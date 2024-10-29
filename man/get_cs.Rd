@@ -4,14 +4,19 @@
 \alias{get_cs}
 \title{Compute Single-Cell Level Scores (c_i)}
 \usage{
-get_cs(p_jk, l_ik, tau_Ck)
+get_cs(topic_res, ldsc_res, trait)
 }
 \arguments{
-\item{p_jk}{Matrix of probabilities of peaks in topics (peaks x topics), obtained from the F matrix of fastTopics.}
+\item{topic_res}{Results from run_fastTopics
+\itemize{
+\item p_jk Matrix of probabilities of peaks in topics (peaks x topics), obtained from the F matrix of fastTopics.
+\item l_ik Matrix of topic proportions for each cell (cells x topics), obtained from the L matrix of fastTopics.
+}}
 
-\item{l_ik}{Matrix of topic proportions for each cell (cells x topics), obtained from the L matrix of fastTopics.}
-
-\item{tau_Ck}{Vector of per-topic heritability contributions (\eqn{\tau_{C_k}}) of length K (number of topics).}
+\item{ldsc_res}{Enrichment results from run_ldsc
+\itemize{
+\item tau_Ck Vector of per-topic heritability contributions (\eqn{\tau_{C_k}}) of length K (number of topics).
+}}
 }
 \value{
 A vector of single-cell level scores (\eqn{c_i}) of length I (number of cells).

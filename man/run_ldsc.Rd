@@ -8,26 +8,38 @@ run_ldsc(
   polyfun_path,
   sumstats_path,
   n,
-  mss_output,
-  ldblocks_path,
-  sig_loci_output = NULL
+  trait,
+  rcode_path,
+  onekg_path,
+  bed_dir,
+  baseline_dir,
+  weights_dir,
+  out_dir
 )
 }
 \arguments{
-\item{polyfun_path}{Path to the PolyFun package.}
+\item{polyfun_path}{A character string specifying the directory to the PolyFun package.}
 
-\item{sumstats_path}{Path to the cleaned summary statistics file.}
+\item{sumstats_path}{A character string specifying the directory with the cleaned summary statistics file.}
 
 \item{n}{Number of samples in the GWAS.}
 
-\item{mss_output}{Munged sumstats file.}
+\item{trait}{GWAS trait (e.g. SIM for simulated)}
 
-\item{ldblocks_path}{Path to file with LD blocks.}
+\item{rcode_path}{A character string specifying the directory to Rscripts for running LDSC}
 
-\item{sig_loci_output}{Signficant loci output file.}
+\item{onekg_path}{A character string specifying the directory to 1000G genotypes data}
+
+\item{bed_dir}{A character string specifying the directory for the BED files.}
+
+\item{baseline_dir}{A character string specifying the directory to baseline annotations for LDSC}
+
+\item{weights_dir}{A character string specifying the directory to weights provided for LDSC}
+
+\item{out_dir}{A character string specifying the output directory for LDSC enrichment results.}
 }
 \value{
-enrichment
+None. LDSC results are written to the specified output directory.
 }
 \description{
 This function runs the LDSC pipeline using PolyFun for enrichment analysis.

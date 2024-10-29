@@ -4,16 +4,23 @@
 \alias{scads}
 \title{scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score}
 \usage{
-scads(count_matrix, GWAS_ss, LD_reference, nTopics = 10, .....)
+scads(
+  count_matrix,
+  nTopics = 10,
+  bed_dir,
+  sumstats_dir,
+  gwas_nsamps,
+  gwas_trait,
+  outdir,
+  ...
+)
 }
 \arguments{
 \item{count_matrix}{A peak-by-cell count matrix.}
 
-\item{GWAS_ss}{A vector of GWAS summary statistics.}
-
-\item{LD_reference}{Reference LD matrix or data.}
-
 \item{nTopics}{The number of topics (clusters) to fit. Default is 10.}
+
+\item{bed_dir}{}
 
 \item{...}{Additional arguments passed to internal functions.}
 }
@@ -24,7 +31,6 @@ A list containing the fitted topic model, enrichment results, and cell scores.
 scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score
 }
 \examples{
-result <- scads(count_matrix, GWAS_ss, LD_reference)
 result <- scads(count_matrix, GWAS_ss, LD_reference, nTopics = 15)
 
 }

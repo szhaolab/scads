@@ -4,20 +4,17 @@
 \alias{get_annot_beds}
 \title{Generate BED Files from Topic Annotations}
 \usage{
-get_annot_beds(
-  topics_annot,
-  topics_prob,
-  output_dir,
-  fuzzy = FALSE,
-  cutoff = 0.5
-)
+get_annot_beds(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5)
 }
 \arguments{
-\item{topics_annot}{A matrix or data frame containing topic annotations (peaks x topics).
+\item{topics_res}{A list containing the factor matrices \code{Fmat} and \code{Lmat},
+differential expression results \code{de_res}, and p-values matrix \code{p_jk}.
+\itemize{
+\item topics_annot A matrix or data frame containing topic annotations (peaks x topics).
 Rows correspond to peaks with names in the format "chr:start-end".
-Columns correspond to topics.}
-
-\item{topics_prob}{A matrix probability of peak is in a topic}
+Columns correspond to topics.
+\item topics_prob A matrix probability of peak is in a topic
+}}
 
 \item{output_dir}{A character string specifying the output directory for the BED files.}
 

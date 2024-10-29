@@ -1,8 +1,9 @@
 ---
-title: "Quick Tutorial"
+title: "Quick Tutorial on scads"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Introduction}
+  %\VignetteIndexEntry{Quick Tutorial on scads}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -59,8 +60,9 @@ Run scads
 
   - Made up topic enrichment estimates (topic 2 is enriched)
   - Output cell scores
+  
 
-```{r}
+```{r eval=FALSE}
 cell_scores <- scads(demo_count_matrix, 
                      nTopics = 5, 
                      bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 
