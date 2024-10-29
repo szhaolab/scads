@@ -2,17 +2,24 @@
 #'
 #' This function generates BED files for each topic based on the provided topic annotations.
 #'
-#' @param topics_annot A matrix or data frame containing topic annotations (peaks x topics).
-#'   Rows correspond to peaks with names in the format "chr:start-end".
-#'   Columns correspond to topics.
-#' @param topics_prob A matrix probability of peak is in a topic
+#' @param topics_res A list containing the factor matrices \code{Fmat} and \code{Lmat}, 
+#' differential expression results \code{de_res}, and p-values matrix \code{p_jk}.
+#'    - topics_annot A matrix or data frame containing topic annotations (peaks x topics).
+#'      Rows correspond to peaks with names in the format "chr:start-end".
+#'      Columns correspond to topics.
+#'    - topics_prob A matrix probability of peak is in a topic
 #' @param output_dir A character string specifying the output directory for the BED files.
 #' @param fuzzy Logical value indicating whether to create fuzzy annotations (default: FALSE).
 #' @param cutoff Numeric value specifying the cutoff for binary annotations when `fuzzy = FALSE` (default: 0.5).
 #' @return None. BED files are written to the specified output directory.
 #' @importFrom stringr str_extract
 #' @export
-get_annot_beds <- function(topics_annot, topics_prob, output_dir, fuzzy = FALSE, cutoff = 0.5) {
+#' 
+get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) {
+  
+  # Obtain data from topics_res object from run_fastTopics step
+  topics_annot <- topics_res$Fmat
+  topics_prob <- topics_res$Pmat
   
   # Ensure the output directory exists
   if (!dir.exists(output_dir)) {

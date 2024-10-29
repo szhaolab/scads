@@ -38,6 +38,7 @@ run_fastTopics <- function(count_matrix, nTopics = 10, ...) {
   # Run fastTopics model
   # count_matrix should have cells as rows and peaks as columns
   # '...' allows passing additional arguments to the model fitting function
+  cat("\nRunning fastTopics\n")
   fastTopics_fit <- fastTopics::fit_topic_model(count_matrix, 
                                                 k = nTopics, ...)
   
@@ -49,6 +50,7 @@ run_fastTopics <- function(count_matrix, nTopics = 10, ...) {
   # 's' represents the total counts per cell
   s <- Matrix::rowSums(count_matrix)  # Vector of total counts per cell
   
+  cat("\nRunning fastTopics-DE\n")
   de_res <- de_analysis2(
     fit = fastTopics_fit,
     X = count_matrix,
@@ -60,10 +62,12 @@ run_fastTopics <- function(count_matrix, nTopics = 10, ...) {
   # 'de_res$z' is a matrix of z-scores with dimensions peaks x topics
   # Convert z-score matrix to a vector for locfdr input
   z_scores <- as.vector(de_res$z)
+  print(summary(z_scores))
   # # Remove non-finite values - issue when using count_matrix_sp
   # z_scores_clean <- z_scores[is.finite(z_scores)]
   
   # Apply locfdr to compute local false discovery rates
+  cat("\nApply locfdr\n")
   locfdr_res <- locfdr::locfdr(z_scores, nulltype = 2, plot=0)  # 'plot = 0' suppresses plotting
   locfdr_vals <- locfdr_res$fdr  # Extract lfdr values
   

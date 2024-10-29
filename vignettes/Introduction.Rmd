@@ -1,0 +1,71 @@
+---
+title: "Quick Tutorial"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+```{r setup}
+library(scads)
+library(data.table)
+```
+
+Load example data
+
+```{r}
+# Access the dataset
+data("demo_count_matrix")
+
+# Examine dataset
+dim(demo_count_matrix)
+demo_count_matrix[1:5,1:5]
+```
+
+Prepare a GWAS summary statistics file 
+
+```{r}
+data_file <- system.file("extdata", "SIM_sumstats.txt.gz", package = "scads")
+sumstats <- fread(data_file, header = T)
+head(sumstats)
+```
+
+Run scads
+
+1. Run fastTopics 
+
+  - fastTopics: fit model and obtain topics 
+  - fastTopics-DE: obtain peaks associated with topics
+  - locfdr: adjust for multiple testing [**issue with NA** on some runs - TODO: FIX ISUE]
+  
+2. Create topic annotations for LDSC 
+
+3. Run LDSC 
+
+  - Currently printing bash commands that will be run 
+  - TODO: Resolve errors preventing running [IN PROGRESS]
+  
+4. Calculate Cell Score 
+
+  - Made up topic enrichment estimates (topic 2 is enriched)
+  - Output cell scores
+
+```{r}
+cell_scores <- scads(demo_count_matrix, 
+                     nTopics = 5, 
+                     bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 
+                     sumstats_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028", 
+                     gwas_nsamps = 45000, 
+                     gwas_trait = "SIM", 
+                     outdir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads")
+```
+

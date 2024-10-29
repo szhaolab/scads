@@ -35,7 +35,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   if (!((is.numeric(X) & is.matrix(X)) | is.sparse.matrix(X)))
     stop("Input argument \"X\" should be a numeric matrix (a \"matrix\" or ",
          "a \"dgCMatrix\")")
-  verify.fit.and.count.matrix(X,fit)
+  fastTopics:::verify.fit.and.count.matrix(X,fit)
   if (is.matrix(X) & is.integer(X))
     storage.mode(X) <- "double"
   
@@ -46,7 +46,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   k <- ncol(fit$F)
   
   # Check input argument "s".
-  verify.positive.vector(s)
+  fastTopics:::verify.positive.vector(s)
   if (length(s) != n)
     stop("Input argument \"s\" should be a vector of positive numbers, ",
          "in which length(s) = nrow(X)")
@@ -60,7 +60,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   shrink.method <- match.arg(shrink.method)
   
   # Check and process input argument "control".
-  control <- modifyList(de_analysis_control_default(),control,keep.null = TRUE)
+  control <- modifyList(fastTopics:::de_analysis_control_default(),control,keep.null = TRUE)
   if (control$nc > 1 & .Platform$OS.type == "windows")
     stop("Multithreading is not available on Windows; try again with ",
          "control$nc = 1")
@@ -102,7 +102,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   # Add "pseudocounts" to the data, and get the Poisson NMF loadings
   # matrix. From this point on, we will fit Poisson glm models x ~
   # Poisson (u), u = sum(L*f), where x is a column of X.
-  out <- add_pseudocounts(X,s*L,pseudocount)
+  out <- fastTopics:::add_pseudocounts(X,s*L,pseudocount)
   X <- out$X
   L <- out$L
   
@@ -114,8 +114,8 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   if (verbose)
     cat(sprintf("Fitting %d Poisson models with k=%d using method=\"%s\".\n",
                 m,k,fit.method))
-  nc <- initialize.multithreading(control$nc,verbose)
-  F <- fit_poisson_models(X,L,fit.method,control$eps,control$numiter,
+  nc <- fastTopics:::initialize.multithreading(control$nc,verbose)
+  F <- fastTopics:::fit_poisson_models(X,L,fit.method,control$eps,control$numiter,
                           control$tol,control$nc)
   F <- pmax(F,control$minval)
   dimnames(F) <- dimnames(fit$F)
@@ -136,7 +136,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   ncb <- blas_get_num_procs()
   blas_set_num_threads(control$nc.blas)
   if (nc == 1)
-    out <- compute_lfc_stats(X,F,L,f0,D,U,M,lfc.stat,control$conf.level,
+    out <- fastTopics:::compute_lfc_stats(X,F,L,f0,D,U,M,lfc.stat,control$conf.level,
                              control$rw,control$eps,verbose)
   else {
     out <- compute_lfc_stats_multicore(X,F,L,f0,D,U,M,lfc.stat,
@@ -178,7 +178,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   } else {
     
     # Compute the -log10 two-tailed p-values computed from the z-scores.
-    out$lpval  <- -lpfromz(out$z)
+    out$lpval  <- -fastTopics:::lpfromz(out$z)
     out$svalue <- as.numeric(NA)
     out$lfsr   <- as.numeric(NA)
   }
