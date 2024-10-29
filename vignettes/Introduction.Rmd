@@ -34,7 +34,7 @@ demo_count_matrix[1:5,1:5]
 Prepare a GWAS summary statistics file 
 
 ```{r}
-data_file <- system.file("extdata", "SIM_sumstats.txt.gz", package = "scads")
+data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
 sumstats <- fread(data_file, header = T)
 head(sumstats)
 ```
@@ -46,6 +46,7 @@ Run scads
   - fastTopics: fit model and obtain topics 
   - fastTopics-DE: obtain peaks associated with topics
   - locfdr: adjust for multiple testing [**issue with NA** on some runs - TODO: FIX ISUE]
+    (Current resolution: just run again)
   
 2. Create topic annotations for LDSC 
 
