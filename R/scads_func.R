@@ -1,4 +1,12 @@
 #' Helper functions for scads
+#' @importFrom utils modifyList
+#' @importFrom Matrix rowSums
+#' @importFrom Matrix colSums
+#' @importFrom stats rnorm
+#' @importFrom stats runif
+#' @importFrom ashr ash
+#' @importFrom RhpcBLASctl blas_set_num_threads
+#' @importFrom RhpcBLASctl blas_get_num_procs
 #' 
 #' modified de_analysis function from fastTopics
 de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
@@ -133,8 +141,8 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   D <- matrix(rnorm(ns*k),ns,k)
   U <- matrix(runif(ns*k),ns,k)
   M <- matrix(sample(k,ns*k,replace = TRUE),ns,k) - 1
-  ncb <- blas_get_num_procs()
-  blas_set_num_threads(control$nc.blas)
+  ncb <- RhpcBLASctl::blas_get_num_procs()
+  RhpcBLASctl::blas_set_num_threads(control$nc.blas)
   if (nc == 1)
     out <- fastTopics:::compute_lfc_stats(X,F,L,f0,D,U,M,lfc.stat,control$conf.level,
                              control$rw,control$eps,verbose)
