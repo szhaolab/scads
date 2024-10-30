@@ -62,7 +62,7 @@ run_ldsc <- function(polyfun_path,
     "--out", file.path(out_dir, sprintf('%s_munged_sumstats.parquet', trait))
   ) 
   print(cmd1)
-  #system(cmd1)
+  system(cmd1)
   
   
   # Get significant loci - for fine-mapping - works but not necessary for now
@@ -84,7 +84,7 @@ run_ldsc <- function(polyfun_path,
       file.path(out_dir, sprintf('annotations/%s/%s.%s.l2.M', trait, trait, chr))
     )
     print(cmd2)
-    #system(cmd2)
+    system(cmd2)
     
   }
   
@@ -98,7 +98,7 @@ run_ldsc <- function(polyfun_path,
       "--out", file.path(out_dir, sprintf('annotations/%s/%s.%s.l2.ldscore.parquet', trait, trait, chr))
     ) 
     print(cmd3)
-    #system(cmd3)
+    system(cmd3)
     
   }
   
@@ -114,7 +114,7 @@ run_ldsc <- function(polyfun_path,
     "--overlap-annot && sed -i 's/_0//g'", file.path(out_dir, sprintf('results/%s_enrichment.results', trait))
   ) 
   print(cmd4)
-  #system(cmd4)
+  system(cmd4)
   
   
 }

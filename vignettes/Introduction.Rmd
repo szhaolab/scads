@@ -15,6 +15,15 @@ knitr::opts_chunk$set(
 )
 ```
 
+## Setup 
+
+Confirm [PolyFUN](https://github.com/omerwe/polyfun) runs in your conda environment
+
+```{bash eval=F}
+conda activate /dartfs/rc/lab/S/Szhao/liyang/conda/base_clone/
+```
+
+Load R packages
 
 ```{r setup}
 library(scads)
@@ -40,7 +49,7 @@ sumstats <- fread(data_file, header = T)
 head(sumstats)
 ```
 
-Run scads
+## Run scads
 
 1. Run fastTopics 
 
@@ -53,17 +62,18 @@ Run scads
 
 3. Run LDSC 
 
-  - Currently printing bash commands that will be run 
-  - TODO: Resolve errors preventing running [IN PROGRESS]
+  - Resolved issues - should be running though the enrichment results will not make sense 
   
 4. Calculate Cell Score 
 
   - Made up topic enrichment estimates (topic 2 is enriched)
-  - Output cell scores
+  - Output list of 2
+    1. out1 (fastTopics results)
+    2. cs (cell scores)
   
 
 ```{r eval=FALSE}
-cell_scores <- scads(demo_count_matrix, 
+scads_res <- scads(demo_count_matrix, 
                      nTopics = 5, 
                      bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 
                      sumstats_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028", 

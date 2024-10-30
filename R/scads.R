@@ -5,7 +5,7 @@
 #' @param bed_dir 
 #' @param ... Additional arguments passed to internal functions.
 #'
-#' @return A list containing the fitted topic model, enrichment results, and cell scores.
+#' @return A list containing the fitted topic model and cell scores.
 #'
 #' @examples
 #' result <- scads(count_matrix, GWAS_ss, LD_reference, nTopics = 15)
@@ -45,7 +45,7 @@ scads <- function(count_matrix, nTopics = 10, bed_dir, sumstats_dir, gwas_nsamps
   cs <- get_cs(topic_res = out1, 
                ldsc_res = outdir)
 
-  return(cs)
+  return(list(cs = cs, out1 = out1))
   
 }
 

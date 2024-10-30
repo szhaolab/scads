@@ -39,7 +39,9 @@ get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) 
   end <- as.numeric(stringr::str_extract(positions, "(?<=-).+"))
   
   # Create a data frame with seqnames, start, end
-  bed_df <- data.frame(seqnames = seqnames, start = start, end = end)
+  bed_df <- data.frame(seqnames = gsub("chr", "", seqnames), 
+                       start = start, 
+                       end = end)
   
   # Add topic names
   topics <- paste0('k', 1:ncol(topics_prob))
