@@ -24,11 +24,14 @@ jobs:
         run: pkgdown::build_site()
         shell: Rscript {0}
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy to GitHub pages 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: main
           publish_dir: ./docs
+          commit_message: "Deploy updated pkgdown site [skip ci]"
+          force: true
           keep_files: true
+
 
