@@ -25,6 +25,9 @@ Imports:
     tibble,
     vroom
 Suggests: 
+    R.utils,
+    data.table,
+    ggplot2,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
