@@ -41,7 +41,7 @@ dim(demo_count_matrix)
 demo_count_matrix[1:5,1:5]
 ```
 
-Prepare a GWAS summary statistics file 
+Prepare a GWAS summary statistics file (chr 10 provided)
 
 ```{r}
 data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
