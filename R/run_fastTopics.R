@@ -20,13 +20,14 @@
 #' }
 #' @export
 #' 
-run_fastTopics <- function(count_matrix, nTopics = 10, ...) {
+run_fastTopics <- function(count_matrix, nTopics = 10, n_s=1000, n_c=1, ...) {
   
   # Ensure that count_matrix has cells as rows and peaks as columns
   # Transpose if necessary
   if (nrow(count_matrix) > ncol(count_matrix)) {
-    count_matrix <- t(count_matrix)
+    count_matrix <- Matrix::t(count_matrix)
   }
+  print(dim(count_matrix))
   
   # # Convert to sparse matrix if not already
   # if (!inherits(count_matrix, "dgCMatrix")) {
@@ -39,49 +40,79 @@ run_fastTopics <- function(count_matrix, nTopics = 10, ...) {
   # count_matrix should have cells as rows and peaks as columns
   # '...' allows passing additional arguments to the model fitting function
   cat("\nRunning fastTopics\n")
+  cat("\nStart time: ")
+  print(Sys.time())
   fastTopics_fit <- fastTopics::fit_topic_model(count_matrix, 
                                                 k = nTopics, ...)
+  
+  cat("\nStop time: ")
+  print(Sys.time())
   
   # Extract factor matrices
   Fmat <- fastTopics_fit$F  # Topics x peaks matrix (feature loadings)
   Lmat <- fastTopics_fit$L  # Cells x topics matrix (topic proportions)
   
+  # # Return results as a list
+  # return(list(
+  #   Fmat = Fmat,
+  #   Lmat = Lmat, 
+  #   fit = fastTopics_fit
+  # ))
+  
   # Run differential expression analysis
   # 's' represents the total counts per cell
   s <- Matrix::rowSums(count_matrix)  # Vector of total counts per cell
-  
+
   cat("\nRunning fastTopics-DE\n")
+  cat("\nStart time: ")
+  print(Sys.time())
   de_res <- de_analysis2(
     fit = fastTopics_fit,
     X = count_matrix,
     s = s,
-    #lfc.stat = "vsnull",
-    shrink.method = "none"
+    lfc.stat = "vsnull",
+    shrink.method = "none",
+    control = list(ns = n_s,
+                   nc = n_c)
   )
-  
+
   # 'de_res$z' is a matrix of z-scores with dimensions peaks x topics
+  # Remove peaks with any NA values for z-scores in topics
+  keep_peaks <- which(complete.cases(de_res$z))
+  keep_z <- de_res$z[complete.cases(de_res$z), ]
   # Convert z-score matrix to a vector for locfdr input
-  z_scores <- as.vector(de_res$z)
+  z_scores <- as.vector(keep_z)
   print(summary(z_scores))
-  # # Remove non-finite values - issue when using count_matrix_sp
-  # z_scores_clean <- z_scores[is.finite(z_scores)]
+  # hist(z_scores, breaks = 50, main = "Histogram of z_scores", xlab = "z_scores")
+  
+  # # Return results as a list
+  # return(list(
+  #   Fmat = Fmat,
+  #   Lmat = Lmat,
+  #   de_res = de_res
+  # ))
   
   # Apply locfdr to compute local false discovery rates
   cat("\nApply locfdr\n")
-  locfdr_res <- locfdr::locfdr(z_scores, nulltype = 2, plot=0)  # 'plot = 0' suppresses plotting
+  cat("\nStart time: ")
+  print(Sys.time())
+  locfdr_res <- locfdr::locfdr(z_scores, nulltype = 2, plot=0, df=30)  # 'plot = 0' suppresses plotting
   locfdr_vals <- locfdr_res$fdr  # Extract lfdr values
-  
+
   # Reshape locfdr_vals back to a matrix with the same dimensions as de_res$z
   locfdr_mat <- matrix(
     locfdr_vals,
-    nrow = nrow(de_res$z),
+    nrow = length(keep_peaks),
     ncol = ncol(de_res$z),
     byrow = FALSE
   )
-  
+
   # Compute p-values as 1 - lfdr for each peak-topic pair
   p_jk <- 1 - locfdr_mat  # Matrix of p-values (peaks x topics)
   
+  # Adjust Fmat to match p_jk
+  Fmat <- Fmat[keep_peaks, ]
+
   # Return results as a list
   return(list(
     Fmat = Fmat,

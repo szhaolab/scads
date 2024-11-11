@@ -90,7 +90,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   # matrix. It must be done before adding pseudocounts to the data.)
   # Equivalently, this is the maximum-likelihood estimate of the
   # binomial probability in the "null" Binomial model x ~ Binom(s,p0).
-  background = 100/(3E9/500)
+  background = 1/(3E9/500)*100
   f0 <- c(rep(background, times=ncol(X))) # colSums(X)/sum(s)
   # f0 <- c(rep(0, times=ncol(count_matrix)))
   # f0 <- ifelse(peak_assignments==1, 9.268e-05, 
@@ -147,7 +147,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
     out <- fastTopics:::compute_lfc_stats(X,F,L,f0,D,U,M,lfc.stat,control$conf.level,
                              control$rw,control$eps,verbose)
   else {
-    out <- compute_lfc_stats_multicore(X,F,L,f0,D,U,M,lfc.stat,
+    out <- fastTopics:::compute_lfc_stats_multicore(X,F,L,f0,D,U,M,lfc.stat,
                                        control$conf.level,control$rw,
                                        control$eps,control$nc,control$nsplit,
                                        verbose)

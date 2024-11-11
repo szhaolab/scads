@@ -72,7 +72,8 @@ head(sumstats)
     2. cs (cell scores)
   
 
-```{r eval=FALSE}
+```{r}
+set.seed(1)
 scads_res <- scads(demo_count_matrix, 
                      nTopics = 5, 
                      bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 

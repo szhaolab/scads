@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.0.9000</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.1</span>
       </span>
     </div>
 
@@ -70,7 +70,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Quick Tutorial on scads</h1>
             
-            <h4 data-toc-skip class="date">2024-10-31</h4>
+            <h4 data-toc-skip class="date">2024-11-11</h4>
       
       
       <div class="hidden name"><code>Introduction.Rmd</code></div>
@@ -84,7 +84,7 @@
 </h2>
 <p>Confirm <a href="https://github.com/omerwe/polyfun" class="external-link">PolyFUN</a> runs
 in your conda environment</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">conda</span> activate /dartfs/rc/lab/S/Szhao/liyang/conda/base_clone/</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate /dartfs/rc/lab/S/Szhao/liyang/conda/base_clone/</span></code></pre></div>
 <p>Load R packages</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scads</span><span class="op">)</span></span>
@@ -114,15 +114,6 @@ in your conda environment</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SIM_sumstats_chr10.txt.gz"</span>, package <span class="op">=</span> <span class="st">"scads"</span><span class="op">)</span></span>
 <span><span class="va">sumstats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdatatable.gitlab.io/data.table/reference/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="va">data_file</span>, header <span class="op">=</span> <span class="cn">T</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in fileAccess.default(pathT, mode = 2): file.access(..., mode=2) and</span></span>
-<span><span class="co">#&gt; file(..., open="ab") gives different results (-1 != 0). Will use the file()</span></span>
-<span><span class="co">#&gt; results: /tmp/Rtmp8Snd8f/a</span></span>
-<span><span class="co">#&gt; Warning in fileAccess.default(pathT, mode = 2): file.access(..., mode=2) and</span></span>
-<span><span class="co">#&gt; file(..., open="ab") gives different results (-1 != 0). Will use the file()</span></span>
-<span><span class="co">#&gt; results: /tmp/Rtmp8Snd8f/q</span></span>
-<span><span class="co">#&gt; Warning in fileAccess.default(pathT, mode = 2): file.access(..., mode=2) and</span></span>
-<span><span class="co">#&gt; file(..., open="ab") gives different results (-1 != 0). Will use the file()</span></span>
-<span><span class="co">#&gt; results: /tmp/Rtmp8Snd8f/x</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">sumstats</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      chr    pos        beta         se     a0     a1         snp       pval</span></span>
 <span><span class="co">#&gt;    &lt;int&gt;  &lt;int&gt;       &lt;num&gt;      &lt;num&gt; &lt;char&gt; &lt;char&gt;      &lt;char&gt;      &lt;num&gt;</span></span>
@@ -174,13 +165,460 @@ will not make sense</li>
 </li>
 </ul>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">scads_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/scads.html">scads</a></span><span class="op">(</span><span class="va">demo_count_matrix</span>, </span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">scads_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/scads.html">scads</a></span><span class="op">(</span><span class="va">demo_count_matrix</span>, </span>
 <span>                     nTopics <span class="op">=</span> <span class="fl">5</span>, </span>
 <span>                     bed_dir <span class="op">=</span> <span class="st">"/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir"</span>, </span>
 <span>                     sumstats_dir <span class="op">=</span> <span class="st">"/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028"</span>, </span>
 <span>                     gwas_nsamps <span class="op">=</span> <span class="fl">45000</span>, </span>
 <span>                     gwas_trait <span class="op">=</span> <span class="st">"SIM"</span>, </span>
-<span>                     outdir <span class="op">=</span> <span class="st">"/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads"</span><span class="op">)</span></span></code></pre></div>
+<span>                     outdir <span class="op">=</span> <span class="st">"/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 1. Run FastTopics</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 12:14:13 EST"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Count matrix dimensions 100 1000[1]  100 1000</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Running fastTopics</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 12:14:13 EST"</span></span>
+<span><span class="co">#&gt; Initializing factors using Topic SCORE algorithm.</span></span>
+<span><span class="co">#&gt; Initializing loadings by running 10 SCD updates.</span></span>
+<span><span class="co">#&gt; Fitting rank-5 Poisson NMF to 100 x 1000 dense matrix.</span></span>
+<span><span class="co">#&gt; Running 100 EM updates, without extrapolation (fastTopics 0.6-163).</span></span>
+<span><span class="co">#&gt; Refining model fit.</span></span>
+<span><span class="co">#&gt; Fitting rank-5 Poisson NMF to 100 x 1000 dense matrix.</span></span>
+<span><span class="co">#&gt; Running 100 SCD updates, with extrapolation (fastTopics 0.6-163).</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Stop time: [1] "2024-11-11 12:14:18 EST"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Running fastTopics-DE</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 12:14:18 EST"</span></span>
+<span><span class="co">#&gt; Fitting 1000 Poisson models with k=5 using method="scd".</span></span>
+<span><span class="co">#&gt; Using 8 RcppParallel threads.</span></span>
+<span><span class="co">#&gt; Computing log-fold change statistics from 1000 Poisson models with k=5.</span></span>
+<span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
+<span><span class="co">#&gt;  -0.322  12.100  16.301  32.023  24.111 217.800 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Apply locfdr</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 12:14:28 EST"</span></span>
+<span><span class="co">#&gt; Warning in locfdr::locfdr(z_scores, nulltype = 2, plot = 0, df = 30): f(z)</span></span>
+<span><span class="co">#&gt; misfit = 2.4.  Rerun with increased df</span></span>
+<span><span class="co">#&gt; Warning in locfdr::locfdr(z_scores, nulltype = 2, plot = 0, df = 30): ML</span></span>
+<span><span class="co">#&gt; Estimation failed</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 2. Get topic annotations</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 12:14:28 EST"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 3. Perform LDSC</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 12:14:28 EST"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/munge_polyfun_sumstats.py --sumstats /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/SIM_sumstats.txt.gz --n 45000 --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/SIM_munged_sumstats.parquet"</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 1"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">779354</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">779354</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 2"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">839590</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">839590</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 3"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">706350</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">706350</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 4"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">729645</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">729645</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 5"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">633015</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">633015</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 6"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">664016</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">664016</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 7"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">589569</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">589569</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 8"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">549971</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">549971</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 9"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">438106</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">438106</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 10"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">510501</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">510501</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 11"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">493922</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">493922</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 12"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">480110</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">480110</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 13"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">366200</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">366200</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 14"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">324698</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">324698</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 15"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">287001</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">287001</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 16"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">316981</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">316981</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 17"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">269222</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">269222</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 18"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">285156</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">285156</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 19"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">232363</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">232363</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 20"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">221626</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">221626</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 21"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">138712</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">138712</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "Creating annotations for chromosome 22"</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">141123</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span> (3): X2, X5, X6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (3): X1, X3, X4</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Rows: </span><span style="color: #0000BB;">141123</span> <span style="font-weight: bold;">Columns: </span><span style="color: #0000BB;">21</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Column specification</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Delimiter:</span> "\t"</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">chr</span>  (3): SNP, A1, A2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">dbl</span> (18): CHR, BP, MAFbin1, MAFbin2, MAFbin3, MAFbin4, MAFbin5, MAFbin6, MAF...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `spec()` to retrieve the full column specification for this data.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Specify the column types or set `show_col_types = FALSE` to quiet this message.</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.1 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.1.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.1.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.2 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.2.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.2.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.3 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.3.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.3.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.4 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.4.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.4.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.5 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.5.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.5.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.6 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.6.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.6.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.7 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.7.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.7.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.8 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.8.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.8.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.9 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.9.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.9.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.10 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.10.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.10.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.11 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.11.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.11.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.12 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.12.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.12.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.13 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.13.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.13.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.14 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.14.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.14.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.15 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.15.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.15.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.16 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.16.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.16.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.17 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.17.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.17.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.18 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.18.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.18.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.19 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.19.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.19.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.20 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.20.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.20.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.21.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.21.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/compute_ldscores.py --bfile /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC.22 --annot /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.22.annot.gz --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM.22.l2.ldscore.parquet"</span></span>
+<span><span class="co">#&gt; [1] "python3 /dartfs/rc/lab/S/Szhao/liyang/polyfun/ldsc.py --h2 /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/SIM_munged_sumstats.parquet --ref-ld-chr /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/annotations/SIM/SIM. --w-ld-chr /dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/weights/weights. --not-M-5-50 --out /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/results/SIM_enrichment --overlap-annot &amp;&amp; sed -i 's/_0//g' /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads/results/SIM_enrichment.results"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 4. Calculate cell scores</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Start time: [1] "2024-11-11 13:01:57 EST"</span></span></code></pre></div>
 </div>
   </div>
 

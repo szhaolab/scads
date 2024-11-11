@@ -26,9 +26,11 @@ create_annotations <- function(bim_file, bed_files = NULL, baseline_file, outfil
   
   # Read BIM file
   if (is.character(bim_file)) {
+    
     annot <- vroom::vroom(bim_file, delim = '\t', col_names = FALSE)
-    annot <- annot[ ,c(2,1,4,5,6)] 
-    colnames(annot) <- c("SNP", "CHR","BP","A1","A2")
+    colnames(annot) <- c("CHR", "SNP", "GD", "BP", "A1", "A2")
+    annot <- annot[, c("SNP", "CHR", "BP", "A1", "A2")]
+    
   } else if (is.data.frame(bim_file)) {
     annot <- bim_file
     # Check required columns
@@ -105,5 +107,5 @@ create_annotations <- function(bim_file, bed_files = NULL, baseline_file, outfil
     writeLines(paste0(M_values, collapse = ' '), con = Mfile)
   }
   
-  return(base_annot)
+  # return(base_annot)
 }

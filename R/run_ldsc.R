@@ -23,7 +23,7 @@ run_ldsc <- function(polyfun_path,
                      sumstats_path, 
                      n, 
                      trait,
-                     rcode_path, 
+                     # rcode_path, 
                      onekg_path, 
                      bed_dir, 
                      baseline_dir, 
@@ -74,18 +74,21 @@ run_ldsc <- function(polyfun_path,
   
   # 2. Create annotations 
   for (chr in 1:22){
-    cmd2 <- paste(
-      "Rscript", 
-      file.path(rcode_path, "create_annotations_LY.R"),
-      paste0(onekg_path, sprintf(".%s.bim",chr)), 
-      file.path(bed_dir),
-      file.path(baseline_dir, sprintf("baseline_MAF_LD.%s.annot.gz", chr)), 
-      file.path(out_dir, sprintf('annotations/%s/%s.%s.annot.gz', trait, trait, chr)),
-      file.path(out_dir, sprintf('annotations/%s/%s.%s.l2.M', trait, trait, chr))
-    )
-    print(cmd2)
-    system(cmd2)
+    print(paste("Creating annotations for chromosome", chr))
     
+    bim_file <- paste0(onekg_path, sprintf(".%s.bim", chr))
+    bed_files <- file.path(bed_dir)
+    baseline_file <- file.path(baseline_dir, sprintf("baseline_MAF_LD.%s.annot.gz", chr))
+    outfile <- file.path(out_dir, sprintf('annotations/%s/%s.%s.annot.gz', trait, trait, chr))
+    Mfile <- file.path(out_dir, sprintf('annotations/%s/%s.%s.l2.M', trait, trait, chr))
+    
+    create_annotations(
+      bim_file = bim_file, 
+      bed_files = bed_files,
+      baseline_file = baseline_file, 
+      outfile = outfile,
+      Mfile = Mfile
+    )
   }
   
   # 3. Compute LD score 
