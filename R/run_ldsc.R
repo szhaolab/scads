@@ -43,6 +43,9 @@ run_ldsc <- function(polyfun_path,
   # }
   
   # Ensure the output directory exists
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE)
+  }
   if (!dir.exists(paste0(out_dir, "/annotations"))) {
     dir.create(paste0(out_dir, "/annotations"), recursive = TRUE)
   }

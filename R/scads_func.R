@@ -8,7 +8,132 @@
 #' @importFrom RhpcBLASctl blas_set_num_threads
 #' @importFrom RhpcBLASctl blas_get_num_procs
 #' 
-#' modified de_analysis function from fastTopics
+
+# Helper function to determine cutoff using KDE (kernel density estimation) - OLD 
+find_kde_cutoff_old <- function(data, bandwidth = "nrd0") {
+  
+  # Compute density
+  density_est <- density(data, bw = bandwidth)
+  
+  # Compute the first derivative of the density
+  derivative <- diff(density_est$y)
+  
+  # Compute the sign of the derivative
+  sign_derivative <- sign(derivative)
+  
+  # Compute where the derivative changes from negative to positive (local minima)
+  sign_changes <- diff(sign_derivative)
+  
+  # Indices where a local minimum occurs (change from -1 to +1)
+  minima_indices <- which(sign_changes == 2) + 1  # +1 to adjust for diff
+  
+  # If multiple minima are found, select the one between the two main modes
+  # Assuming two modes, there should be one minima
+  if (length(minima_indices) >= 1) {
+    cutoff <- density_est$x[minima_indices[1]]
+  } else {
+    # If no clear minimum is found, default to a global threshold (e.g., median)
+    cutoff <- median(data)
+    warning("No clear minimum found in KDE. Using median as cutoff.")
+  }
+  
+  return(cutoff)
+}
+
+# Helper function to determine cutoff using KDE (kernel density estimation)
+find_kde_cutoff <- function(data, bandwidth = "nrd0", plot_results = FALSE) {
+  # Compute density and derivatives
+  density_est <- density(data, bw = bandwidth)
+  derivative <- diff(density_est$y)
+  sign_derivative <- sign(derivative)
+  sign_changes <- diff(sign_derivative)
+  
+  # Detect maxima and minima
+  maxima_indices <- which(sign_changes == -2) + 1
+  minima_indices <- which(sign_changes == 2) + 1
+  
+  # Handle cases with fewer than two maxima
+  if (length(maxima_indices) < 2) {
+    warning("Fewer than two maxima found. Returning median as cutoff.")
+    return(median(data))
+  }
+  
+  # Sort maxima and select top two
+  maxima_x <- density_est$x[maxima_indices]
+  maxima_y <- density_est$y[maxima_indices]
+  sorted_maxima <- order(maxima_y, decreasing = TRUE)
+  primary_maxima <- maxima_indices[sorted_maxima[1:2]]
+  primary_maxima_x <- density_est$x[primary_maxima]
+  
+  # Find minimum between the top two maxima
+  minima_between <- minima_indices[
+    density_est$x[minima_indices] > primary_maxima_x[1] &
+      density_est$x[minima_indices] < primary_maxima_x[2]
+  ]
+  
+  if (length(minima_between) > 0) {
+    selected_minimum <- minima_between[which.min(density_est$y[minima_between])]
+    cutoff <- density_est$x[selected_minimum]
+  } else {
+    cutoff <- median(data)  # Fallback to median
+    warning("No clear minimum found between primary maxima. Using median as cutoff.")
+  }
+  
+  # Plot results if requested
+  if (plot_results) {
+    plot(density_est, main = "Density with Maxima and Minima")
+    points(maxima_x, maxima_y, col = "red", pch = 20)
+    points(density_est$x[minima_indices], density_est$y[minima_indices], col = "blue", pch = 20)
+    points(primary_maxima_x, density_est$y[primary_maxima], col = "green", pch = 20)  # Highlight top maxima
+    abline(v = cutoff, col = "purple", lwd = 2, lty = 2)  # Highlight cutoff
+  }
+  
+  return(cutoff)
+}
+
+find_kde_midpoint <- function(data, bandwidth = "nrd0", plot_results = FALSE) {
+  # Compute density
+  density_est <- density(data, bw = bandwidth)
+  derivative <- diff(density_est$y)
+  sign_derivative <- sign(derivative)
+  sign_changes <- diff(sign_derivative)
+  
+  # Find maxima
+  maxima_indices <- which(sign_changes == -2) + 1
+  
+  if (length(maxima_indices) < 2) {
+    warning("Fewer than two maxima found. Returning median as cutoff.")
+    return(median(data))
+  }
+  
+  # Extract x-values of the two highest peaks
+  maxima_x <- density_est$x[maxima_indices]
+  maxima_y <- density_est$y[maxima_indices]
+  sorted_maxima <- order(maxima_y, decreasing = TRUE)
+  top_two_maxima_x <- sort(maxima_x[sorted_maxima[1:2]]) # Ensure left-to-right order
+  
+  # Compute midpoint between the two peaks
+  cutoff <- mean(top_two_maxima_x)
+  
+  # Plot results if requested
+  if (plot_results) {
+    plot(density_est, main = "Density with Maxima and Minima", xlab = "Value", ylab = "Density")
+    
+    # Highlight maxima
+    points(top_two_maxima_x, density_est$y[match(top_two_maxima_x, density_est$x)], col = "green", pch = 20)
+    
+    # Highlight midpoint (cutoff)
+    abline(v = cutoff, col = "purple", lwd = 2, lty = 2)
+    
+    # Annotate cutoff
+    text(cutoff, max(density_est$y) * 0.9, labels = round(cutoff, 6), col = "purple", pos = 4)
+  }
+  
+  return(cutoff)
+}
+
+
+# Modified de_analysis function from fastTopics
 de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
                           fit.method = c("scd","em","mu","ccd","glm"),
                           shrink.method = c("ash","none"), lfc.stat = "le",
@@ -90,14 +215,27 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   # matrix. It must be done before adding pseudocounts to the data.)
   # Equivalently, this is the maximum-likelihood estimate of the
   # binomial probability in the "null" Binomial model x ~ Binom(s,p0).
-  background = 1/(3E9/500)*100
-  f0 <- c(rep(background, times=ncol(X))) # colSums(X)/sum(s)
-  # f0 <- c(rep(0, times=ncol(count_matrix)))
-  # f0 <- ifelse(peak_assignments==1, 9.268e-05, 
-  #              ifelse(peak_assignments==2, 9.722e-05, 
-  #                     ifelse(peak_assignments==3, 9.292e-05, 
-  #                            ifelse(peak_assignments==4, 9.648e-05, 9.263e-05))))
-  names(f0) <- rownames(fit$F)
+  
+  # background = f0
+  # cat("Use f0 provided:", background, "\n")
+  # f0 <- c(rep(background, times=ncol(X)))
+  # names(f0) <- rownames(fit$F)
+  
+  # if (is.null(f0)) {
+  #   # If f0 is not provided, use the default single cutoff
+  #   background = 1/(3E9/500) # *100
+  #   f0 <- c(rep(background, times=ncol(X)))
+  #   names(f0) <- rownames(fit$F)
+  #   cat("No f0 cutoffs provided. Using default background:", background, "\n")
+  # } else {
+  #   # Ensure f0 is a vector with length equal to number of topics
+  #   if (!is.numeric(f0) | length(f0) != k) {
+  #     stop("Input \"f0\" should be a numeric vector with length equal to the number of topics.")
+  #   }
+  #   names(f0) <- colnames(fit$F)
+  #   cat("Using provided f0 values for each topic.\n")
+  #   print(f0)
+  # }
   
   # SET UP DATA FOR FITTING POISSON MODELS
   # --------------------------------------
@@ -124,9 +262,17 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
                 m,k,fit.method))
   nc <- fastTopics:::initialize.multithreading(control$nc,verbose)
   F <- fastTopics:::fit_poisson_models(X,L,fit.method,control$eps,control$numiter,
-                          control$tol,control$nc)
+                                       control$tol,control$nc)
+  print(head(F))
+  print(summary(F))
   F <- pmax(F,control$minval)
   dimnames(F) <- dimnames(fit$F)
+  
+  # calc f0 
+  global_cutoff <- 10^find_kde_midpoint(log10(c(F)))
+  cat("Use f0 calculated from refitted F:", global_cutoff, "\n")
+  f0 <- c(rep(global_cutoff, times=ncol(X)))
+  names(f0) <- rownames(fit$F)
   
   # COMPUTE LOG-FOLD CHANGE STATISTICS
   # ----------------------------------
@@ -145,12 +291,12 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   RhpcBLASctl::blas_set_num_threads(control$nc.blas)
   if (nc == 1)
     out <- fastTopics:::compute_lfc_stats(X,F,L,f0,D,U,M,lfc.stat,control$conf.level,
-                             control$rw,control$eps,verbose)
+                                          control$rw,control$eps,verbose)
   else {
     out <- fastTopics:::compute_lfc_stats_multicore(X,F,L,f0,D,U,M,lfc.stat,
-                                       control$conf.level,control$rw,
-                                       control$eps,control$nc,control$nsplit,
-                                       verbose)
+                                                    control$conf.level,control$rw,
+                                                    control$eps,control$nc,control$nsplit,
+                                                    verbose)
   }
   blas_set_num_threads(ncb)
   if (any(out$ar == 0))
@@ -199,3 +345,38 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   class(out) <- c("topic_model_de_analysis","list")
   return(out)
 }
+
+# Helper function to read and preprocess BED files
+read_preprocess_bed <- function(f) {
+  # Read BED file using fread
+  bed_df <- tryCatch({
+    fread(f, header = FALSE, sep = "\t", data.table = FALSE, fill = TRUE)
+  }, error = function(e) {
+    stop(paste("Error reading BED file:", f, ":", e$message))
+  })
+  
+  # Ensure BED file has at least 3 columns: chrom, start, end
+  if (ncol(bed_df) < 3) {
+    stop(paste("BED file", f, "does not have at least 3 columns."))
+  }
+  
+  # Rename columns for clarity
+  colnames(bed_df)[1:3] <- c("chrom", "start", "end")
+  
+  # Convert start and end to integers (handle scientific notation)
+  bed_df$start <- as.integer(as.numeric(bed_df$start))
+  bed_df$end <- as.integer(as.numeric(bed_df$end))
+  
+  # Check for NAs introduced by coercion
+  if (any(is.na(bed_df$start)) || any(is.na(bed_df$end))) {
+    problematic_rows <- which(is.na(bed_df$start) | is.na(bed_df$end))
+    stop(paste("Non-integer values found in BED file:", f, "at rows:", paste(problematic_rows, collapse = ", ")))
+  }
+  
+  # Create GRanges object
+  gr <- GRanges(seqnames = bed_df$chrom,
+                ranges = IRanges(start = bed_df$start, end = bed_df$end))
+  
+  return(gr)
+}
+
