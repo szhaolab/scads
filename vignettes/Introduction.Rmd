@@ -74,6 +74,7 @@ head(sumstats)
 
 ```{r}
 set.seed(1)
+# using f0 = 1/(3E9/500)*100
 scads_res <- scads(demo_count_matrix, 
                      nTopics = 5, 
                      bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 

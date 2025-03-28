@@ -82,10 +82,11 @@ run_ldsc <- function(polyfun_path,
     bim_file <- paste0(onekg_path, sprintf(".%s.bim", chr))
     bed_files <- file.path(bed_dir)
     baseline_file <- file.path(baseline_dir, sprintf("baseline_MAF_LD.%s.annot.gz", chr))
+    # baseline_file <- file.path(baseline_dir, sprintf("baselineLF2.2.UKB.%s.annot.parquet", chr))
     outfile <- file.path(out_dir, sprintf('annotations/%s/%s.%s.annot.gz', trait, trait, chr))
     Mfile <- file.path(out_dir, sprintf('annotations/%s/%s.%s.l2.M', trait, trait, chr))
     
-    create_annotations(
+    create_annotations2(
       bim_file = bim_file, 
       bed_files = bed_files,
       baseline_file = baseline_file, 
@@ -101,6 +102,7 @@ run_ldsc <- function(polyfun_path,
       file.path(polyfun_path, "compute_ldscores.py"),
       "--bfile", paste0(onekg_path, sprintf(".%s",chr)),
       "--annot", file.path(out_dir, sprintf('annotations/%s/%s.%s.annot.gz', trait, trait, chr)),
+      "--allow-missing",
       "--out", file.path(out_dir, sprintf('annotations/%s/%s.%s.l2.ldscore.parquet', trait, trait, chr))
     ) 
     print(cmd3)
@@ -117,6 +119,8 @@ run_ldsc <- function(polyfun_path,
     "--w-ld-chr", file.path(weights_dir, 'weights.'),
     "--not-M-5-50",
     "--out", file.path(out_dir, sprintf('results/%s_enrichment', trait)),
+    "--print-coefficients",
+    "--n-blocks=200",
     "--overlap-annot && sed -i 's/_0//g'", file.path(out_dir, sprintf('results/%s_enrichment.results', trait))
   ) 
   print(cmd4)

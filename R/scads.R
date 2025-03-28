@@ -41,7 +41,9 @@ scads <- function(count_matrix, nTopics = 10, n_s=1000, n_c=8,
   beddir_list <- get_annot_beds(topics_res = out1, output_dir = outdir)
 
   # step3: run LDSC
-  
+  cat("\n3. Run LDSC \n")
+  cat("\nStart time: ")
+  print(Sys.time())
   # Detect the number of physical cores
   num_cores <- parallel::detectCores(logical = FALSE)
   # Determine the number of tasks
@@ -62,7 +64,9 @@ scads <- function(count_matrix, nTopics = 10, n_s=1000, n_c=8,
              onekg_path = "/dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/1000G_EUR_Phase3_plink/1000G.EUR.QC",
              bed_dir = beddir_list[[i]],
              baseline_dir = "/dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/Gazel_LD_baseline",
+             # baseline_dir = "/dartfs/rc/lab/S/Szhao/liyang/enrichment/LDSCORE/baselineLF2.2.UKB",
              weights_dir = "/dartfs/rc/lab/S/Szhao/fine-mapping/cancer-polyfun/weights",
+             # weights_dir = "/dartfs/rc/lab/S/Szhao/liyang/enrichment/LDSCORE/baselineLF2.2.UKB",
              out_dir = beddir_list[[i]])
     cat("\nStop time for topic ", i)
     print(Sys.time())
