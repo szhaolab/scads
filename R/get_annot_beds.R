@@ -12,6 +12,7 @@
 #' @param output_dir A character string specifying the base output directory for the BED files.
 #' @param fuzzy Logical value indicating whether to create fuzzy annotations (default: FALSE).
 #' @param cutoff Numeric value specifying the cutoff for binary annotations when `fuzzy = FALSE` (default: 0.5).
+#'
 #' @return A list of output folder paths (`bed_dir_list`), one for each topic.
 #' @importFrom stringr str_extract
 #' @export
@@ -34,15 +35,18 @@ get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) 
   }
   
   # Extract seqnames, start, and end from peak ranges
-  seqnames <- stringr::str_extract(peak_ranges, "^[^:]+")
-  positions <- stringr::str_extract(peak_ranges, "(?<=:).+")
-  start <- as.numeric(stringr::str_extract(positions, "^[^-]+"))
-  end <- as.numeric(stringr::str_extract(positions, "(?<=-).+"))
+  seqnames <- stringr::str_extract(peak_ranges, "^[^:]+")         # e.g. "chr1"
+  positions <- stringr::str_extract(peak_ranges, "(?<=:).+")      # e.g. "1000-2000"
+  start <- as.numeric(stringr::str_extract(positions, "^[^-]+"))  # e.g. 1000
+  end <- as.numeric(stringr::str_extract(positions, "(?<=-).+"))  # e.g. 2000
   
   # Create a data frame with seqnames, start, end
-  bed_df <- data.frame(seqnames = gsub("chr", "", seqnames), 
-                       start = start, 
-                       end = end)
+  # Always ensure the "chr" prefix is present
+  bed_df <- data.frame(
+    seqnames = ifelse(grepl("^chr", seqnames), seqnames, paste0("chr", seqnames)),
+    start = start, 
+    end = end
+  )
   
   # Add topic names
   topics <- paste0('k', 1:ncol(topics_prob))
@@ -54,7 +58,6 @@ get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) 
   # If fuzzy annotations are requested
   if (fuzzy) {
     # Implement fuzzy annotation logic here
-    # For now, we'll leave it unimplemented as per your existing code
     stop("Fuzzy annotations are not yet implemented.")
   } else {
     
@@ -83,7 +86,7 @@ get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) 
                     file = file.path(output_folder, paste0(topic, "_annotations.bed")),
                     quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
       } else {
-        # If no peaks, still create the folder and note it
+        # If no peaks, still create the folder
         output_folder <- file.path(output_dir, paste0(topic, "_output"))
         if (!dir.exists(output_folder)) {
           dir.create(output_folder, recursive = TRUE)
