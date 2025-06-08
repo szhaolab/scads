@@ -17,16 +17,24 @@ knitr::opts_chunk$set(
 
 ## Setup 
 
-Confirm [PolyFUN](https://github.com/omerwe/polyfun) runs in your conda environment
+Confirm [PolyFUN](https://github.com/omerwe/polyfun) and [LDSC](https://github.com/bulik/ldsc) exist and runs in your conda environment. See their websites for installation and usage guidance. This tutorial is run in command-line R. 
 
 ```{bash eval=F}
 conda activate /dartfs/rc/lab/S/Szhao/liyang/conda/base_clone/
+R
 ```
 
 Load R packages
 
 ```{r setup}
+# library(remotes)
+# remotes::install_github("szhaolab/scads")
+# library(scads)
+
+setwd("/dartfs/rc/lab/S/Szhao/liyang/scads")
+devtools::load_all()
 library(scads)
+
 library(data.table)
 ```
 
@@ -47,6 +55,8 @@ Prepare a GWAS summary statistics file
 data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
 sumstats <- fread(data_file, header = T)
 head(sumstats)
+
+# if sumstats are hg19 then need to lift them over to hg38 to be compatible with S-LDSC
 ```
 
 ## Run scads
@@ -54,19 +64,18 @@ head(sumstats)
 1. Run fastTopics 
 
   - fastTopics: fit model and obtain topics 
-  - fastTopics-DE: obtain peaks associated with topics
-  - locfdr: adjust for multiple testing [**issue with NA** on some runs - TODO: FIX ISUE]
-    (Current resolution: just run again)
+  - obtain peaks associated with topics via KDE_cutoff per topic
+  - potential alternative if necessary (apply fastTopics-DE and locfdr)
   
 2. Create topic annotations for LDSC 
 
-3. Run LDSC 
+3. Run S-LDSC 
 
-  - Resolved issues - should be running though the enrichment results will not make sense 
+  - We will run hg38 version of S-LDSC using the recommended baseline_v2.2 model with the topic annotations
   
 4. Calculate Cell Score 
 
-  - Made up topic enrichment estimates (topic 2 is enriched)
+  - Use topic enrichment estimates 
   - Output list of 2
     1. out1 (fastTopics results)
     2. cs (cell scores)
@@ -74,7 +83,6 @@ head(sumstats)
 
 ```{r}
 set.seed(1)
-# using f0 = 1/(3E9/500)*100
 scads_res <- scads(demo_count_matrix, 
                      nTopics = 5, 
                      bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 

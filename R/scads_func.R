@@ -8,6 +8,138 @@
 #' @importFrom RhpcBLASctl blas_set_num_threads
 #' @importFrom RhpcBLASctl blas_get_num_procs
 #' 
+#' 
+#' 
+
+# Create continuous annotation for S-LDSC
+create_continuous_annotation <- function(bim_file, bed_file, annot_file) {
+  
+  # Read the .bim file
+  bim_dt <- fread(bim_file, header = FALSE)
+  setnames(bim_dt, c("CHR","SNP","GD","BP","A1","A2"))
+  
+  # Read the BED file (chr start end value).
+  bed_df <- fread(bed_file, header = FALSE)
+  setnames(bed_df, c("chr","start","end","value"))
+  bed_df[, chr := gsub("^chr", "", chr)]
+  
+  # Build GRanges for BED intervals (0-based -> 1-based).
+  bed_gr <- GRanges(
+    seqnames = bed_df$chr,
+    ranges   = IRanges(start = bed_df$start + 1, end = bed_df$end),
+    score    = bed_df$value
+  )
+  
+  # Build GRanges for the SNPs (using CHR/BP from .bim).
+  snp_gr <- GRanges(
+    seqnames = bim_dt$CHR,
+    ranges   = IRanges(start = bim_dt$BP, end = bim_dt$BP)
+  )
+  
+  # Find overlaps
+  overlaps <- findOverlaps(snp_gr, bed_gr, ignore.strand = TRUE)
+  
+  # Create the numeric annotation vector
+  continuous_annot <- numeric(length(snp_gr))
+  
+  # Assign the mean 'score' to overlapping SNPs
+  overlap_list <- split(subjectHits(overlaps), queryHits(overlaps))
+  for (snp_idx in names(overlap_list)) {
+    idx <- as.integer(snp_idx)
+    overlapping_values <- mcols(bed_gr)$score[ overlap_list[[snp_idx]] ]
+    continuous_annot[idx] <- mean(overlapping_values, na.rm = TRUE)
+  }
+  
+  # Write out a single column with header = "ANNOT"
+  # 1) Write to uncompressed file
+  uncompressed_file <- sub("\\.gz$", "", annot_file)
+  fwrite(
+    data.table(ANNOT = continuous_annot),
+    file      = uncompressed_file,
+    sep       = "\t",
+    col.names = TRUE,   # <<-- provide a header line
+    row.names = FALSE,
+    quote     = FALSE
+  )
+  
+  # 2) Gzip the file
+  system2("gzip", c("-f", shQuote(uncompressed_file)))
+  
+  cat("Continuous annotation written + gzipped to", annot_file, "\n")
+}
+
+create_continuous_annotation2 <- function(bim_file, bed_file, annot_file) {
+  
+  # Read the .bim file
+  bim_dt <- fread(bim_file, header = FALSE)
+  setnames(bim_dt, c("CHR","SNP","GD","BP","A1","A2"))
+  
+  # Read the BED file (chr start end value).
+  bed_df <- fread(bed_file, header = FALSE)
+  setnames(bed_df, c("chr","start","end","value"))
+  bed_df[, chr := gsub("^chr", "", chr)]
+  
+  # Build GRanges for BED intervals (0-based -> 1-based).
+  bed_gr <- GRanges(
+    seqnames = bed_df$chr,
+    ranges   = IRanges(start = bed_df$start + 1, end = bed_df$end),
+    score    = bed_df$value
+  )
+  
+  # Build GRanges for the SNPs (using CHR/BP from .bim).
+  snp_gr <- GRanges(
+    seqnames = bim_dt$CHR,
+    ranges   = IRanges(start = bim_dt$BP, end = bim_dt$BP)
+  )
+  
+  # Find overlaps
+  overlaps <- findOverlaps(snp_gr, bed_gr, ignore.strand = TRUE)
+  
+  # Create the numeric annotation vector
+  continuous_annot <- numeric(length(snp_gr))
+  
+  # Assign the mean 'score' to overlapping SNPs
+  overlap_list <- split(subjectHits(overlaps), queryHits(overlaps))
+  for (snp_idx in names(overlap_list)) {
+    idx <- as.integer(snp_idx)
+    overlapping_values <- mcols(bed_gr)$score[ overlap_list[[snp_idx]] ]
+    continuous_annot[idx] <- mean(overlapping_values, na.rm = TRUE)
+  }
+  
+  # ----- NEW: Min–max rescale into [0.0001, 1.0001] ----- #
+  new_min <- 0.0001
+  new_max <- 1.0001
+  
+  old_min <- min(continuous_annot, na.rm = TRUE)
+  old_max <- max(continuous_annot, na.rm = TRUE)
+  
+  if (old_max == old_min) {
+    warning("All annotation values are identical; skipping rescaling.")
+    scaled <- rep((new_min + new_max) / 2, length(continuous_annot))
+  } else {
+    # first bring into [0, 1]
+    scaled01 <- (continuous_annot - old_min) / (old_max - old_min)
+    # then stretch into [new_min, new_max]
+    scaled  <- scaled01 * (new_max - new_min) + new_min
+  }
+  
+  # Write out a single column with header = "ANNOT"
+  uncompressed_file <- sub("\\.gz$", "", annot_file)
+  fwrite(
+    data.table(ANNOT = scaled),
+    file      = uncompressed_file,
+    sep       = "\t",
+    col.names = TRUE,
+    row.names = FALSE,
+    quote     = FALSE
+  )
+  
+  # Gzip the file
+  system2("gzip", c("-f", shQuote(uncompressed_file)))
+  
+  cat("Continuous annotation (min–max scaled) written + gzipped to", annot_file, "\n")
+}
+
 
 # Helper function to determine cutoff using KDE (kernel density estimation) - OLD 
 find_kde_cutoff_old <- function(data, bandwidth = "nrd0") {
@@ -380,3 +512,319 @@ read_preprocess_bed <- function(f) {
   return(gr)
 }
 
+
+
+plot_signac_umap <- function(count_matrix, L, cell_scores, top_peaks = 2000, seed = 24) {
+  set.seed(seed)  # For reproducibility
+  
+  # Step 1: Create a Seurat object using the count matrix
+  cat("Creating Seurat object...\n")
+  seurat_obj <- CreateSeuratObject(
+    counts = count_matrix,
+    assay = "ATAC"
+  )
+  
+  # Step 2: Identify top variable features (peaks)
+  cat("Finding top variable peaks...\n")
+  seurat_obj <- FindVariableFeatures(seurat_obj, nfeatures = top_peaks)
+  
+  # Step 3: Perform Latent Semantic Indexing (LSI)
+  cat("Performing LSI...\n")
+  seurat_obj <- RunTFIDF(seurat_obj)  # TF-IDF normalization
+  seurat_obj <- RunSVD(seurat_obj, reduction.name = "lsi", reduction.key = "LSI_")
+  
+  # Step 4: UMAP on LSI dimensions
+  cat("Running UMAP...\n")
+  seurat_obj <- RunUMAP(
+    seurat_obj,
+    reduction = "lsi",
+    dims = 1:30,  # Use top 30 LSI dimensions by default
+    reduction.name = "umap",
+    reduction.key = "UMAP_"
+  )
+  
+  # Step 5: Add cell scores for visualization
+  cat("Adding cell scores...\n")
+  seurat_obj$Cell_Score <- cell_scores
+  
+  # Step 6: Extract UMAP embeddings for plotting
+  umap_embeddings <- Embeddings(seurat_obj, "umap")
+  umap_df <- data.frame(
+    UMAP1 = umap_embeddings[, 1],
+    UMAP2 = umap_embeddings[, 2],
+    enrich_topic_prop = L,
+    Cell_Score = cell_scores  # Add cell scores for coloring
+  )
+  
+  # Step 7: Plot UMAP
+  purple_ramp <- c("white", "#DCD0FF", "#A884FF", "#6A45B1", "#421766")
+  
+  cat("Plotting UMAP...\n")
+  p1 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = enrich_topic_prop)) +
+    geom_point(alpha = 0.7, size = 0.5) +
+    # scale_color_gradient(low = "blue", high = "red") +  
+    scale_color_gradientn(
+      colours = purple_ramp,
+      values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+    ) + 
+    labs(title = "UMAP of scATAC-seq Data (Colored by prop of enriched topic)",
+         x = "UMAP1", y = "UMAP2", color = "proportion of enriched topic in cell") +
+    theme_minimal()
+  
+  cat("Plotting UMAP...\n")
+  p2 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = Cell_Score)) +
+    geom_point(alpha = 0.7, size = 0.5) +
+    scale_color_gradientn(
+      colours = purple_ramp,
+      values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+    ) + 
+    # scale_color_gradient(low = "blue", high = "red") + 
+    labs(title = "UMAP of scATAC-seq Data (Colored by Cell Score)",
+         x = "UMAP1", y = "UMAP2", color = "Cell Score") +
+    theme_minimal()
+  
+  return(p = list(p1,p2))  # Explicitly print the plot for non-interactive environments
+}
+
+plot_signac_umap2 <- function(count_matrix, L, cell_scores, z_scores, seed_idx, scavenge_trs, top_peaks = 2000, seed = 24) {
+  set.seed(seed)  # For reproducibility
+  
+  # Step 1: Create a Seurat object using the count matrix
+  cat("Creating Seurat object...\n")
+  seurat_obj <- CreateSeuratObject(
+    counts = count_matrix,
+    assay = "ATAC"
+  )
+  
+  # Step 2: Identify top variable features (peaks)
+  cat("Finding top variable peaks...\n")
+  seurat_obj <- FindVariableFeatures(seurat_obj, nfeatures = top_peaks)
+  
+  # Step 3: Perform Latent Semantic Indexing (LSI)
+  cat("Performing LSI...\n")
+  seurat_obj <- RunTFIDF(seurat_obj)  # TF-IDF normalization
+  seurat_obj <- RunSVD(seurat_obj, reduction.name = "lsi", reduction.key = "LSI_")
+  
+  # Step 4: UMAP on LSI dimensions
+  cat("Running UMAP...\n")
+  seurat_obj <- RunUMAP(
+    seurat_obj,
+    reduction = "lsi",
+    dims = 1:30,  # Use top 30 LSI dimensions by default
+    reduction.name = "umap",
+    reduction.key = "UMAP_"
+  )
+  
+  # Step 5: Add cell scores for visualization
+  cat("Adding cell scores...\n")
+  seurat_obj$Cell_Score <- cell_scores
+  
+  # Step 6: Extract UMAP embeddings for plotting
+  umap_embeddings <- Embeddings(seurat_obj, "umap")
+  umap_df <- data.frame(
+    UMAP1 = umap_embeddings[, 1],
+    UMAP2 = umap_embeddings[, 2],
+    enrich_topic_prop = L,
+    z_score = z_scores,
+    seed = seed_idx,
+    scavenge_trs = scavenge_trs,
+    Cell_Score = cell_scores  # Add cell scores for coloring
+  )
+  
+  # Step 7: Plot UMAP
+  purple_ramp <- c("white", "#DCD0FF", "#A884FF", "#6A45B1", "#421766")
+  
+  cat("Plotting UMAP...\n")
+  p1 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = enrich_topic_prop)) +
+    geom_point(alpha = 0.7, size = 0.5) +
+    # scale_color_gradient(low = "blue", high = "red") +  # Customize color gradient
+    scale_color_gradientn(
+      colours = purple_ramp,
+      values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+    ) +
+    labs(title = "UMAP of scATAC-seq Data (Colored by prop of enriched topic)",
+         x = "UMAP1", y = "UMAP2", color = "proportion of enriched topic in cell") +
+    theme_minimal()
+  
+  # cat("Plotting UMAP...\n")
+  # p2 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = z_score)) +
+  #   geom_point(alpha = 0.7, size = 0.5) +
+  #   # scale_color_gradient(low = "blue", high = "red") +  # Customize color gradient
+  #   scale_color_gradientn(
+  #     colours = purple_ramp,
+  #     values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+  #   ) +
+  #   labs(title = "UMAP of scATAC-seq Data (Colored by gchromVAR z_scores)",
+  #        x = "UMAP1", y = "UMAP2", color = "z_scores (gchromVAR)") +
+  #   theme_minimal()
+  
+  # cat("Plotting UMAP...\n")
+  # p2b <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = seed)) +
+  #   geom_point(alpha = 0.7, size = 0.5) +
+  #   # scale_color_gradient(low = "blue", high = "red") +  # Customize color gradient
+  #   scale_color_gradientn(
+  #     colours = purple_ramp,
+  #     values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+  #   ) +
+  #   labs(title = "UMAP of scATAC-seq Data (Colored by seed cell)",
+  #        x = "UMAP1", y = "UMAP2", color = "Seed") +
+  #   theme_minimal()
+  
+  cat("Plotting UMAP...\n")
+  p3 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = scavenge_trs)) +
+    geom_point(alpha = 0.7, size = 0.5) +
+    # scale_color_gradient(low = "blue", high = "red") +  # Customize color gradient
+    scale_color_gradientn(
+      colours = purple_ramp,
+      values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+    ) +
+    labs(title = "UMAP of scATAC-seq Data (Colored by SCAVENGE score)",
+         x = "UMAP1", y = "UMAP2", color = "SCAVENGE TRS") +
+    theme_minimal()
+  
+  cat("Plotting UMAP...\n")
+  p4 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = Cell_Score)) +
+    geom_point(alpha = 0.7, size = 0.5) +
+    # scale_color_gradient(low = "blue", high = "red") +  # Customize color gradient
+    scale_color_gradientn(
+      colours = purple_ramp,
+      values  = scales::rescale(c(0, 0.25, 0.5, 0.75, 1)) # optional if you want equal spacing
+    ) +
+    labs(title = "UMAP of scATAC-seq Data (Colored by Cell Score)",
+         x = "UMAP1", y = "UMAP2", color = "Cell Score by scads") +
+    theme_minimal()
+  
+  return(p = list(p1,p3,p4))  # Explicitly print the plot for non-interactive environments
+}
+
+get_signac_umap <- function(count_matrix, L, cell_scores, top_peaks = 2000, seed = 24) {
+  set.seed(seed)  # For reproducibility
+  
+  # Step 1: Create a Seurat object using the count matrix
+  cat("Creating Seurat object...\n")
+  seurat_obj <- CreateSeuratObject(
+    counts = count_matrix,
+    assay = "ATAC"
+  )
+  
+  # Step 2: Identify top variable features (peaks)
+  cat("Finding top variable peaks...\n")
+  seurat_obj <- FindVariableFeatures(seurat_obj, nfeatures = top_peaks)
+  
+  # Step 3: Perform Latent Semantic Indexing (LSI)
+  cat("Performing LSI...\n")
+  seurat_obj <- RunTFIDF(seurat_obj)  # TF-IDF normalization
+  seurat_obj <- RunSVD(seurat_obj, reduction.name = "lsi", reduction.key = "LSI_")
+  
+  # Step 4: UMAP on LSI dimensions
+  cat("Running UMAP...\n")
+  seurat_obj <- RunUMAP(
+    seurat_obj,
+    reduction = "lsi",
+    dims = 1:30,  # Use top 30 LSI dimensions by default
+    reduction.name = "umap",
+    reduction.key = "UMAP_"
+  )
+  
+  # Step 5: Add cell scores for visualization
+  cat("Adding cell scores...\n")
+  seurat_obj$Cell_Score <- cell_scores
+  
+  # Step 6: Extract UMAP embeddings for plotting
+  umap_embeddings <- Embeddings(seurat_obj, "umap")
+  umap_df <- data.frame(
+    UMAP1 = umap_embeddings[, 1],
+    UMAP2 = umap_embeddings[, 2],
+    enrich_topic_prop = L,
+    Cell_Score = cell_scores  # Add cell scores for coloring
+  )
+  
+  return(umap_df)  
+}
+
+
+plot_cell_ranking <- function(score, topic_prop, title = "Ranked plot") {
+  stopifnot(length(score) == length(topic_prop))
+  
+  df <- data.frame(score = score, topic_prop = topic_prop) %>%
+    arrange(desc(score)) %>%  
+    mutate(rank = row_number(), rank_percent = rank / n() * 100)
+  
+  ggplot(df, aes(x = 0, xend = 1, y = rank_percent, yend = rank_percent, color = topic_prop)) +
+    geom_segment(linewidth = 0.3) +
+    scale_y_reverse(breaks = c(0, 25, 50, 75, 100), labels = c("0%", "25%", "50%", "75%", "100%")) +
+    scale_color_gradientn(
+      colors = c("white", "#D7C6F4", "#5A189A"),
+      name = "Causal Topic Prop"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "right"
+    ) +
+    labs(
+      title = title,
+      x = NULL,
+      y = "Cells ranked by score (high to low)"
+    )
+}
+
+############################################################
+# Function to extract phenores outputs
+get_phenores_outputs <- function(phenores_file) {
+  phenores <- readRDS(phenores_file)
+  
+  csnps_null <- list()
+  csnps_annot <- list()
+  h2_null <- list()
+  h2_annot <- list()
+  snps_null <- list()
+  snps_annot <- list()
+  beta_null <- list()
+  beta_annot <- list()
+  
+  for (i in seq_along(phenores$batch)) {
+    id_cSNP_list <- phenores$batch[[i]]$id.cSNP.list
+    csnps_null[[i]] <- if (length(id_cSNP_list) >= 1) id_cSNP_list[[1]] else list()
+    csnps_annot[[i]] <- if (length(id_cSNP_list) >= 2) id_cSNP_list[[2]] else list()
+    
+    snps_null[[i]] <- phenores$batch[[i]]$id.SNP.count[1]
+    snps_annot[[i]] <- ifelse(length(phenores$batch[[i]]$id.SNP.count) >= 2,
+                              phenores$batch[[i]]$id.SNP.count[2], 0)
+    h2_null[[i]] <- phenores$batch[[i]]$var.snp[1]
+    h2_annot[[i]] <- ifelse(length(phenores$batch[[i]]$var.snp) >= 2,
+                            phenores$batch[[i]]$var.snp[2], 0)
+    
+    beta_all <- phenores$batch[[i]]$beta.all
+    if (length(id_cSNP_list) >= 1) {
+      num_null <- length(id_cSNP_list[[1]])
+      beta_null[[i]] <- beta_all[1:num_null]
+      beta_annot[[i]] <- beta_all[-(1:num_null)]
+    } else {
+      beta_null[[i]] <- numeric(0)
+      beta_annot[[i]] <- beta_all
+    }
+  }
+  
+  csnps_null <- unlist(csnps_null, recursive = FALSE)
+  csnps_annot <- unlist(csnps_annot, recursive = TRUE)
+  snps_null <- unlist(snps_null, recursive = FALSE)
+  snps_annot <- unlist(snps_annot, recursive = FALSE)
+  h2_null <- unlist(h2_null, recursive = FALSE)
+  h2_annot <- unlist(h2_annot, recursive = FALSE)
+  beta_null <- unlist(beta_null, recursive = FALSE)
+  beta_annot <- unlist(beta_annot, recursive = FALSE)
+  
+  return(list(csnps_null = csnps_null,
+              csnps_annot = csnps_annot,
+              snps_null = snps_null,
+              snps_annot = snps_annot,
+              h2_null = h2_null,
+              h2_annot = h2_annot,
+              beta_null = beta_null,
+              beta_annot = beta_annot))
+}
+
+############################################################

@@ -18,34 +18,36 @@
 #' @export
 #' 
 get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) {
+  library(stringr)
   
-  # Obtain data from topics_res object from run_fastTopics step
   topics_annot <- topics_res$Fmat
-  topics_prob <- topics_res$Pmat
+  topics_prob  <- topics_res$Pmat
+  peak_ranges  <- rownames(topics_annot)
+  if (is.null(peak_ranges)) stop("Row names must contain peak ranges")
   
-  # Ensure the base output directory exists
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir, recursive = TRUE)
+  # Detect format and split accordingly:
+  if (all(grepl("^[^_]+_[0-9]+_[0-9]+$", peak_ranges))) {
+    # underscore format: chr1_10234_10734
+    parts <- strsplit(peak_ranges, "_", fixed = TRUE)
+    seqnames <- vapply(parts, `[`, 1, FUN.VALUE = "")
+    start    <- as.integer(vapply(parts, `[`, 2, FUN.VALUE = ""))
+    end      <- as.integer(vapply(parts, `[`, 3, FUN.VALUE = ""))
+  } else if (all(grepl("^[^:]+:[0-9]+-[0-9]+$", peak_ranges))) {
+    # colon‐dash format: chr1:10234-10734
+    seqnames <- str_extract(peak_ranges, "^[^:]+")
+    positions <- str_extract(peak_ranges, "(?<=:).+")
+    start    <- as.integer(str_extract(positions, "^[0-9]+"))
+    end      <- as.integer(str_extract(positions, "[0-9]+$"))
+  } else {
+    stop("Row names must be either 'chr:start-end' or 'chr_start_end'")
   }
   
-  # Ensure row names contain peak ranges in "chr:start-end" format
-  peak_ranges <- rownames(topics_annot)
-  if (is.null(peak_ranges)) {
-    stop("Row names of topics_annot must contain peak ranges in 'chr:start-end' format.")
-  }
-  
-  # Extract seqnames, start, and end from peak ranges
-  seqnames <- stringr::str_extract(peak_ranges, "^[^:]+")         # e.g. "chr1"
-  positions <- stringr::str_extract(peak_ranges, "(?<=:).+")      # e.g. "1000-2000"
-  start <- as.numeric(stringr::str_extract(positions, "^[^-]+"))  # e.g. 1000
-  end <- as.numeric(stringr::str_extract(positions, "(?<=-).+"))  # e.g. 2000
-  
-  # Create a data frame with seqnames, start, end
-  # Always ensure the "chr" prefix is present
+  # Build bed_df
   bed_df <- data.frame(
     seqnames = ifelse(grepl("^chr", seqnames), seqnames, paste0("chr", seqnames)),
-    start = start, 
-    end = end
+    start    = start,
+    end      = end,
+    stringsAsFactors = FALSE
   )
   
   # Add topic names

@@ -26,9 +26,10 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1, ...)
   # Ensure that count_matrix has cells as rows and peaks as columns
   # Transpose if necessary 
   # Assuming num_peaks > num_cells
-  if (nrow(count_matrix) > ncol(count_matrix)) {
-    count_matrix <- Matrix::t(count_matrix)
-  }
+  # if (nrow(count_matrix) > ncol(count_matrix)) {
+  #   count_matrix <- Matrix::t(count_matrix)
+  # }
+  count_matrix <- Matrix::t(count_matrix)
   print(dim(count_matrix))
   
   # Run fastTopics model
@@ -54,7 +55,8 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1, ...)
     F_topic <- Fmat[, topic]
     
     # Find cutoff using KDE
-    cutoff_topic <- 10^find_kde_midpoint(log10(F_topic))
+    # cutoff_topic <- 10^find_kde_midpoint(log10(F_topic))
+    cutoff_topic <- 5.141173e-07 # 1e-6
     cutoffs[topic] <- cutoff_topic
     cat(sprintf("Cutoff for Topic %d: %.5e\n", topic, cutoff_topic))
   }
