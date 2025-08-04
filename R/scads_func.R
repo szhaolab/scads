@@ -69,76 +69,80 @@ create_continuous_annotation <- function(bim_file, bed_file, annot_file) {
 }
 
 create_continuous_annotation2 <- function(bim_file, bed_file, annot_file) {
+  library(data.table)
+  library(GenomicRanges)
   
-  # Read the .bim file
+  message("[1] Reading BIM file: ", bim_file)
   bim_dt <- fread(bim_file, header = FALSE)
   setnames(bim_dt, c("CHR","SNP","GD","BP","A1","A2"))
+  message("    → BIM rows: ", nrow(bim_dt))
   
-  # Read the BED file (chr start end value).
+  message("[2] Reading BED file: ", bed_file)
   bed_df <- fread(bed_file, header = FALSE)
   setnames(bed_df, c("chr","start","end","value"))
   bed_df[, chr := gsub("^chr", "", chr)]
+  message("    → BED rows: ", nrow(bed_df),
+          "; value range: [", min(bed_df$value), ", ", max(bed_df$value), "]")
   
-  # Build GRanges for BED intervals (0-based -> 1-based).
+  message("[3] Building GRanges objects")
   bed_gr <- GRanges(
     seqnames = bed_df$chr,
     ranges   = IRanges(start = bed_df$start + 1, end = bed_df$end),
     score    = bed_df$value
   )
-  
-  # Build GRanges for the SNPs (using CHR/BP from .bim).
   snp_gr <- GRanges(
     seqnames = bim_dt$CHR,
     ranges   = IRanges(start = bim_dt$BP, end = bim_dt$BP)
   )
+  message("    → SNP GRanges length: ", length(snp_gr),
+          "; BED GRanges length: ", length(bed_gr))
   
-  # Find overlaps
+  message("[4] Finding overlaps")
   overlaps <- findOverlaps(snp_gr, bed_gr, ignore.strand = TRUE)
+  message("    → # overlaps: ", length(overlaps))
   
-  # Create the numeric annotation vector
+  message("[5] Building continuous_annot vector")
   continuous_annot <- numeric(length(snp_gr))
-  
-  # Assign the mean 'score' to overlapping SNPs
   overlap_list <- split(subjectHits(overlaps), queryHits(overlaps))
+  message("    → # SNPs with any overlap: ", length(overlap_list))
+  
   for (snp_idx in names(overlap_list)) {
     idx <- as.integer(snp_idx)
-    overlapping_values <- mcols(bed_gr)$score[ overlap_list[[snp_idx]] ]
-    continuous_annot[idx] <- mean(overlapping_values, na.rm = TRUE)
+    vals <- mcols(bed_gr)$score[overlap_list[[snp_idx]]]
+    continuous_annot[idx] <- mean(vals, na.rm = TRUE)
   }
+  message("    → continuous_annot range before scaling: [",
+          min(continuous_annot, na.rm=TRUE), ", ",
+          max(continuous_annot, na.rm=TRUE), "]")
   
-  # ----- NEW: Min–max rescale into [0.0001, 1.0001] ----- #
-  new_min <- 0.0001
-  new_max <- 1.0001
-  
+  message("[6] Rescaling to [0.0001, 1.0001]")
+  new_min <- 0.0001; new_max <- 1.0001
   old_min <- min(continuous_annot, na.rm = TRUE)
   old_max <- max(continuous_annot, na.rm = TRUE)
-  
   if (old_max == old_min) {
-    warning("All annotation values are identical; skipping rescaling.")
+    warning("All annotation values identical; skipping rescaling.")
     scaled <- rep((new_min + new_max) / 2, length(continuous_annot))
   } else {
-    # first bring into [0, 1]
     scaled01 <- (continuous_annot - old_min) / (old_max - old_min)
-    # then stretch into [new_min, new_max]
-    scaled  <- scaled01 * (new_max - new_min) + new_min
+    scaled <- scaled01 * (new_max - new_min) + new_min
   }
+  message("    → scaled range: [", min(scaled), ", ", max(scaled), "]")
   
-  # Write out a single column with header = "ANNOT"
+  message("[7] Writing to ", annot_file)
   uncompressed_file <- sub("\\.gz$", "", annot_file)
   fwrite(
     data.table(ANNOT = scaled),
     file      = uncompressed_file,
     sep       = "\t",
     col.names = TRUE,
-    row.names = FALSE,
     quote     = FALSE
   )
-  
-  # Gzip the file
+  message("    → gzipping ", uncompressed_file)
   system2("gzip", c("-f", shQuote(uncompressed_file)))
   
-  cat("Continuous annotation (min–max scaled) written + gzipped to", annot_file, "\n")
+  message("[8] Done: continuous annotation written to ", annot_file)
 }
+
 
 
 # Helper function to determine cutoff using KDE (kernel density estimation) - OLD 
@@ -265,11 +269,101 @@ find_kde_midpoint <- function(data, bandwidth = "nrd0", plot_results = FALSE) {
 }
 
 
+#' Estimate “background” accessibility rate from a reference cell‐type peak list
+#'
+#' @param count_matrix A peaks-by-cells matrix (dgCMatrix or dense).
+#' @param cell_type_cells list of cells of the specific cell type
+#' @param cell_type_peaks Path to a BED file of that cell type’s peaks (three cols: chr, start, end).
+#' @return A single numeric: the estimated baseline accessibility probability.
+#' @examples
+#' get_average_bg(cm, "CD8", "cd8_peaks.bed")
+get_average_bg <- function(count_matrix,
+                           cell_type_cells,
+                           cell_type_peaks) {
+
+  cat("\nEstimating baseline using cell type\n")
+  ## 1a) Convert CT peaks into a GRanges object
+  CTpeaks <- fread(cell_type_peaks)
+  gr_ct <- GRanges(
+    seqnames = paste0("chr", CTpeaks$V1),
+    ranges   = IRanges(start = CTpeaks$V2, end = CTpeaks$V3)
+  )
+
+  ## 1b) Convert all peaks in count marix into a GRanges object
+  cells <- readRDS(cell_type_cells)
+  print(head(cells))
+  cm <- count_matrix[cells,]
+  print(dim(cm))
+  print(class(cm))
+  # if (!is.matrix(cm)) {
+  #   cm <- as.matrix(cm)
+  # }
+  # print(class(cm))
+  peak_ids <- colnames(cm)
+  print(head(peak_ids))
+  ## Normalize separators: replace “:”, “-” or any mix with “_”
+  peak_ids_norm <- gsub("[:\\-]", "_", peak_ids)
+  # print(head(peak_ids_norm))
+  ## Split into chromosome / start / end
+  parts <- strsplit(peak_ids_norm, "_", fixed = TRUE)
+  print(head(parts))
+  # bind into a 3-column matrix
+  mat <- do.call(rbind, parts)
+  print(dim(mat))
+  ## Turn into numeric where appropriate
+  chr   <- mat[,1]
+  start <- as.integer(mat[,2])
+  end   <- as.integer(mat[,3])
+  
+  print("Start")
+  print(head(start))
+  print(sum(is.na(start)))
+  print("End")
+  print(head(end))
+  print(sum(is.na(end)))
+
+  ## Build your GRanges
+  gr_peaks <- GenomicRanges::GRanges(seqnames = chr,
+                      ranges   = IRanges::IRanges(start = start, end = end))
+
+  ## 2) Find which peaks overlap any CT peaks
+  is_overlap <- overlapsAny(gr_peaks, gr_ct, ignore.strand=TRUE)
+  print(table(is_overlap))
+
+  ## 3) Subset the counts‐matrix accordingly and compare total reads.
+
+  # 3b) Sum *across cells* for each peak
+  peak_totals <- colSums(cm)
+
+  # 3c) Now split “overlapping” vs. “non‐overlapping” peaks
+  overlapped_peaks     <- which(is_overlap)
+  non_overlapped_peaks <- which(!is_overlap)
+
+  sum_overlap_reads     <- sum( peak_totals[overlapped_peaks] )
+  sum_non_overlap_reads <- sum( peak_totals[non_overlapped_peaks] )
+
+  dt <- data.table::data.table(
+    category    = c("overlap", "non_overlap"),
+    n_peaks     = c(length(overlapped_peaks), length(non_overlapped_peaks)),
+    total_reads = c(sum_overlap_reads, sum_non_overlap_reads)
+  )
+  print(dt)
+
+  n_cells <- nrow(count_matrix)
+  reads_per_cell <- (sum_overlap_reads + sum_non_overlap_reads)/n_cells # reads per cell
+  baseline <- sum_non_overlap_reads/length(non_overlapped_peaks)/n_cells/reads_per_cell # 4.762821e-07
+  cat("\nBaseline: ", baseline)
+  
+  return(baseline)
+}
+
+
+
 # Modified de_analysis function from fastTopics
 de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
                           fit.method = c("scd","em","mu","ccd","glm"),
                           shrink.method = c("ash","none"), lfc.stat = "le",
-                          control = list(), verbose = TRUE, ...) {
+                          control = list(), verbose = TRUE, f0 = NULL, ...) {
   
   # CHECK AND PROCESS INPUTS
   # ------------------------
@@ -348,26 +442,16 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   # Equivalently, this is the maximum-likelihood estimate of the
   # binomial probability in the "null" Binomial model x ~ Binom(s,p0).
   
-  # background = f0
-  # cat("Use f0 provided:", background, "\n")
-  # f0 <- c(rep(background, times=ncol(X)))
-  # names(f0) <- rownames(fit$F)
+  background = f0
+  cat("Use f0 provided:", background, "\n")
+  f0 <- c(rep(background, times=ncol(X)))
+  names(f0) <- rownames(fit$F)
   
-  # if (is.null(f0)) {
-  #   # If f0 is not provided, use the default single cutoff
-  #   background = 1/(3E9/500) # *100
-  #   f0 <- c(rep(background, times=ncol(X)))
-  #   names(f0) <- rownames(fit$F)
-  #   cat("No f0 cutoffs provided. Using default background:", background, "\n")
-  # } else {
-  #   # Ensure f0 is a vector with length equal to number of topics
-  #   if (!is.numeric(f0) | length(f0) != k) {
-  #     stop("Input \"f0\" should be a numeric vector with length equal to the number of topics.")
-  #   }
-  #   names(f0) <- colnames(fit$F)
-  #   cat("Using provided f0 values for each topic.\n")
-  #   print(f0)
-  # }
+  # # calc f0 
+  # global_cutoff <- 10^find_kde_midpoint(log10(c(F)))
+  # cat("Use f0 calculated from refitted F:", global_cutoff, "\n")
+  # f0 <- c(rep(global_cutoff, times=ncol(X)))
+  # names(f0) <- rownames(fit$F)
   
   # SET UP DATA FOR FITTING POISSON MODELS
   # --------------------------------------
@@ -400,11 +484,6 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   F <- pmax(F,control$minval)
   dimnames(F) <- dimnames(fit$F)
   
-  # calc f0 
-  global_cutoff <- 10^find_kde_midpoint(log10(c(F)))
-  cat("Use f0 calculated from refitted F:", global_cutoff, "\n")
-  f0 <- c(rep(global_cutoff, times=ncol(X)))
-  names(f0) <- rownames(fit$F)
   
   # COMPUTE LOG-FOLD CHANGE STATISTICS
   # ----------------------------------
@@ -828,3 +907,125 @@ get_phenores_outputs <- function(phenores_file) {
 }
 
 ############################################################
+
+
+plot_snp_cs_correlation <- function(df,
+                                    cor_col    = "cor",
+                                    pval_col   = "pval",
+                                    threshold  = 0.5,
+                                    facet_ncol = 3,
+                                    point_col  = "#E74C3C",
+                                    line_col   = "#2C3E50") {
+  
+  
+  # turn your column‐names into symbols for tidy eval
+  cor_sym  <- rlang::sym(cor_col)
+  pval_sym <- rlang::sym(pval_col)
+  
+  # 1) pick the SNP×cell‐type combos above threshold
+  good_pairs <- df %>%
+    dplyr::distinct(SNP, BioClassification, !!cor_sym, !!pval_sym) %>%
+    dplyr::filter(abs(!!cor_sym) > threshold)
+  
+  if (nrow(good_pairs)==0) {
+    stop("No SNP×cell-type combos with ", cor_col, " >", threshold)
+  }
+  
+  # 2) subset to those
+  plot_data <- df %>%
+    dplyr::semi_join(good_pairs, by = c("SNP","BioClassification"))
+  
+  # 3) build facet labels
+  labels <- good_pairs %>%
+    dplyr::mutate(
+      label = sprintf("%s — %s\nr=%.2f, p=%.1g",
+                      SNP, BioClassification,
+                      !!cor_sym, !!pval_sym)
+    ) %>%
+    dplyr::select(SNP, BioClassification, label)
+  
+  plot_data <- plot_data %>%
+    dplyr::left_join(labels, by = c("SNP","BioClassification"))
+  
+  # 4) draw
+  ggplot(plot_data, aes(x = cs_bin, y = total_reads)) +
+    geom_line(color = line_col, size = 0.8, aes(group = 1)) +
+    geom_point(color = point_col, size = 2) +
+    facet_wrap(~ label, ncol = facet_ncol, scales = "free_y") +
+    scale_x_continuous(breaks = 1:5) +
+    scale_y_continuous(labels = comma) +
+    labs(
+      title   = sprintf("ATAC‐seq reads vs. cs_bin (cor > %.2f)", threshold),
+      x       = "cs_bin (1 = lowest, 5 = highest)",
+      y       = "Total ATAC reads",
+      caption = "Facets = SNP × cell type"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title       = element_text(face = "bold", hjust = 0.5),
+      strip.text       = element_text(size = 9, face = "bold"),
+      panel.grid.major = element_line(color = "gray80"),
+      panel.grid.minor = element_blank()
+    )
+}
+
+
+plot_snp_cs_correlation2 <- function(df,
+                                    cor_col    = "cor",
+                                    pval_col   = "pval",
+                                    threshold  = 0.5,
+                                    facet_ncol = 3,
+                                    point_col  = "#E74C3C",
+                                    line_col   = "#2C3E50") {
+  
+  
+  # turn your column‐names into symbols for tidy eval
+  cor_sym  <- rlang::sym(cor_col)
+  pval_sym <- rlang::sym(pval_col)
+  
+  # 1) pick the SNP×cell‐type combos above threshold
+  good_pairs <- df %>%
+    dplyr::distinct(SNP, !!cor_sym, !!pval_sym) %>%
+    dplyr::filter(abs(!!cor_sym) > threshold)
+  
+  if (nrow(good_pairs)==0) {
+    stop("No SNP×cell-type combos with ", cor_col, " >", threshold)
+  }
+  
+  # 2) subset to those
+  plot_data <- df %>%
+    dplyr::semi_join(good_pairs, by = c("SNP"))
+  
+  # 3) build facet labels
+  labels <- good_pairs %>%
+    dplyr::mutate(
+      label = sprintf("%s — \nr=%.2f, p=%.1g",
+                      SNP,
+                      !!cor_sym, !!pval_sym)
+    ) %>%
+    dplyr::select(SNP, label)
+  
+  plot_data <- plot_data %>%
+    dplyr::left_join(labels, by = c("SNP"))
+  
+  # 4) draw
+  ggplot(plot_data, aes(x = cs_bin_all, y = total_reads)) +
+    geom_line(color = line_col, size = 0.8, aes(group = 1)) +
+    geom_point(color = point_col, size = 2) +
+    facet_wrap(~ label, ncol = facet_ncol, scales = "free_y") +
+    scale_x_continuous(breaks = 1:5) +
+    scale_y_continuous(labels = comma) +
+    labs(
+      title   = sprintf("ATAC‐seq reads vs. cs_bin (cor > %.2f)", threshold),
+      x       = "cs_bin (1 = lowest, 5 = highest)",
+      y       = "Total ATAC reads",
+      caption = "Facets = SNP × cell type"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title       = element_text(face = "bold", hjust = 0.5),
+      strip.text       = element_text(size = 9, face = "bold"),
+      panel.grid.major = element_line(color = "gray80"),
+      panel.grid.minor = element_blank()
+    )
+}

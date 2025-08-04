@@ -35,6 +35,9 @@ scads <- function(count_matrix,
                   nTopics = 10, 
                   n_s = 1000, 
                   n_c = 8, 
+                  baseline_method = "constant", # c("constant", "average", "estimate"),
+                  bl_celltype = NULL, 
+                  bl_celltype_peak_file = NULL,
                   sumstats_dir, 
                   gwas_nsamps, 
                   gwas_trait, 
@@ -57,14 +60,15 @@ scads <- function(count_matrix,
   cat("\n1. Run FastTopics\n")
   cat("\nStart time: "); print(Sys.time())
   cat("\nCount matrix dimensions:", dim(count_matrix), "\n")
-  out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c)
-  saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
-  # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
+  # out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c,
+  #                        baseline_method, bl_celltype, bl_celltype_peak_file)
+  # saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
+  out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
   
   # 2) get topic annotations (bed files)
   cat("\n2. Get topic annotations\n")
   cat("\nStart time: "); print(Sys.time())
-  
+
   if (!continuous_topic_annot) {
     # Binary (peak-based) annotation approach
     beddir_list <- get_annot_beds(topics_res = out1, output_dir = outdir)
@@ -72,20 +76,20 @@ scads <- function(count_matrix,
     # Continuous annotation approach
     beddir_list <- get_continuous_annot_beds(topics_res = out1, output_dir = outdir)
   }
-  
+
   # 3) run LDSC
   cat("\n3. Run LDSC\n")
   cat("\nStart time: "); print(Sys.time())
-  
+
   num_cores <- parallel::detectCores(logical = FALSE)
   num_tasks <- length(beddir_list)
   mc_cores_to_use <- min(num_cores, num_tasks, 5)
-  
+
   cat("\nUsing", mc_cores_to_use, "cores for", num_tasks, "tasks.\n")
-  
+
   parallel::mclapply(seq_along(beddir_list), function(i) {
     cat("\nStart time for topic", i, ":", Sys.time(), "\n")
-    
+
     # If using continuous annotations, call run_sldsc_cont; else run_sldsc
     if (!continuous_topic_annot) {
       run_sldsc(
@@ -116,12 +120,12 @@ scads <- function(count_matrix,
         out_dir       = beddir_list[[i]]
       )
     }
-    
+
     cat("\nStop time for topic", i, ":", Sys.time(), "\n")
   }, mc.cores = mc_cores_to_use)
-  
+
   cat("\nStop time:", Sys.time(), "\n")
-  
+
   # 4) calc the cell score
   cat("\n4. Calculate cell scores\n")
   cat("\nStart time:", Sys.time(), "\n")
@@ -130,91 +134,8 @@ scads <- function(count_matrix,
                    trait      = gwas_trait,
                    nTopics    = nTopics)
   print(summary(cs_res$cs))
-  
+
   cat("\nEnd time:", Sys.time(), "\n")
-  
+
   return(list(cs_res = cs_res, out1 = out1))
 }
-
-#' 
-# scads <- function(count_matrix, 
-#                   nTopics = 10, 
-#                   n_s = 1000, 
-#                   n_c = 8, 
-#                   sumstats_dir, 
-#                   gwas_nsamps, 
-#                   gwas_trait, 
-#                   outdir,
-#                   polyfun_code_dir,
-#                   ldsc_code_dir,
-#                   onekg_path,
-#                   baseline_dir,
-#                   frqfile_pref,
-#                   hm3_snps,
-#                   ...){
-#   
-#   # 0) create directories 
-#   if (!dir.exists(outdir)) {
-#     dir.create(outdir, recursive = TRUE)
-#   }
-#   
-#   # 1) run fastTopics
-#   cat("\n1. Run FastTopics\n")
-#   cat("\nStart time: "); print(Sys.time())
-#   cat("\nCount matrix dimensions:", dim(count_matrix), "\n")
-#   out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c)
-#   saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
-#   # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
-#   
-#   # 2) get topic annotations (bed files)
-#   cat("\n2. Get topic annotations\n")
-#   cat("\nStart time: "); print(Sys.time())
-#   beddir_list <- get_annot_beds(topics_res = out1, output_dir = outdir)
-#  #  beddir_list <- get_continuous_annot_beds(topics_res = out1, output_dir = outdir) 
-#   
-#   # 3) run LDSC
-#   cat("\n3. Run LDSC \n")
-#   cat("\nStart time: "); print(Sys.time())
-#   
-#   num_cores <- parallel::detectCores(logical = FALSE)
-#   num_tasks <- length(beddir_list)
-#   mc_cores_to_use <- min(num_cores, num_tasks, 5)
-#   
-#   cat("\nUsing", mc_cores_to_use, "cores for", num_tasks, "tasks.\n")
-#   
-#   parallel::mclapply(seq_along(beddir_list), function(i){
-#     cat("\nStart time for topic", i, ":", Sys.time(), "\n")
-#     
-#     # For each topic, call the updated run_ldsc
-#     run_sldsc(polyfun_path  = polyfun_code_dir,
-#               ldsc_path = ldsc_code_dir,
-#              sumstats_path = sumstats_dir,
-#              n             = gwas_nsamps,
-#              trait         = gwas_trait,
-#              onekg_path    = onekg_path,
-#              bed_dir       = beddir_list[[i]],
-#              baseline_dir  = baseline_dir,
-#              frqfile_pref  = frqfile_pref,
-#              hm3_snps      = hm3_snps,
-#              out_dir       = beddir_list[[i]])
-#     
-#     cat("\nStop time for topic", i, ":", Sys.time(), "\n")
-#   }, mc.cores = mc_cores_to_use)
-#   
-#   cat("\nStop time:", Sys.time(), "\n")
-#   
-#   # 4) calc the cell score
-#   cat("\n4. Calculate cell scores\n")
-#   cat("\nStart time:", Sys.time(), "\n")
-#   cs_res <- get_cs(topic_res  = out1,
-#                    ldsc_res_dir = outdir,
-#                    trait      = gwas_trait,
-#                    nTopics    = nTopics)
-#   print(summary(cs_res$cs))
-#   
-#   cat("\nEnd time:", Sys.time(), "\n")
-#   
-#   return(list(cs_res = cs_res, out1 = out1))
-# }
-# 
-#   

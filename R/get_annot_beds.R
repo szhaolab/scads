@@ -17,7 +17,7 @@
 #' @importFrom stringr str_extract
 #' @export
 #' 
-get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5) {
+get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.9) {
   library(stringr)
   
   topics_annot <- topics_res$Fmat

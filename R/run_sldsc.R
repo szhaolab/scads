@@ -153,8 +153,8 @@ run_sldsc <- function(polyfun_path,
   # ref-ld-chr => "out_dir/annotations/trait/trait.," + baseline_dir
   # We also pick up the weights from the parent of the parent of baseline_dir (since baseline_dir might be .../baselineLD_v2.2/baselineLD.)
   # Adjust if your weights directory is stored differently.
-  # weights_prefix <- file.path(dirname(dirname(baseline_dir)), "weights/weights.hm3_noMHC.")
-  weights_prefix <- file.path(dirname(dirname(baseline_dir)), "1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
+  weights_prefix <- file.path(dirname(dirname(baseline_dir)), "weights/weights.hm3_noMHC.")
+  # weights_prefix <- file.path(dirname(dirname(baseline_dir)), "1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
   
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),

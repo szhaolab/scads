@@ -21,23 +21,30 @@
 #' results <- run_fastTopics(counts, nTopics = 5)
 #' }
 #' @export
-run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1, ...) {
+run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
+                           baseline_method = "constant",
+                           bl_celltype_cells = NULL, 
+                           bl_celltype_peak_file = NULL,
+                           fdr_cutoff = 0.05, ...) {
   
   # Ensure that count_matrix has cells as rows and peaks as columns
   # Transpose if necessary 
   # Assuming num_peaks > num_cells
-  # if (nrow(count_matrix) > ncol(count_matrix)) {
-  #   count_matrix <- Matrix::t(count_matrix)
-  # }
-  count_matrix <- Matrix::t(count_matrix)
-  print(dim(count_matrix))
+  if (nrow(count_matrix) > ncol(count_matrix)) {
+    count_matrix <- Matrix::t(count_matrix)
+  }
+  # count_matrix <- Matrix::t(count_matrix)
+  # print(dim(count_matrix))
   
   # Run fastTopics model
   cat("\nRunning fastTopics\n")
   cat("\nStart time: ")
   print(Sys.time())
-  fastTopics_fit <- fastTopics::fit_topic_model(count_matrix, 
+  fastTopics_fit <- fastTopics::fit_topic_model(count_matrix,
                                                 k = nTopics, ...)
+  # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
+  # fastTopics_fit <- out1$fastTopics_fit
+  saveRDS(fastTopics_fit, file.path(outdir, "fasTopics_fit.rds"))
   
   cat("\nStop time: ")
   print(Sys.time())
@@ -46,43 +53,65 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1, ...)
   Fmat <- fastTopics_fit$F  # Peaks x topics matrix (feature loadings)
   Lmat <- fastTopics_fit$L  # Cells x topics matrix (topic proportions)
   
-  # Determine per-topic cutoffs using KDE midpoint
-  cat("\nDetermining per-topic cutoffs using KDE\n")
-  cutoffs <- numeric(nTopics)  # Initialize vector to store cutoffs
-  
-  for (topic in 1:nTopics) {
-    cat(sprintf("Processing Topic %d...\n", topic))
-    F_topic <- Fmat[, topic]
+  # Determine baseline via 3 methods 
+  cat("\nDetermining baseline\n")
+  if (baseline_method == "average"){
     
-    # Find cutoff using KDE
-    # cutoff_topic <- 10^find_kde_midpoint(log10(F_topic))
-    cutoff_topic <- 5.141173e-07 # 1e-6
-    cutoffs[topic] <- cutoff_topic
-    cat(sprintf("Cutoff for Topic %d: %.5e\n", topic, cutoff_topic))
+      total_peaks <- ncol(count_matrix)
+      total_reads <- sum(count_matrix)
+      n_cells <- nrow(count_matrix)
+      reads_per_cell <- total_reads/n_cells
+      baseline <- (total_reads)/(total_peaks)/n_cells/reads_per_cell
+      cat("Baseline: ", baseline)
+
+  } else if (baseline_method == "estimate") {
+    
+      baseline <- get_average_bg(count_matrix, 
+                               cell_type = bl_celltype_cells, 
+                               cell_type_peaks = bl_celltype_peak_file)
+      cat("Baseline: ", baseline)
+    
+  } else {
+    
+      baseline <- 1e-7
+      cat("Baseline: ", baseline)
   }
+    
+  
+  # # Determine per-topic cutoffs using KDE midpoint
+  # cat("\nDetermining per-topic cutoffs using KDE\n")
+  # cutoffs <- numeric(nTopics)  # Initialize vector to store cutoffs
+  # Using KDE cutoff
+  # cat(sprintf("Processing Topic %d...\n", topic))
+  # F_topic <- Fmat[, topic]
+  # # Find cutoff using KDE
+  # cutoff_topic <- 10^find_kde_midpoint(log10(F_topic))
+  # cutoffs[topic] <- cutoff_topic
+  # cat(sprintf("Cutoff for Topic %d: %.5e\n", topic, cutoff_topic))
   
   # # Determine global cutoff using KDE midpoint 
   # cat("\nDetermining global cutoff using KDE\n")
   # global_cutoff <- 10^find_kde_midpoint(log10(c(Fmat)))
   # cat("\nGlobal cutoff: ", global_cutoff)
   
-  # # Run differential expression analysis
-  # s <- Matrix::rowSums(count_matrix)  # Vector of total counts per cell
-  # 
-  # cat("\nRunning fastTopics-DE\n")
-  # cat("\nStart time: ")
-  # print(Sys.time())
-  # de_res <- de_analysis2(
-  #   fit = fastTopics_fit,
-  #   X = count_matrix,
-  #   s = s,
-  #   lfc.stat = "vsnull",
-  #   shrink.method = "none",
-  #   control = list(ns = n_s, nc = n_c, minval = 1e-50),
-  #   f0 = global_cutoff  # Global KDE cutoff
-  # )
-  # 
-  # print(summary(de_res$z))
+  # Run differential expression analysis
+  s <- Matrix::rowSums(count_matrix)  # Vector of total counts per cell
+
+  cat("\nRunning fastTopics-DE\n")
+  cat("\nStart time: ")
+  print(Sys.time())
+  de_res <- de_analysis2(
+    fit = fastTopics_fit,
+    X = count_matrix,
+    s = s,
+    lfc.stat = "vsnull",
+    shrink.method = "none",
+    control = list(ns = n_s, nc = n_c, minval = 1e-50),
+    f0 = baseline
+  )
+  # de_res <- out1$de_res
+
+  print(summary(de_res$z))
   # 
   # # 'de_res$z' is a matrix of z-scores with dimensions peaks x topics
   # # Remove peaks with any NA values for z-scores in topics
@@ -152,21 +181,40 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1, ...)
   # p_jk <- matrix(0, nrow = nrow(Fmat), ncol = ncol(Fmat))
   # p_jk <- ifelse(Fmat > global_cutoff, 1, 0)
   
-    # Binarize Fmat per topic using the corresponding cutoff
-    p_jk <- matrix(0, nrow = nrow(Fmat), ncol = ncol(Fmat))
-    for (topic in 1:nTopics) {
-      threshold <- cutoffs[topic]
-      p_jk[, topic] <- ifelse(Fmat[, topic] > threshold, 1, 0)
-      cat(sprintf("Binarized Topic %d with threshold %.5e\n", topic, threshold))
-    }
+    # # Binarize Fmat per topic using the corresponding cutoff
+    # p_jk <- matrix(0, nrow = nrow(Fmat), ncol = ncol(Fmat))
+    # for (topic in 1:nTopics) {
+    #   threshold <- cutoffs[topic]
+    #   p_jk[, topic] <- ifelse(Fmat[, topic] > threshold, 1, 0)
+    #   cat(sprintf("Binarized Topic %d with threshold %.5e\n", topic, threshold))
+    # }
+  
+  # Binarize Fmat per topic using the baseline cutoff 
+  # p_jk <- matrix(0, nrow = nrow(Fmat), ncol = ncol(Fmat))
+  # p_jk <- ifelse(log(Fmat/baseline)>0, 1, 0)
+  
+  # Binarize Fmat per topic using the baseline cutoff
+  total_bins <- ceiling(3e9 / 500)
+  # pvals <- 2 * pnorm(-abs(res2$de_res$z))
+  pvals <- 2 * pnorm(-abs(de_res$z))
+  qvals <- apply(pvals, 2, function(col) p.adjust(col, method="fdr", n=total_bins))
+  qvals[is.na(qvals)] <- 1
+  # p_jk <- matrix(0, nrow = nrow(Fmat), ncol = ncol(Fmat))
+  # p_jk <- ifelse(qvals < fdr_cutoff, 1, 0)
+  z <- de_res$z
+  z[is.na(z)] <- 0
+  print(summary(z))
+  p_jk <- ifelse(qvals < fdr_cutoff, 1, 0)*sign(z)
+  p_jk[p_jk<0] <- 0
+  print(colSums(p_jk))
   
   # Return results as a list
   return(list(
     fastTopics_fit = fastTopics_fit,
     Fmat = Fmat,
     Lmat = Lmat,
-    # de_res = de_res,
+    de_res = de_res,
     Pmat = p_jk,  # Matrix of p-values (peaks x topics)
-    cutoffs = cutoffs
+    baseline = baseline
   ))
 }
