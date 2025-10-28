@@ -79,6 +79,7 @@ run_sldsc <- function(polyfun_path,
                       baseline_dir,
                       frqfile_pref,
                       hm3_snps,
+                      weights_pref,
                       out_dir) {
   
   # 1) Create subfolders
@@ -153,15 +154,15 @@ run_sldsc <- function(polyfun_path,
   # ref-ld-chr => "out_dir/annotations/trait/trait.," + baseline_dir
   # We also pick up the weights from the parent of the parent of baseline_dir (since baseline_dir might be .../baselineLD_v2.2/baselineLD.)
   # Adjust if your weights directory is stored differently.
-  weights_prefix <- file.path(dirname(dirname(baseline_dir)), "weights/weights.hm3_noMHC.")
-  # weights_prefix <- file.path(dirname(dirname(baseline_dir)), "1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
+  # weights_pref <- file.path(dirname(dirname(baseline_dir)), "weights/weights.hm3_noMHC.") #hg38
+  # weights_pref <- file.path(dirname(dirname(baseline_dir)), "1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.") #hg19
   
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),
     "--h2", munged_out,
     "--ref-ld-chr", paste0(file.path(ann_dir, paste0(trait, ".")), ",", baseline_dir),
     "--frqfile-chr", frqfile_pref,
-    "--w-ld-chr", weights_prefix,
+    "--w-ld-chr", weights_pref,
     "--overlap-annot",
     "--print-coefficients",
     "--print-delete-vals",

@@ -17,7 +17,6 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics) {
   nTopics <- ncol(p_jk)
   
   # 2) read in LDSC results per topic
-  tau        <- vector("list", nTopics)
   tau_display <- NULL
   for(k in seq_len(nTopics)){
     res_f <- file.path(ldsc_res_dir,
@@ -26,22 +25,20 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics) {
                        paste0(trait, ".results"))
     if(!file.exists(res_f)){
       warning("Missing ", res_f)
-      tau[[k]] <- NA
       next
     }
     res <- read.table(res_f, header=TRUE, sep="\t", check.names=FALSE)
     if(nrow(res)<1){
       warning("Empty ", res_f)
-      tau[[k]] <- NA
       next
     }
     res$Category <- paste0("k", k)
-    tau[[k]] <- res$Prop._h2[1]
-    tau_display <- rbind(tau_display, res[1,])
+    if(is.null(tau_display)){
+      tau_display <- res[1,]
+    } else {
+      tau_display <- rbind(tau_display, res[1,])
+    }
   }
-  tau_Ck <- unlist(tau)
-  e_Ck   <- tau_display$Enrichment
-  se_e   <- tau_display$Enrichment_std_error
   
   # 3) per-topic peak counts (assuming one variant per peak)
   a_k <- colSums(p_jk)  # length K
@@ -49,6 +46,10 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics) {
   # 4) compute M_i and N_i for each cell
   #    M_i = Σ_k  l_ik[i,k] * (a_k * e_Ck)[k]
   #    N_i = Σ_k  l_ik[i,k] * a_k[k]
+  
+  # first filter out negative enrichment 
+  e_Ck   <- ifelse(tau_display$Enrichment < 0, 0, tau_display$Enrichment)
+  se_e   <- ifelse(tau_display$Enrichment < 0, 0, tau_display$Enrichment_std_error)
   M_i <- as.numeric(l_ik %*% (a_k * e_Ck))
   N_i <- as.numeric(l_ik %*% a_k)
   
@@ -124,9 +125,9 @@ get_cs2 <- function(topic_res,
                     ldsc_res_dir,
                     trait,
                     sumstats_dir     = NULL,
-                    v_option         = c("one","gwas"),
-                    weight_by        = c("enrichment","tau"),
-                    cs_approx        = c("first","second")
+                    v_option         = "one", # c("one","gwas"),
+                    weight_by        = "enrichment", # c("enrichment","tau"),
+                    cs_approx        = "first" # c("first","second")
 ){
   ## ——————————————————————————————————————
   ## 1. Unpack inputs and set up
@@ -143,9 +144,9 @@ get_cs2 <- function(topic_res,
   ## ——————————————————————————————————————
   ## 2. Read LDSC results to get tau_Ck, e_Ck, se_e_Ck
   tau_display <- NULL
-  tau_Ck   <- numeric(K)
-  e_Ck     <- numeric(K)
-  se_e_Ck  <- numeric(K)
+  # tau_Ck   <- numeric(K)
+  # e_Ck     <- numeric(K)
+  # se_e_Ck  <- numeric(K)
   for(k in seq_len(K)){
     res_f <- file.path(ldsc_res_dir,
                        paste0("k", k, "_output"),
@@ -160,10 +161,14 @@ get_cs2 <- function(topic_res,
     }
     d$Category <- paste0("k", k)
     tau_display <- rbind(tau_display, d[1,])
-    tau_Ck[k]  <- d$Prop._h2[1]
-    e_Ck[k]    <- d$Enrichment[1]
-    se_e_Ck[k] <- d$Enrichment_std_error[1]
+    # tau_Ck[k]  <- d$Prop._h2[1]
+    # e_Ck[k]    <- d$Enrichment[1]
+    # se_e_Ck[k] <- d$Enrichment_std_error[1]
   }
+  # filter out negative enrichment 
+  e_Ck  <- ifelse(tau_display$Enrichment < 0, 0, tau_display$Enrichment)
+  se_e  <- ifelse(tau_display$Enrichment < 0, 0, tau_display$Enrichment_std_error)
+  tau_Ck  <- ifelse(tau_display$Enrichment < 0, 0, tau_display$Prop._h2)
   w_k <- if(weight_by=="enrichment") e_Ck else tau_Ck
   
   ## ——————————————————————————————————————
@@ -249,7 +254,6 @@ get_cs2 <- function(topic_res,
     n_ij <- l_ik %*% t(P)             # I × J, computed via sparse×dense
     m_ij <- l_ik %*% t(P %*% Diagonal(x = w_k))
 
-    
 
     # 5c) Var(N_i) and Cov(M_i,N_i)
     Var_Ni    <- rowSums( (v_j^2) * (n_ij * (1 - n_ij)) )

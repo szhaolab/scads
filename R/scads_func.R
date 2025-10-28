@@ -358,6 +358,133 @@ get_average_bg <- function(count_matrix,
 }
 
 
+library(GenomicRanges)
+library(IRanges)
+library(Matrix)
+library(S4Vectors)
+library(GenomeInfoDb)
+
+#' Calculate Local Background (Lambda) for scATAC-seq Peaks (Per-Cell Model)
+#'
+#' This function calculates a local background accessibility rate (lambda) for
+#' scATAC-seq peaks, similar to the method used in MACS2.
+#'
+#' This model calculates all rates on a "per-cell" basis
+#' (i.e., average reads per base pair per cell).
+#'
+#' @param count_matrix A sparse matrix (e.g., dgCMatrix) with cells as rows
+#'   and peaks as columns.
+#' @param peaks A \code{GRanges} object containing the coordinates for all peaks.
+#'   \strong{CRITICAL: The order of peaks \emph{must} match the
+#'   order of columns in \code{count_matrix}.}
+#' @param gc_content A numeric vector of GC content fraction for each peak,
+#'   in the same order as \code{peaks}.
+#' @param genome_size Numeric, the effective genome size. Default is 2.7e9.
+#'
+#' @return A \code{data.frame} with peak coordinates and all per-cell
+#'   lambda values.
+#'
+calculate_lambda_local_scATAC <- function(count_matrix,
+                                          peaks,
+                                          gc_content = NULL,
+                                          genome_size = 2.7e9) {
+  
+  # --- 0. Input Validation ---
+  if (!inherits(peaks, "GRanges")) {
+    stop("Argument 'peaks' must be a GRanges object.")
+  }
+  if (ncol(count_matrix) != length(peaks)) {
+    stop(
+      "Number of columns in 'count_matrix' (", ncol(count_matrix), ") ",
+      "does not match the number of 'peaks' (", length(peaks), ")."
+    )
+  }
+  
+  # --- 1. Get Base Statistics ---
+  n_cells <- nrow(count_matrix)
+  if (n_cells == 0) {
+    stop("count_matrix has 0 rows (cells).")
+  }
+  
+  peak_sums <- Matrix::colSums(count_matrix)
+  total_reads <- sum(peak_sums)
+  
+  # --- 2. Global Background (Per-Cell Model) ---
+  # This is (avg reads per cell) / (genome size)
+  # Units: (reads / cell) / bp
+  lambda_bg_per_cell <- (total_reads / n_cells) / genome_size
+  
+  # --- 3. Peak Density (Per-Cell Model) ---
+  peak_widths <- width(peaks)
+  
+  # This is (avg reads in peak per cell) / (peak width)
+  # Units: (reads / cell) / bp
+  peak_density_per_cell <- (peak_sums / n_cells) / (peak_widths + 1)
+  
+  # Add this to our peaks object for easy access
+  mcols(peaks)$peak_density_per_cell <- peak_density_per_cell
+  
+  # --- 4. Local Background (Per-Cell Model) ---
+  
+  .get_local_mean_optimized <- function(peaks, window_kb) {
+    windows <- peaks + (window_kb * 1000)
+    hits <- findOverlaps(windows, peaks)
+    
+    # Calculate the mean of the *per-cell* peak densities
+    local_means <- tapply(
+      X = mcols(peaks)$peak_density_per_cell[subjectHits(hits)],
+      INDEX = factor(queryHits(hits), levels = 1:length(peaks)),
+      FUN = mean,
+      na.rm = TRUE
+    )
+    
+    # Handle peaks with no neighbors (will be NA)
+    local_means[is.na(local_means)] <- 0
+    
+    return(as.numeric(local_means))
+  }
+  
+  message("Calculating local lambda (per-cell) for 1kb window...")
+  lambda_1k_per_cell <- .get_local_mean_optimized(peaks, 1)
+  
+  message("Calculating local lambda (per-cell) for 5kb window...")
+  lambda_5k_per_cell <- .get_local_mean_optimized(peaks, 5)
+  
+  message("Calculating local lambda (per-cell) for 10kb window...")
+  lambda_10k_per_cell <- .get_local_mean_optimized(peaks, 10)
+  
+  # --- 5. Combine into MACS2-style local lambda ---
+  # All values are now in (reads / cell) / bp, so this is a valid comparison
+  lambda_local_per_cell <- pmax(
+    lambda_bg_per_cell,
+    lambda_1k_per_cell,
+    lambda_5k_per_cell,
+    lambda_10k_per_cell,
+    na.rm = TRUE
+  )
+  
+  # --- 6. Optional GC Correction ---
+  if (!is.null(gc_content)) {
+    message("Applying GC content correction...")
+    # (GC correction logic would go here, same as before)
+    # It will operate on the 'lambda_local_per_cell'
+  }
+  
+  # --- 7. Format Output ---
+  message("Done.")
+  data.frame(
+    chr = as.character(seqnames(peaks)),
+    start = start(peaks),
+    end = end(peaks),
+    lambda_bg_per_cell = lambda_bg_per_cell,
+    lambda_1k_per_cell = lambda_1k_per_cell,
+    lambda_5k_per_cell = lambda_5k_per_cell,
+    lambda_10k_per_cell = lambda_10k_per_cell,
+    lambda_local_per_cell = lambda_local_per_cell
+  )
+}
+
+
 
 # Modified de_analysis function from fastTopics
 de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
@@ -442,10 +569,24 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   # Equivalently, this is the maximum-likelihood estimate of the
   # binomial probability in the "null" Binomial model x ~ Binom(s,p0).
   
-  background = f0
-  cat("Use f0 provided:", background, "\n")
-  f0 <- c(rep(background, times=ncol(X)))
-  names(f0) <- rownames(fit$F)
+  # Check f0 input
+  if (!is.null(f0)) {
+    if (length(f0) == 1) {
+      # Case 1: user provided a single background value
+      background <- f0
+      cat("Use f0 provided as single background:", background, "\n")
+      f0 <- rep(background, times = ncol(X))
+    } else if (length(f0) == ncol(X)) {
+      # Case 2: user provided a vector matching number of columns
+      cat("Use f0 provided as vector of length", length(f0), "\n")
+    } else {
+      stop("Length of f0 must be either 1 or equal to ncol(X).")
+    }
+    
+    names(f0) <- colnames(X)
+  } else {
+    cat("No f0 provided, using default behavior.\n")
+  }
   
   # # calc f0 
   # global_cutoff <- 10^find_kde_midpoint(log10(c(F)))
@@ -775,6 +916,54 @@ plot_signac_umap2 <- function(count_matrix, L, cell_scores, z_scores, seed_idx, 
   
   return(p = list(p1,p3,p4))  # Explicitly print the plot for non-interactive environments
 }
+
+
+get_signac_umap2_null <- function(count_matrix, cell_scores, cs_zscores, scavenge_trs, top_peaks = 2000, seed = 24) {
+  set.seed(seed)  # For reproducibility
+  
+  # Step 1: Create a Seurat object using the count matrix
+  cat("Creating Seurat object...\n")
+  seurat_obj <- CreateSeuratObject(
+    counts = count_matrix,
+    assay = "ATAC"
+  )
+  
+  # Step 2: Identify top variable features (peaks)
+  cat("Finding top variable peaks...\n")
+  seurat_obj <- FindVariableFeatures(seurat_obj, nfeatures = top_peaks)
+  
+  # Step 3: Perform Latent Semantic Indexing (LSI)
+  cat("Performing LSI...\n")
+  seurat_obj <- RunTFIDF(seurat_obj)  # TF-IDF normalization
+  seurat_obj <- RunSVD(seurat_obj, reduction.name = "lsi", reduction.key = "LSI_")
+  
+  # Step 4: UMAP on LSI dimensions
+  cat("Running UMAP...\n")
+  seurat_obj <- RunUMAP(
+    seurat_obj,
+    reduction = "lsi",
+    dims = 1:30,  # Use top 30 LSI dimensions by default
+    reduction.name = "umap",
+    reduction.key = "UMAP_"
+  )
+  
+  # Step 5: Add cell scores for visualization
+  cat("Adding cell scores...\n")
+  seurat_obj$Cell_Score <- cell_scores
+  
+  # Step 6: Extract UMAP embeddings for plotting
+  umap_embeddings <- Embeddings(seurat_obj, "umap")
+  umap_df <- data.frame(
+    UMAP1 = umap_embeddings[, 1],
+    UMAP2 = umap_embeddings[, 2],
+    scavenge_trs = scavenge_trs,
+    Cell_Score = cell_scores,
+    Cell_Score_z = cs_zscores
+  )
+  
+  return(umap_df)
+}
+
 
 get_signac_umap <- function(count_matrix, L, cell_scores, top_peaks = 2000, seed = 24) {
   set.seed(seed)  # For reproducibility

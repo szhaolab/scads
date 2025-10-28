@@ -23,6 +23,7 @@ get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.9) 
   topics_annot <- topics_res$Fmat
   topics_prob  <- topics_res$Pmat
   peak_ranges  <- rownames(topics_annot)
+  head(peak_ranges)
   if (is.null(peak_ranges)) stop("Row names must contain peak ranges")
   
   # Detect format and split accordingly:
@@ -32,14 +33,23 @@ get_annot_beds <- function(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.9) 
     seqnames <- vapply(parts, `[`, 1, FUN.VALUE = "")
     start    <- as.integer(vapply(parts, `[`, 2, FUN.VALUE = ""))
     end      <- as.integer(vapply(parts, `[`, 3, FUN.VALUE = ""))
+    
   } else if (all(grepl("^[^:]+:[0-9]+-[0-9]+$", peak_ranges))) {
     # colon‐dash format: chr1:10234-10734
-    seqnames <- str_extract(peak_ranges, "^[^:]+")
-    positions <- str_extract(peak_ranges, "(?<=:).+")
-    start    <- as.integer(str_extract(positions, "^[0-9]+"))
-    end      <- as.integer(str_extract(positions, "[0-9]+$"))
+    seqnames <- stringr::str_extract(peak_ranges, "^[^:]+")
+    positions <- stringr::str_extract(peak_ranges, "(?<=:).+")
+    start    <- as.integer(stringr::str_extract(positions, "^[0-9]+"))
+    end      <- as.integer(stringr::str_extract(positions, "[0-9]+$"))
+    
+  } else if (all(grepl("^[^\\-]+-[0-9]+-[0-9]+$", peak_ranges))) {
+    # dash format: chr1-10234-10734
+    parts <- strsplit(peak_ranges, "-", fixed = TRUE)
+    seqnames <- vapply(parts, `[`, 1, FUN.VALUE = "")
+    start    <- as.integer(vapply(parts, `[`, 2, FUN.VALUE = ""))
+    end      <- as.integer(vapply(parts, `[`, 3, FUN.VALUE = ""))
+    
   } else {
-    stop("Row names must be either 'chr:start-end' or 'chr_start_end'")
+    stop("Row names must be one of: 'chr_start_end', 'chr:start-end', or 'chr-start-end'")
   }
   
   # Build bed_df

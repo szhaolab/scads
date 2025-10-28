@@ -30,9 +30,9 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   # Ensure that count_matrix has cells as rows and peaks as columns
   # Transpose if necessary 
   # Assuming num_peaks > num_cells
-  if (nrow(count_matrix) > ncol(count_matrix)) {
-    count_matrix <- Matrix::t(count_matrix)
-  }
+  # if (nrow(count_matrix) > ncol(count_matrix)) {
+  #   count_matrix <- Matrix::t(count_matrix)
+  # }
   # count_matrix <- Matrix::t(count_matrix)
   # print(dim(count_matrix))
   
@@ -42,9 +42,11 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   print(Sys.time())
   fastTopics_fit <- fastTopics::fit_topic_model(count_matrix,
                                                 k = nTopics, ...)
+  saveRDS(fastTopics_fit, file.path(outdir, "fasTopics_fit.rds"))
+  
+  # fastTopics_fit <- readRDS(file.path(outdir, "fasTopics_fit.rds"))
   # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
   # fastTopics_fit <- out1$fastTopics_fit
-  saveRDS(fastTopics_fit, file.path(outdir, "fasTopics_fit.rds"))
   
   cat("\nStop time: ")
   print(Sys.time())
@@ -55,7 +57,36 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   
   # Determine baseline via 3 methods 
   cat("\nDetermining baseline\n")
-  if (baseline_method == "average"){
+  if (baseline_method == "macs2"){
+    
+    peak_df <- data.frame(rownames(Fmat))
+    colnames(peak_df) <- "peak_name"
+    peak_df$std_name <- gsub("[-_]", ":", peak_df$peak_name)
+    parsed_df <- tidyr::extract(
+      peak_df,
+      col = std_name,
+      into = c("chr", "start", "end"),
+      # Regex: (group 1: not a colon)[colon](group 2: digits)[colon](group 3: digits)
+      regex = "([^:]+):([0-9]+):([0-9]+).*",
+      remove = FALSE # Keep original columns
+    )
+    message("Successfully parsed ", nrow(parsed_df), " peaks.")
+    peaks <- GRanges(
+      seqnames = parsed_df$chr,
+      ranges = IRanges(
+        # Add 1 to the start, as BED is 0-indexed but GRanges is 1-indexed
+        # *if* your coordinates were 0-indexed BED.
+        # If they were 1-indexed (e.g., "chr1:101-200"), remove the "+ 1".
+        start = as.numeric(parsed_df$start) + 1, 
+        end = as.numeric(parsed_df$end)
+      ),
+      # Store the original name to be 100% sure of the order
+      original_name = parsed_df$peak_name
+    )
+    df <- calculate_lambda_local_scATAC(count_matrix, peaks)
+    baseline <- df$lambda_local_per_cell
+    
+  } else if (baseline_method == "average"){
     
       total_peaks <- ncol(count_matrix)
       total_reads <- sum(count_matrix)

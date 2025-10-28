@@ -48,6 +48,7 @@ scads <- function(count_matrix,
                   baseline_dir,
                   frqfile_pref,
                   hm3_snps,
+                  weights_pref,
                   continuous_topic_annot = FALSE,
                   ...) {
   
@@ -60,10 +61,10 @@ scads <- function(count_matrix,
   cat("\n1. Run FastTopics\n")
   cat("\nStart time: "); print(Sys.time())
   cat("\nCount matrix dimensions:", dim(count_matrix), "\n")
-  # out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c,
-  #                        baseline_method, bl_celltype, bl_celltype_peak_file)
-  # saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
-  out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
+  out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c,
+                         baseline_method, bl_celltype, bl_celltype_peak_file)
+  saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
+  # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
   
   # 2) get topic annotations (bed files)
   cat("\n2. Get topic annotations\n")
@@ -103,6 +104,7 @@ scads <- function(count_matrix,
         baseline_dir  = baseline_dir,
         frqfile_pref  = frqfile_pref,
         hm3_snps      = hm3_snps,
+        weights_pref  = weights_pref,
         out_dir       = beddir_list[[i]]
       )
     } else {
