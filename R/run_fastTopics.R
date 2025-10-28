@@ -25,7 +25,8 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
                            baseline_method = "constant",
                            bl_celltype_cells = NULL, 
                            bl_celltype_peak_file = NULL,
-                           fdr_cutoff = 0.05, ...) {
+                           fdr_cutoff = 0.05,
+                           outdir, ...) {
   
   # Ensure that count_matrix has cells as rows and peaks as columns
   # Transpose if necessary 
