@@ -7,8 +7,15 @@
 #' @importFrom ashr ash
 #' @importFrom RhpcBLASctl blas_set_num_threads
 #' @importFrom RhpcBLASctl blas_get_num_procs
-#' 
-#' 
+#' @importFrom fastTopics verify.fit.and.count.matrix
+#' @importFrom fastTopics verify.positive.vector
+#' @importFrom fastTopics de_analysis_control_default
+#' @importFrom fastTopics add_pseudocounts
+#' @importFrom fastTopics initialize.multithreading
+#' @importFrom fastTopics fit_poisson_models
+#' @importFrom fastTopics compute_lfc_stats
+#' @importFrom fastTopics compute_lfc_stats_multicore
+#' @importFrom fastTopics lpfromz
 #' 
 
 # Create continuous annotation for S-LDSC
