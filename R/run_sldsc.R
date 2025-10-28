@@ -96,9 +96,23 @@ run_sldsc <- function(polyfun_path,
   }
   
   # 2) Munge sumstats
-  sumstats_gz <- file.path(sumstats_path, sprintf("%s_sumstats.txt.gz", trait))
-  munged_out  <- file.path(out_dir, sprintf("%s_munged_sumstats.parquet", trait))
+  sumstats_gz <- list.files(
+    path = sumstats_path,
+    pattern = paste0("^", trait, ".*sumstats.*\\.txt\\.gz$"),
+    full.names = TRUE
+  )
   
+  # Check number of matches
+  if (length(sumstats_gz) == 0) {
+    stop(paste0("No matching sumstats file found for trait: ", trait))
+  } else if (length(sumstats_gz) > 1) {
+    stop(paste0("Multiple matching files found for trait: ", trait, 
+                "\nFiles:\n", paste(sumstats_gz, collapse = "\n")))
+  } else {
+    message(paste0("Found summary stats file: ", basename(sumstats_gz)))
+  }
+  
+  munged_out  <- file.path(out_dir, sprintf("%s_munged_sumstats.parquet", trait))
   cmd_munge <- paste(
     "python3", file.path(polyfun_path, "munge_polyfun_sumstats.py"),
     "--sumstats", sumstats_gz,
