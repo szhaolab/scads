@@ -128,6 +128,8 @@ scads <- function(count_matrix,
 
     cat("\nStop time for topic", i, ":", Sys.time(), "\n")
   }, mc.cores = mc_cores_to_use)
+  
+  print(sldsc_results[sapply(sldsc_results, inherits, "error")])
 
   cat("\nStop time:", Sys.time(), "\n")
 
