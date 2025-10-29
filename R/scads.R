@@ -89,9 +89,10 @@ scads <- function(count_matrix,
 
   cat("\nUsing", mc_cores_to_use, "cores for", num_tasks, "tasks.\n")
 
-  parallel::mclapply(seq_along(beddir_list), function(i) {
+  sldsc_results <- parallel::mclapply(seq_along(beddir_list), function(i) {
+    
+    tryCatch({
     cat("\nStart time for topic", i, ":", Sys.time(), "\n")
-
     # If using continuous annotations, call run_sldsc_cont; else run_sldsc
     if (!continuous_topic_annot) {
       run_sldsc(
@@ -123,6 +124,7 @@ scads <- function(count_matrix,
         out_dir       = beddir_list[[i]]
       )
     }
+    }, error = function(e) e)
 
     cat("\nStop time for topic", i, ":", Sys.time(), "\n")
   }, mc.cores = mc_cores_to_use)
