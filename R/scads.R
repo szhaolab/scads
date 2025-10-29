@@ -89,92 +89,92 @@ scads <- function(count_matrix,
 
   cat("\nUsing", mc_cores_to_use, "cores for", num_tasks, "tasks.\n")
 
-  # sldsc_results <- parallel::mclapply(seq_along(beddir_list), function(i) {
-  #   
-  #   tryCatch({
-  #   cat("\nStart time for topic", i, ":", Sys.time(), "\n")
-  #   # If using continuous annotations, call run_sldsc_cont; else run_sldsc
-  #   if (!continuous_topic_annot) {
-  #     run_sldsc(
-  #       polyfun_path  = polyfun_code_dir,
-  #       ldsc_path     = ldsc_code_dir,
-  #       sumstats_path = sumstats_dir,
-  #       n             = gwas_nsamps,
-  #       trait         = gwas_trait,
-  #       onekg_path    = onekg_path,
-  #       bed_dir       = beddir_list[[i]],
-  #       baseline_dir  = baseline_dir,
-  #       frqfile_pref  = frqfile_pref,
-  #       hm3_snps      = hm3_snps,
-  #       weights_pref  = weights_pref,
-  #       out_dir       = beddir_list[[i]]
-  #     )
-  #   } else {
-  #     run_sldsc_cont(
-  #       polyfun_path  = polyfun_code_dir,
-  #       ldsc_path     = ldsc_code_dir,
-  #       sumstats_path = sumstats_dir,
-  #       n             = gwas_nsamps,
-  #       trait         = gwas_trait,
-  #       onekg_path    = onekg_path,
-  #       bed_dir       = beddir_list[[i]],
-  #       baseline_dir  = baseline_dir,
-  #       frqfile_pref  = frqfile_pref,
-  #       hm3_snps      = hm3_snps,
-  #       out_dir       = beddir_list[[i]]
-  #     )
-  #   }
-  #   }, error = function(e) e)
-  # 
-  #   cat("\nStop time for topic", i, ":", Sys.time(), "\n")
-  # }, mc.cores = mc_cores_to_use)
-  # 
-  # print(sldsc_results[sapply(sldsc_results, inherits, "error")])
-  
-  cl <- parallel::makeCluster(mc_cores_to_use)
-  parallel::clusterExport(cl, varlist = c("polyfun_code_dir", "ldsc_code_dir",
-                                          "sumstats_dir", "gwas_nsamps", "gwas_trait",
-                                          "onekg_path", "beddir_list", "baseline_dir",
-                                          "frqfile_pref", "hm3_snps", "weights_pref",
-                                          "continuous_topic_annot"), envir = environment())
-  
-  sldsc_results <- parallel::parLapply(cl, seq_along(beddir_list), function(i) {
+  sldsc_results <- parallel::mclapply(seq_along(beddir_list), function(i) {
+
     tryCatch({
-      cat("\nStart time for topic", i, ":", Sys.time(), "\n")
-      
-      if (!continuous_topic_annot) {
-        run_sldsc(
-          polyfun_path  = polyfun_code_dir,
-          ldsc_path     = ldsc_code_dir,
-          sumstats_path = sumstats_dir,
-          n             = gwas_nsamps,
-          trait         = gwas_trait,
-          onekg_path    = onekg_path,
-          bed_dir       = beddir_list[[i]],
-          baseline_dir  = baseline_dir,
-          frqfile_pref  = frqfile_pref,
-          hm3_snps      = hm3_snps,
-          weights_pref  = weights_pref,
-          out_dir       = beddir_list[[i]]
-        )
-      } else {
-        run_sldsc_cont(
-          polyfun_path  = polyfun_code_dir,
-          ldsc_path     = ldsc_code_dir,
-          sumstats_path = sumstats_dir,
-          n             = gwas_nsamps,
-          trait         = gwas_trait,
-          onekg_path    = onekg_path,
-          bed_dir       = beddir_list[[i]],
-          baseline_dir  = baseline_dir,
-          frqfile_pref  = frqfile_pref,
-          hm3_snps      = hm3_snps,
-          out_dir       = beddir_list[[i]]
-        )
-      }
+    cat("\nStart time for topic", i, ":", Sys.time(), "\n")
+    # If using continuous annotations, call run_sldsc_cont; else run_sldsc
+    if (!continuous_topic_annot) {
+      run_sldsc(
+        polyfun_path  = polyfun_code_dir,
+        ldsc_path     = ldsc_code_dir,
+        sumstats_path = sumstats_dir,
+        n             = gwas_nsamps,
+        trait         = gwas_trait,
+        onekg_path    = onekg_path,
+        bed_dir       = beddir_list[[i]],
+        baseline_dir  = baseline_dir,
+        frqfile_pref  = frqfile_pref,
+        hm3_snps      = hm3_snps,
+        weights_pref  = weights_pref,
+        out_dir       = beddir_list[[i]]
+      )
+    } else {
+      run_sldsc_cont(
+        polyfun_path  = polyfun_code_dir,
+        ldsc_path     = ldsc_code_dir,
+        sumstats_path = sumstats_dir,
+        n             = gwas_nsamps,
+        trait         = gwas_trait,
+        onekg_path    = onekg_path,
+        bed_dir       = beddir_list[[i]],
+        baseline_dir  = baseline_dir,
+        frqfile_pref  = frqfile_pref,
+        hm3_snps      = hm3_snps,
+        out_dir       = beddir_list[[i]]
+      )
+    }
     }, error = function(e) e)
-  })
-  parallel::stopCluster(cl)
+
+    cat("\nStop time for topic", i, ":", Sys.time(), "\n")
+  }, mc.cores = mc_cores_to_use)
+
+  print(sldsc_results[sapply(sldsc_results, inherits, "error")])
+  
+  # cl <- parallel::makeCluster(mc_cores_to_use)
+  # parallel::clusterExport(cl, varlist = c("polyfun_code_dir", "ldsc_code_dir",
+  #                                         "sumstats_dir", "gwas_nsamps", "gwas_trait",
+  #                                         "onekg_path", "beddir_list", "baseline_dir",
+  #                                         "frqfile_pref", "hm3_snps", "weights_pref",
+  #                                         "continuous_topic_annot"), envir = environment())
+  # 
+  # sldsc_results <- parallel::parLapply(cl, seq_along(beddir_list), function(i) {
+  #   tryCatch({
+  #     cat("\nStart time for topic", i, ":", Sys.time(), "\n")
+  #     
+  #     if (!continuous_topic_annot) {
+  #       run_sldsc(
+  #         polyfun_path  = polyfun_code_dir,
+  #         ldsc_path     = ldsc_code_dir,
+  #         sumstats_path = sumstats_dir,
+  #         n             = gwas_nsamps,
+  #         trait         = gwas_trait,
+  #         onekg_path    = onekg_path,
+  #         bed_dir       = beddir_list[[i]],
+  #         baseline_dir  = baseline_dir,
+  #         frqfile_pref  = frqfile_pref,
+  #         hm3_snps      = hm3_snps,
+  #         weights_pref  = weights_pref,
+  #         out_dir       = beddir_list[[i]]
+  #       )
+  #     } else {
+  #       run_sldsc_cont(
+  #         polyfun_path  = polyfun_code_dir,
+  #         ldsc_path     = ldsc_code_dir,
+  #         sumstats_path = sumstats_dir,
+  #         n             = gwas_nsamps,
+  #         trait         = gwas_trait,
+  #         onekg_path    = onekg_path,
+  #         bed_dir       = beddir_list[[i]],
+  #         baseline_dir  = baseline_dir,
+  #         frqfile_pref  = frqfile_pref,
+  #         hm3_snps      = hm3_snps,
+  #         out_dir       = beddir_list[[i]]
+  #       )
+  #     }
+  #   }, error = function(e) e)
+  # })
+  # parallel::stopCluster(cl)
   
 
   cat("\nStop time:", Sys.time(), "\n")
