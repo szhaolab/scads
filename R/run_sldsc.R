@@ -165,12 +165,6 @@ run_sldsc <- function(polyfun_path,
   # 4) Final S-LDSC referencing new annotation + baseline v2.2
   final_out <- file.path(res_dir, trait)
   
-  # ref-ld-chr => "out_dir/annotations/trait/trait.," + baseline_dir
-  # We also pick up the weights from the parent of the parent of baseline_dir (since baseline_dir might be .../baselineLD_v2.2/baselineLD.)
-  # Adjust if your weights directory is stored differently.
-  # weights_pref <- file.path(dirname(dirname(baseline_dir)), "weights/weights.hm3_noMHC.") #hg38
-  # weights_pref <- file.path(dirname(dirname(baseline_dir)), "1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.") #hg19
-  
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),
     "--h2", munged_out,
@@ -187,3 +181,10 @@ run_sldsc <- function(polyfun_path,
   
   message("\n[run_sldsc] Completed S-LDSC steps. Output in: ", res_dir)
 }
+
+# ref-ld-chr => "out_dir/annotations/trait/trait.," + baseline_dir
+# We also pick up the weights from the parent of the parent of baseline_dir (since baseline_dir might be .../baselineLD_v2.2/baselineLD.)
+# Adjust if your weights directory is stored differently.
+# weights_pref <- file.path(dirname(dirname(baseline_dir)), "weights/weights.hm3_noMHC.") #hg38
+# weights_pref <- file.path(dirname(dirname(baseline_dir)), "1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.") #hg19
+
