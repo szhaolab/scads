@@ -28,14 +28,14 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
                            fdr_cutoff = 0.05,
                            outdir, ...) {
   
-  # Ensure that count_matrix has cells as rows and peaks as columns
-  # Transpose if necessary 
+  # Ensure that count_matrix has cells as rows and peaks as columns 
+  # Transpose if necessary (assuming more peaks than cells )
   # Assuming num_peaks > num_cells
-  # if (nrow(count_matrix) > ncol(count_matrix)) {
-  #   count_matrix <- Matrix::t(count_matrix)
-  # }
+  if (nrow(count_matrix) > ncol(count_matrix)) {
+    count_matrix <- Matrix::t(count_matrix)
+  }
   # count_matrix <- Matrix::t(count_matrix)
-  # print(dim(count_matrix))
+  print(dim(count_matrix))
   
   # Run fastTopics model
   cat("\nRunning fastTopics\n")
