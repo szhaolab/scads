@@ -160,10 +160,13 @@ run_sldsc <- function(polyfun_path,
     )
     message("\n[run_sldsc] Step 2b: ldsc --l2:\n", cmd_l2)
     system(cmd_l2)
+    message("\nFinish step 2b: ", cmd_l2)
   }
   
+  message("\nBegin step 3")
   # 4) Final S-LDSC referencing new annotation + baseline v2.2
   final_out <- file.path(res_dir, trait)
+  message("\n Creating new file: ", final_out)
   
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),
