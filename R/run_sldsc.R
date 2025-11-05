@@ -187,10 +187,10 @@ run_sldsc <- function(polyfun_path,
     "--h2", munged_out,
     "--ref-ld-chr", paste(
       file.path(ann_dir, paste0(trait, ".", chr, ".l2.ldscore.gz")), ",",
-      file.path(baseline_dir, paste0(chr, ".l2.ldscore.gz"))
+      paste0(baseline_dir,chr, ".l2.ldscore.gz")
     ),
-    "--frqfile-chr", file.path(frqfile_pref, paste0(chr, ".frq.gz")),
-    "--w-ld-chr", file.path(weights_pref, paste0(chr, ".l2.ldscore.gz")),
+    "--frqfile-chr", paste0(frqfile_pref, chr, ".frq.gz"),
+    "--w-ld-chr", paste0(weights_pref, chr, ".l2.ldscore.gz"),
     "--overlap-annot",
     "--print-coefficients",
     "--print-delete-vals",
