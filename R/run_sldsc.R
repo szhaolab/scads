@@ -185,12 +185,12 @@ run_sldsc <- function(polyfun_path,
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),
     "--h2", munged_out,
-    "--ref-ld-chr", paste0(
-      file.path(ann_dir, paste0(trait, ".", chr, ".l2.ldscore.gz")), ",",
-      paste0(baseline_dir,chr, ".l2.ldscore.gz")
+    "--ref-ld", paste0(
+      file.path(ann_dir, paste0(trait, ".", chr)), ",",
+      paste0(baseline_dir,chr)
     ),
-    "--frqfile-chr", paste0(frqfile_pref, chr, ".frq.gz"),
-    "--w-ld-chr", paste0(weights_pref, chr, ".l2.ldscore.gz"),
+    "--frqfile", paste0(frqfile_pref, chr),
+    "--w-ld", paste0(weights_pref, chr),
     "--overlap-annot",
     "--print-coefficients",
     "--print-delete-vals",
