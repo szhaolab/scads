@@ -168,16 +168,33 @@ run_sldsc <- function(polyfun_path,
   final_out <- file.path(res_dir, trait)
   message("\n Creating new file: ", final_out)
   
+  # for all chromosomes (1-22)
+  # cmd_h2 <- paste(
+  #   "python3", file.path(polyfun_path, "ldsc.py"),
+  #   "--h2", munged_out,
+  #   "--ref-ld-chr", paste0(file.path(ann_dir, paste0(trait, ".")), ",", baseline_dir),
+  #   "--frqfile-chr", frqfile_pref,
+  #   "--w-ld-chr", weights_pref,
+  #   "--overlap-annot",
+  #   "--print-coefficients",
+  #   "--print-delete-vals",
+  #   "--out", final_out
+  # )
+  
+  # for one chromosome 
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),
     "--h2", munged_out,
-    "--ref-ld-chr", paste0(file.path(ann_dir, paste0(trait, ".")), ",", baseline_dir),
-    "--frqfile-chr", frqfile_pref,
-    "--w-ld-chr", weights_pref,
+    "--ref-ld-chr", paste(
+      file.path(ann_dir, paste0(trait, ".", chr, ".l2.ldscore.gz")), ",",
+      file.path(baseline_dir, paste0(chr, ".l2.ldscore.gz"))
+    ),
+    "--frqfile-chr", file.path(frqfile_pref, paste0(chr, ".frq.gz")),
+    "--w-ld-chr", file.path(weights_pref, paste0(chr, ".l2.ldscore.gz")),
     "--overlap-annot",
     "--print-coefficients",
     "--print-delete-vals",
-    "--out", final_out
+    "--out", paste0(final_out, "_chr", chr)
   )
   message("\n[run_sldsc] Step 3: ldsc.py --h2:\n", cmd_h2)
   system(cmd_h2)
