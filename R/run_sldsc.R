@@ -185,7 +185,7 @@ run_sldsc <- function(polyfun_path,
   cmd_h2 <- paste(
     "python3", file.path(polyfun_path, "ldsc.py"),
     "--h2", munged_out,
-    "--ref-ld-chr", paste(
+    "--ref-ld-chr", paste0(
       file.path(ann_dir, paste0(trait, ".", chr, ".l2.ldscore.gz")), ",",
       paste0(baseline_dir,chr, ".l2.ldscore.gz")
     ),
