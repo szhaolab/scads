@@ -130,7 +130,7 @@ run_sldsc <- function(polyfun_path,
   message("[run_sldsc] Found BED file(s): ", paste(bed_files, collapse = ", "))
   user_bed <- bed_files[1]
   
-  for (chr in 1:22) {
+  for (chr in 10) {
     # (a) make_annot
     out_annot <- file.path(ann_dir, sprintf("%s.%d.annot.gz", trait, chr))
     bim_file  <- sprintf("%s%d.bim", onekg_path, chr)
