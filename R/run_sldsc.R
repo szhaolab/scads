@@ -168,34 +168,47 @@ run_sldsc <- function(polyfun_path,
   final_out <- file.path(res_dir, trait)
   message("\n Creating new file: ", final_out)
   
-  # for all chromosomes (1-22)
-  # cmd_h2 <- paste(
-  #   "python3", file.path(polyfun_path, "ldsc.py"),
-  #   "--h2", munged_out,
-  #   "--ref-ld-chr", paste0(file.path(ann_dir, paste0(trait, ".")), ",", baseline_dir),
-  #   "--frqfile-chr", frqfile_pref,
-  #   "--w-ld-chr", weights_pref,
-  #   "--overlap-annot",
-  #   "--print-coefficients",
-  #   "--print-delete-vals",
-  #   "--out", final_out
-  # )
+  # Count how many annotation files exist
+  annot_files <- list.files(ann_dir, pattern = "\\.annot\\.gz$", full.names = TRUE)
+  n_annot <- length(annot_files)
+  message("\n Number of chromosomes with annotation: ", n_annot)
   
-  # for one chromosome 
-  cmd_h2 <- paste(
-    "python3", file.path(polyfun_path, "ldsc.py"),
-    "--h2", munged_out,
-    "--ref-ld", paste0(
-      file.path(ann_dir, paste0(trait, ".", chr)), ",",
-      paste0(baseline_dir,chr)
-    ),
-    "--frqfile", paste0(frqfile_pref, chr),
-    "--w-ld", paste0(weights_pref, chr),
-    "--overlap-annot",
-    "--print-coefficients",
-    "--print-delete-vals",
-    "--out", paste0(final_out, "_chr", chr)
-  )
+  if (n_annot == 1) {
+    # for one chromosome 
+    cmd_h2 <- paste(
+      "python3", file.path(polyfun_path, "ldsc.py"),
+      "--h2", munged_out,
+      "--ref-ld", paste0(
+        file.path(ann_dir, paste0(trait, ".", chr)), ",",
+        paste0(baseline_dir,chr)
+      ),
+      "--frqfile", paste0(frqfile_pref, chr),
+      "--w-ld", paste0(weights_pref, chr),
+      "--overlap-annot",
+      "--print-coefficients",
+      "--print-delete-vals",
+      "--out", paste0(final_out, "_chr", chr)
+    )
+    
+  } else if (n_annot == 22) {
+    # for all chromosomes (1-22)
+    cmd_h2 <- paste(
+      "python3", file.path(polyfun_path, "ldsc.py"),
+      "--h2", munged_out,
+      "--ref-ld-chr", paste0(file.path(ann_dir, paste0(trait, ".")), ",", baseline_dir),
+      "--frqfile-chr", frqfile_pref,
+      "--w-ld-chr", weights_pref,
+      "--overlap-annot",
+      "--print-coefficients",
+      "--print-delete-vals",
+      "--out", final_out
+    )
+    
+  } else {
+    # Invalid number of annotation files
+    stop("Please check number of CHR — S-LDSC only takes in either one chromosome or 22 chromosomes.")
+  }
+  
   message("\n[run_sldsc] Step 3: ldsc.py --h2:\n", cmd_h2)
   system(cmd_h2)
   
