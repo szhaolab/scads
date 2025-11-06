@@ -1,0 +1,398 @@
+#' main function for getting the gc baseline (lambda for each region and topic)
+
+get_gc_baseline <- function(count_mat_tp, #peak_names,
+                             genome="hg19",
+                             peakwidth = 501,
+                             emtrace = FALSE,
+                             verbose = FALSE,
+                             plot = FALSE,
+                             # gctype=c("ladder","tricube"),
+                             gcrange=c(0.3,0.8),
+                             # model=c('nbinom','poisson'),
+                             mu0=1,mu1=50,theta0=mu0,theta1=mu1,
+                             p=0.02,converge=1e-3,
+                             max_pts = 100000,
+                             max_line = 5000) {
+  # prepare input
+  peak_names <- rownames(count_mat_tp) # assuming the peak names are the same for all topics
+  gcEffects_input_res_topic_list <- list()
+  for (k in 1:ncol(count_mat_tp)) {
+    gcEffects_input_res_topic <- prep_gcEffects_input(rc = count_mat_tp[,k], 
+                                                      peak_names = peak_names,
+                                                      gctype = "ladder",
+                                                      genome = genome,
+                                                      peakwidth = peakwidth,
+                                                      verbose = verbose)
+    gcEffects_input_res_topic_list[[k]] <- gcEffects_input_res_topic
+  }
+  cat("...... GC content correction inputs are prepared. \n")
+  
+  # get adaptive gc effects
+  adp_gcEffects_res_topic_list <- list()
+  for (k in 1:length(gcEffects_input_res_topic_list)) {
+    cat("...... Estimating GC effects for topic ", colnames(count_mat_tp)[k],"\n")
+    cur_gc_res <- gcEffects_input_res_topic_list[[k]]
+    gc <- cur_gc_res$gc
+    region <- cur_gc_res$region
+    rc <- cur_gc_res$rc
+    adp_gcEffects_res_topic <- adp_gcEffects(gc=gc,
+                                             region=region,
+                                             rc=rc,
+                                             model=('nbinom'),
+                                             emtrace = emtrace,
+                                             plot = plot,
+                                             gcrange = gcrange,
+                                             peakwidth = peakwidth,
+                                             mu0=mu0,mu1=mu1,theta0=theta0,theta1=theta1,
+                                             p=p,converge=converge,
+                                             max_pts = max_pts,
+                                             max_line = max_line)
+    adp_gcEffects_res_topic_list[[k]] <- adp_gcEffects_res_topic
+  }
+  cat("...... Baseline models for are fitted. \n")
+  
+  # get predicted baseline mu0 for all regions
+  pred_mu0_list <- list()
+  for (k in 1:length(gcEffects_input_res_topic_list)) {
+    pred_mu0_list[[k]] <- pred_baseline_mu0(adp_gcEffects_res_topic_list[[k]], 
+                                            gcEffects_input_res_topic_list[[k]]$gc)
+  }
+  names(pred_mu0_list) <- colnames(count_mat_tp)
+  
+  # get lambda
+  lambda_j_list <- list()
+  N_k_list <- c()
+  gc_list <- c()
+  # rc_list <- c()
+  for (k in 1:length(pred_mu0_list)) {
+    N_k <- sum(count_mat_tp[,k])
+    lambda_j_list[[k]] <- pred_mu0_list[[k]] / N_k
+    N_k_list <- c(N_k, N_k_list)
+    gc_list[[k]] <- gcEffects_input_res_topic_list[[k]]$gc
+    # rc_list[[k]] <- gcEffects_input_res_topic_list[[k]]$rc
+  }
+  names(lambda_j_list) <- colnames(count_mat_tp)
+  names(N_k_list) <- colnames(count_mat_tp)
+  names(gc_list) <- colnames(count_mat_tp)
+  lambda_jk <- as.data.frame(do.call(cbind, lambda_j_list))
+  return(list(
+    lambda_jk = lambda_jk,
+    N_k = N_k_list,
+    gc_k = gc_list
+    # rc_k = rc_list
+  ))
+}
+
+
+#' Prepare GC content input for GC-effect correction
+#'
+#' This function computes the GC content across genomic peak regions, applying a weighting
+#' scheme (either uniform "ladder" or smoothed "tricube") over each region of fixed width.
+#' It prepares a list of GC content, genomic regions, and the provided read count information
+#' for downstream GC-effect correction or modeling.
+#'
+#' @param rc A numeric vector, matrix, or data frame representing read counts (e.g., from ATAC-seq or ChIP-seq).
+#'   This can be sparse or dense, and should align with the provided \code{peak_names}.
+#' @param peak_names A character vector of peak names, typically in the format
+#'   \code{"chr_start_end"}, e.g., \code{"chr1_12345_12845"}.
+#' @param genome A character string specifying the genome build to use. Must be a valid
+#'   BSgenome package name (e.g., \code{"hg19"}, \code{"hg38"}, \code{"mm10"}). Default is \code{"hg19"}.
+#' @param peakwidth An integer specifying the width of each peak (default: \code{501}).
+#'   Used to determine the smoothing window for GC content calculation.
+#' @param gctype A character string specifying the GC weighting scheme.
+#'   Options are \code{"ladder"} (uniform weights) or \code{"tricube"} (smooth kernel weights).
+#'   Default is \code{"ladder"}.
+#'
+#' @details
+#' The function extracts sequences for the given genomic regions using \code{getSeq()}
+#' from a BSgenome object and computes the GC content in each region by summing weights
+#' at positions corresponding to G or C nucleotides. The result is scaled to sum to 1.
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{gc}{A numeric vector of GC content values for each region.}
+#'   \item{region}{A \code{GRanges} object representing the genomic regions.}
+#'   \item{rc}{The input read count data, returned for convenience.}
+#' }
+#'
+#' @importFrom BSgenome getBSgenome
+#' @importFrom Biostrings getSeq vmatchPattern startIndex
+#' @importFrom GenomicRanges GRanges
+#' @importFrom IRanges IRanges
+#'
+#' @examples
+#' \dontrun{
+#' library(BSgenome.Hsapiens.UCSC.hg19)
+#' peaks <- c("chr1_100000_100500", "chr2_200000_200500")
+#' rc <- c(50, 75)
+#' res <- prep_gcEffects_input(rc = rc, peak_names = peaks, genome = "hg19", gctype = "tricube")
+#' head(res$gc)
+#' }
+#'
+#' @export
+
+prep_gcEffects_input <- function(rc, 
+                                 # read_count_mat_sparse,
+                                 peak_names,
+                                 genome="hg19",
+                                 peakwidth = 501,
+                                 gctype=c("ladder","tricube"),
+                                 verbose = TRUE){
+  ### input sanity check
+  genome <- getBSgenome(genome)
+  gctype <- match.arg(gctype)
+  halfbdw <- floor(peakwidth/2)
+  if(gctype=="ladder"){
+    weight <- c(rep(1,peakwidth))
+    weight <- weight/sum(weight)
+  }else if(gctype=="tricube"){
+    w <- halfbdw
+    weight <- (1-abs(seq(-w,w)/w)^3)^3
+    weight <- weight/sum(weight)
+  }
+  
+  ### prepare peak regions
+  parts  <- do.call(rbind, strsplit(peak_names, "_", fixed = TRUE))
+  chrs   <- parts[, 1]
+  starts <- as.integer(parts[, 2])
+  ends   <- as.integer(parts[, 3])
+
+  region <- GRanges(chrs,IRanges(start=starts,end=ends))
+  
+  ### effective gc content1
+  if (verbose) {
+    cat("...... Calculating GC content", "\n")
+  }
+  nr <- region
+  seqs <- getSeq(genome,nr) # slow
+  gcpos <- startIndex(vmatchPattern("S", seqs, fixed="subject")) # a list of the positions within each window that are G or C
+  gc <- round(sapply(gcpos,function(x) sum(weight[x])),3)
+  
+  ### round all values in rc to integers
+  if (verbose) {
+    cat("...... Rounding read counts to nearest integers", "\n")
+  }
+  rc <- round(rc)
+  
+  return(list(gc=gc,
+              region=region,
+              rc=rc))
+}
+
+
+
+#' @title Adaptive GC Effects Estimation for ChIP-seq Read Counts
+#'
+#' @description
+#' Estimates GC-content-dependent effects on ChIP-seq read counts using an
+#' expectation-maximization (EM) algorithm with generalized linear models.
+#' Regions are modeled as a mixture of background and foreground components
+#' (e.g. non-peak and peak-like regions), each following either a Poisson or
+#' negative binomial distribution. GC effects are fitted separately for each
+#' component using natural spline regression. Optional visualization shows
+#' fitted curves and mixture probabilities.
+#'
+#' @param gc A numeric vector of GC content values for genomic windows or regions.
+#'
+#' @param region A genomic region object or identifier (not directly used in
+#' modeling but retained for consistency or downstream reference).
+#'
+#' @param rc A numeric vector of read counts corresponding to the same
+#' regions as \code{gc}.
+#'
+#' @param peakwidth A non-negative integer specifying the expected ChIP-seq
+#' binding width (default 501). Used for labeling and downstream interpretation.
+#'
+#' @param plot Logical; if \code{TRUE} (default), generates a scatter plot
+#' showing GC content vs read counts, colored by posterior mixture
+#' probabilities, and overlays fitted foreground (red) and background (blue)
+#' curves.
+#'
+#' @param gcrange A numeric vector of length 2 specifying the GC-content range
+#' to include for model fitting. Regions outside this range are ignored.
+#' Default is \code{c(0.3, 0.8)}.
+#'
+#' @param emtrace Logical; if \code{TRUE} (default), prints log-likelihood and
+#' convergence progress at each EM iteration.
+#'
+#' @param model Character string specifying the distribution model for read
+#' counts. Supported options are \code{"nbinom"} (default) and \code{"poisson"}.
+#'
+#' @param mu0,mu1 Numeric values giving the initial mean read counts for
+#' background and foreground components, respectively. Defaults are
+#' \code{mu0 = 1}, \code{mu1 = 50}.
+#'
+#' @param theta0,theta1 Numeric values specifying initial shape parameters
+#' for negative binomial models of background and foreground. Used only when
+#' \code{model = "nbinom"}.
+#'
+#' @param p Numeric value specifying the initial mixture proportion of
+#' foreground regions. Default is 0.02.
+#'
+#' @param converge Numeric value specifying the EM convergence threshold.
+#' Iteration stops when the relative log-likelihood change is below this
+#' threshold. Default is 1e-3.
+#'
+#' @param max_pts Integer specifying the maximum number of points plotted
+#' (default 100000).
+#'
+#' @param max_line Integer specifying the maximum number of points used to
+#' draw fitted curves (default 5000).
+#'
+#' @return A list containing:
+#' \item{gc}{GC-content values at which GC effects were estimated.}
+#' \item{lmns0}{Fitted GLM object for the background component.}
+#' \item{lmns1}{Fitted GLM object for the foreground component.}
+#' \item{z}{Posterior probabilities of each region belonging to the foreground component.}
+#' \item{mu0, mu1}{Predicted read counts (fitted means) at each GC content for
+#' background and foreground components, respectively.}
+#' \item{mu0med0, mu1med1}{Medians of fitted background and foreground signals
+#' in their respective component regions.}
+#' \item{mu0med1, mu1med0}{Cross-median values: background prediction in
+#' foreground-like regions, and vice versa.}
+#' \item{g}{A \code{ggplot} object (if \code{plot=TRUE}) showing fitted GC effects.}
+#' \item{dat}{Data frame containing the filtered counts and GC content used for fitting.}
+#'
+#' @details
+#' The algorithm iteratively updates posterior probabilities (E step) and fits
+#' GC-dependent regression models for both mixture components (M step). The GC
+#' dependence is modeled using a natural spline with 2 degrees of freedom.
+#' 
+#' The fitted curves can reveal whether sequencing depth or read coverage is
+#' biased by GC content, separately for peak-enriched and background regions.
+#'
+#' @import MASS
+#' @importFrom splines ns
+#' @importFrom stats glm glm.nb dpois dnbinom predict
+#' @importFrom grDevices colorRampPalette
+#' @importFrom ggplot2 ggplot geom_point geom_line aes labs theme_minimal
+#' scale_y_continuous coord_cartesian scale_color_manual
+#'
+#' @export
+#'
+#' @examples
+#' set.seed(1)
+#' gc <- runif(10000, 0.2, 0.9)
+#' rc <- rpois(10000, lambda = exp(5 * (gc - 0.5)^2))
+#' res <- adp_gcEffects(gc = gc, rc = rc, model = "poisson", plot = TRUE)
+#' 
+#' # visualize the estimated GC effects
+#' print(res$g)
+#' 
+#' 
+adp_gcEffects <- function(gc=gc,
+                          region=region,
+                          rc=rc,
+                          # coverage,bdwidth,flank=NULL,
+                          peakwidth = 501, 
+                          plot=TRUE,
+                      # sampling=c(0.05,1),#supervise=GRanges(),
+                      gcrange=c(0.3,0.8),emtrace=TRUE,
+                      model=c('nbinom','poisson'),
+                      mu0=1,mu1=50,theta0=mu0,theta1=mu1,
+                      p=0.02,converge=1e-3,
+                      max_pts = 100000,
+                      max_line = 5000
+                      # genome="hg19",gctype=c("ladder","tricube")
+                      ){
+  
+  ### em algorithms
+  # gc <- rep(gc,2)
+  # rc <- c(rcfwd,rcrev)
+  
+  # browser()
+  idx <- gc>=gcrange[1] & gc<=gcrange[2] & !is.na(rc) & !is.na(gc)
+  dat <- data.frame(y=rc[idx],gc=gc[idx])
+  # dat0 <- data.frame(y=rc,gc=gc)
+  if(model=='poisson'){
+    logp1 <- dpois(dat$y, lambda = mu1, log = TRUE)
+    logp0 <- dpois(dat$y, lambda = mu0, log = TRUE)
+  }else{
+    # browser()
+    logp1 <- dnbinom(dat$y, size=theta1, mu=mu1, log = TRUE)
+    logp0 <- dnbinom(dat$y, size=theta0, mu=mu0, log = TRUE)
+  }
+  z <- 1/(1+exp(logp0-logp1)*(1-p)/p)
+  llf <- sum(z*(logp1+log(p)) + (1-z)*(logp0+log(1-p)))
+  llgap <- llf
+  i <- 0
+  # rm(rcfwd,rcrev,rc,gc,idx)
+  while(abs(llgap) > (abs(llf) * converge) && i < 100){
+    p <- (2+sum(z))/(2*2+length(z))
+    dat1 <- dat[z>=0.5,]
+    dat0 <- dat[z<0.5,]
+    if(model=='poisson'){
+      lmns0 <- glm(y ~ ns(gc, df = 2), data=dat0, family="poisson")
+      lmns1 <- glm(y ~ ns(gc, df = 2), data=dat1, family="poisson")
+      predY0 <- predict(lmns0, data.frame(gc = dat$gc),type="response")
+      predY1 <- predict(lmns1, data.frame(gc = dat$gc),type="response")
+      logp1 <- dpois(dat$y, lambda = predY1, log = TRUE)
+      logp0 <- dpois(dat$y, lambda = predY0, log = TRUE)
+    }else{
+      # slow
+      lmns0 <- glm.nb(y ~ ns(gc, df = 2), data=dat0, init.theta=theta0)
+      lmns1 <- glm.nb(y ~ ns(gc, df = 2), data=dat1, init.theta=theta1)
+      predY0 <- predict(lmns0, data.frame(gc = dat$gc),type="response")
+      predY1 <- predict(lmns1, data.frame(gc = dat$gc),type="response")
+      theta1 <- lmns1$theta
+      theta0 <- lmns0$theta
+      logp1 <- dnbinom(dat$y, size=theta1, mu=predY1, log = TRUE)
+      logp0 <- dnbinom(dat$y, size=theta0, mu=predY0, log = TRUE)
+    }
+    z <- 1/(1+exp(logp0-logp1)*(1-p)/p)
+    if(sum(z>=0.5) < length(gc)*0.0005 | sum(z<0.5) < length(gc)*0.0005)
+      break;
+    lli <- sum(z*(logp1+log(p)) + (1-z)*(logp0+log(1-p)))
+    llgap <- lli - llf
+    llf <- lli
+    i <- i + 1
+    if(emtrace)
+      cat("......... Iteration",i,'\tll',llf,'\tincrement',llgap,'\n')
+  }
+  
+  samptype <- ""
+  if(plot){
+    tmp <- nrow(dat)
+    idx0 <- sample.int(tmp,min(100000,tmp))
+    rbPal <- colorRampPalette(c('skyblue','pink'))
+    color <- rbPal(20)[as.numeric(cut(z[idx0],breaks = 20))]
+    plot(dat$gc[idx0],dat$y[idx0]+0.5,col=color,xlim=gcrange,pch=20,
+         main=paste(model,samptype),
+         xlab='Effective GC content',ylab="Read counts",log='y',yaxt='n')
+    idx00 <- sample.int(tmp,min(5000,tmp))
+    idx00 <- idx00[order(dat$gc[idx00])]
+    lines(dat$gc[idx00],predY1[idx00]+0.5,col='red',lwd=3)
+    lines(dat$gc[idx00],predY0[idx00]+0.5,col='blue',lwd=3)
+    axis(side=2, at=c(0,2^(0:10))+0.5, labels=c(0,2^(0:10)))
+  }
+  
+  ### gc effects
+  gcbase <- round(seq(0,1,0.001),3)
+  gcbias <- list(gc=gcbase,
+                 lmns0 = lmns0, # add the predicted model to the output
+                 lmns1 = lmns1,
+                 z = z,
+                 mu0=predict(lmns0,data.frame(gc = gcbase),type="response"),
+                 mu1=predict(lmns1,data.frame(gc = gcbase),type="response"),
+                 mu0med0=median(predY0[z<0.5]),
+                 mu1med1=median(predY1[z>=0.5]),
+                 mu0med1=median(predY0[z>=0.5]),
+                 mu1med0=median(predY1[z<0.5]),
+                 # g = g,
+                 dat = dat)
+  
+  gcbias
+}
+
+#' @param gc The processed gc content information from \code{prep_gcEffects_input()}.
+pred_baseline_mu0 <- function(adp_gcEffects_res, gc) {
+  # Predict baseline mu0 values for given GC content values
+  pred_mu0 <- predict(adp_gcEffects_res$lmns0, 
+                           data.frame(gc = gc), 
+                           type = "response")
+  return(pred_mu0)
+}
+
+
+
+
