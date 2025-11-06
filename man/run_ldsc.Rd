@@ -9,7 +9,6 @@ run_ldsc(
   sumstats_path,
   n,
   trait,
-  rcode_path,
   onekg_path,
   bed_dir,
   baseline_dir,
@@ -26,8 +25,6 @@ run_ldsc(
 
 \item{trait}{GWAS trait (e.g. SIM for simulated)}
 
-\item{rcode_path}{A character string specifying the directory to Rscripts for running LDSC}
-
 \item{onekg_path}{A character string specifying the directory to 1000G genotypes data}
 
 \item{bed_dir}{A character string specifying the directory for the BED files.}
@@ -37,6 +34,8 @@ run_ldsc(
 \item{weights_dir}{A character string specifying the directory to weights provided for LDSC}
 
 \item{out_dir}{A character string specifying the output directory for LDSC enrichment results.}
+
+\item{rcode_path}{A character string specifying the directory to Rscripts for running LDSC}
 }
 \value{
 None. LDSC results are written to the specified output directory.

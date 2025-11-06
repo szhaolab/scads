@@ -1,6 +1,77 @@
-#' main function for getting the gc baseline (lambda for each region and topic)
 
-get_gc_baseline <- function(count_mat_tp, #peak_names,
+#'  Calculate GC Baseline Correction Parameters for Topic-Specific Count Data 
+#'
+#' @description
+#' This function is the main function that computes GC-content baseline correction parameters (lambda values)
+#' for each genomic region and topic combination. It processes count matrices with
+#' topic modeling results, estimates GC effects for each topic separately, and
+#' returns normalized baseline parameters that can be used for GC bias correction.
+#'
+#' @param count_matrix A SummarizedExperiment or similar object containing a count
+#'   matrix accessible via \code{assay()}. Rows represent genomic peaks and columns
+#'   represent cells or samples.
+#' @param Lmat A matrix of topic loadings where rows correspond to cells (matching
+#'   column names in \code{count_matrix}) and columns represent topics.
+#' @param genome A character string specifying the genome build. Must be a valid
+#'   BSgenome package name (e.g., "hg19", "hg38", "mm10"). Default is "hg19".
+#' @param peakwidth An integer specifying the width of genomic peaks in base pairs.
+#'   Default is 501.
+#' @param emtrace Logical; if \code{TRUE}, prints iteration details during EM
+#'   algorithm convergence for each topic. Default is \code{FALSE}.
+#' @param verbose Logical; if \code{TRUE}, prints progress messages during GC
+#'   content calculation and data preparation. Default is \code{FALSE}.
+#' @param plot Logical; if \code{TRUE}, generates diagnostic plots showing GC
+#'   effects for each topic. Default is \code{FALSE}.
+#' @param gcrange A numeric vector of length 2 specifying the GC content range
+#'   to include in model fitting. Default is \code{c(0.3, 0.8)}.
+#' @param mu0,mu1 Numeric initial values for background and foreground mean read
+#'   counts. Defaults are \code{mu0 = 1} and \code{mu1 = 50}.
+#' @param theta0,theta1 Numeric initial shape parameters for negative binomial
+#'   distribution. Default to \code{mu0} and \code{mu1} respectively.
+#' @param p Numeric initial mixture proportion for foreground regions. Default is 0.02.
+#' @param converge Numeric convergence threshold for EM algorithm. Default is 1e-3.
+#' @param max_pts Integer specifying maximum number of points to plot. Default is 100000.
+#' @param max_line Integer specifying maximum number of points for fitted curve lines.
+#'   Default is 5000.
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{lambda_jk}{A data frame where rows represent genomic regions (peaks) and
+#'     columns represent topics. Each entry is the normalized baseline parameter
+#'     (lambda) for that region-topic combination.}
+#'   \item{N_k}{A named numeric vector containing the total read count for each topic.}
+#'   \item{gc_k}{A named list where each element contains the GC content vector for
+#'     all regions, organized by topic.}
+#' }
+#'
+#' @details
+#' The function performs the following steps:
+#' \enumerate{
+#'   \item Multiplies the count matrix by the topic loading matrix to obtain
+#'     topic-specific read counts.
+#'   \item Calculates GC content for each genomic peak region.
+#'   \item Fits adaptive GC effect models for each topic using negative binomial
+#'     regression with an EM algorithm.
+#'   \item Predicts baseline mean values (mu0) for each region and topic.
+#'   \item Normalizes by total topic counts to obtain lambda parameters.
+#' }
+#'
+#' The lambda values can be used to correct for GC bias in downstream analyses
+#' such as differential accessibility or peak calling.
+#'
+#' @seealso \code{\link{prep_gcEffects_input}}, \code{\link{adp_gcEffects}},
+#'   \code{\link{pred_baseline_mu0}}
+#'
+#' @importFrom SummarizedExperiment assay
+#'
+#' @examples
+#' \dontrun{
+#'   gc_baseline_res <- get_gc_baseline(count_matrix = count_mat_raw, Lmat = L_mat_topic)
+#' }
+#'
+#' @export
+
+get_gc_baseline <- function(count_matrix, Lmat,
                              genome="hg19",
                              peakwidth = 501,
                              emtrace = FALSE,
@@ -13,8 +84,17 @@ get_gc_baseline <- function(count_mat_tp, #peak_names,
                              p=0.02,converge=1e-3,
                              max_pts = 100000,
                              max_line = 5000) {
+  
+  # get count_mat_tp matrix --> matrix of read count: peak x topic
+  count_mat <- assay(count_matrix)
+  peak_names <- count_mat@Dimnames[[1]]
+  
+  # select cells in count matrix that only appear in matrix L
+  unique_cells_in_L <- rownames(Lmat)
+  count_mat_in_L <- count_mat[, unique_cells_in_L, drop=FALSE]
+  count_mat_tp <- count_mat_in_L %*% Lmat
+  
   # prepare input
-  peak_names <- rownames(count_mat_tp) # assuming the peak names are the same for all topics
   gcEffects_input_res_topic_list <- list()
   for (k in 1:ncol(count_mat_tp)) {
     gcEffects_input_res_topic <- prep_gcEffects_input(rc = count_mat_tp[,k], 
@@ -75,6 +155,7 @@ get_gc_baseline <- function(count_mat_tp, #peak_names,
   names(N_k_list) <- colnames(count_mat_tp)
   names(gc_list) <- colnames(count_mat_tp)
   lambda_jk <- as.data.frame(do.call(cbind, lambda_j_list))
+  rownames(lambda_jk) <- peak_names
   return(list(
     lambda_jk = lambda_jk,
     N_k = N_k_list,
@@ -263,10 +344,7 @@ prep_gcEffects_input <- function(rc,
 #'
 #' @import MASS
 #' @importFrom splines ns
-#' @importFrom stats glm glm.nb dpois dnbinom predict
-#' @importFrom grDevices colorRampPalette
-#' @importFrom ggplot2 ggplot geom_point geom_line aes labs theme_minimal
-#' scale_y_continuous coord_cartesian scale_color_manual
+#' @importFrom stats glm dpois dnbinom predict
 #'
 #' @export
 #'
@@ -384,7 +462,31 @@ adp_gcEffects <- function(gc=gc,
   gcbias
 }
 
-#' @param gc The processed gc content information from \code{prep_gcEffects_input()}.
+#' Predict Baseline Mean Values (mu0) from GC Content
+#'
+#' This function predicts the baseline (background component) mean read counts
+#' for specified GC content values using a fitted model from \code{adp_gcEffects()}.
+#' It extracts the background GLM model (lmns0) and generates predictions for
+#' the provided GC content vector.
+#'
+#' @param adp_gcEffects_res A list object returned by \code{adp_gcEffects()},
+#'   which contains fitted GLM models including \code{lmns0} (the background model).
+#' @param gc A numeric vector of GC content values (between 0 and 1) for which
+#'   baseline predictions are desired. (The processed gc content information from \code{prep_gcEffects_input()}.)
+#'
+#' @return A numeric vector of predicted baseline mean values (mu0) corresponding
+#'   to each element in \code{gc}.
+#'
+#' @details
+#' This is a helper function typically used after fitting GC effects with
+#' \code{adp_gcEffects()}. It uses the background component model (lmns0) to
+#' predict expected read counts at given GC content levels, which can be used
+#' for normalization or bias correction.
+#'
+#' @seealso \code{\link{adp_gcEffects}}, \code{\link{get_gc_baseline}}
+#'
+#' @export
+#' 
 pred_baseline_mu0 <- function(adp_gcEffects_res, gc) {
   # Predict baseline mu0 values for given GC content values
   pred_mu0 <- predict(adp_gcEffects_res$lmns0, 

@@ -7,11 +7,23 @@
 scads(
   count_matrix,
   nTopics = 10,
-  bed_dir,
+  n_s = 1000,
+  n_c = 8,
+  baseline_method = "constant",
+  bl_celltype = NULL,
+  bl_celltype_peak_file = NULL,
   sumstats_dir,
   gwas_nsamps,
   gwas_trait,
   outdir,
+  polyfun_code_dir,
+  ldsc_code_dir,
+  onekg_path,
+  baseline_dir,
+  frqfile_pref,
+  hm3_snps,
+  weights_pref,
+  continuous_topic_annot = FALSE,
   ...
 )
 }
@@ -20,17 +32,49 @@ scads(
 
 \item{nTopics}{The number of topics (clusters) to fit. Default is 10.}
 
-\item{bed_dir}{}
+\item{n_s}{Number of simulations for fastTopics-DE.}
+
+\item{n_c}{Number of cores to use for parallelization.}
+
+\item{sumstats_dir}{Directory with GWAS sumstats.}
+
+\item{gwas_nsamps}{Sample size of GWAS.}
+
+\item{gwas_trait}{GWAS trait name (e.g., "SIM").}
+
+\item{outdir}{Directory where outputs are saved.}
+
+\item{polyfun_code_dir}{Directory to access polyFUN (LDSC) code scripts; must be python3-compatible.}
+
+\item{ldsc_code_dir}{Directory to access LDSC code scripts.}
+
+\item{onekg_path}{Prefix to 1000G plink files in hg38 (e.g., "/path/1000G.EUR.hg38.").}
+
+\item{baseline_dir}{Prefix to baseline v2.2 annotation (e.g. "/path/baselineLD_v2.2/baselineLD.").}
+
+\item{frqfile_pref}{Prefix to the .frq or .afreq files (e.g. "/path/1000G.EUR.hg38.").}
+
+\item{hm3_snps}{Path to the HapMap3 no‐MHC SNP list (e.g. "hm3_no_MHC.list.txt").}
+
+\item{continuous_topic_annot}{Logical. If \code{TRUE}, create \emph{continuous} topic annotations
+(via \code{get_continuous_annot_beds()}) and run \code{run_sldsc_cont()}.
+If \code{FALSE}, use the \emph{binary} annotation approach (\code{get_annot_beds()} and \code{run_sldsc()}).
+Default is \code{FALSE}.}
 
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
-A list containing the fitted topic model, enrichment results, and cell scores.
+A list containing the fitted topic model (\code{out1}) and the cell scores (\code{cs_res}).
 }
 \description{
 scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score
 }
 \examples{
-result <- scads(count_matrix, GWAS_ss, LD_reference, nTopics = 15)
+result <- scads(count_matrix, nTopics = 15, sumstats_dir="/some/sumstats", gwas_nsamps=60000,
+                gwas_trait="SIM", outdir="results/", 
+                onekg_path="/some/path/1000G.EUR.hg38.",
+                baseline_dir="/some/path/baselineLD_v2.2/baselineLD.",
+                frqfile_pref="/some/path/1000G.EUR.hg38.",
+                hm3_snps="/some/path/hm3_no_MHC.list.txt")
 
 }
