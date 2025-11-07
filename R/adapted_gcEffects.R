@@ -86,13 +86,19 @@ get_gc_baseline <- function(count_matrix, Lmat,
                              max_line = 5000) {
   
   # get count_mat_tp matrix --> matrix of read count: peak x topic
-  count_mat <- assay(count_matrix)
-  peak_names <- count_mat@Dimnames[[1]]
+  # count_mat <- assay(count_matrix)
+  # peak_names <- count_mat@Dimnames[[1]]
+  if (is(count_matrix, "SummarizedExperiment")) {
+    count_mat <- assay(count_matrix)
+  } else {
+    count_mat <- count_matrix
+  }
+  peak_names <- colnames(count_mat)
   
   # select cells in count matrix that only appear in matrix L
   unique_cells_in_L <- rownames(Lmat)
-  count_mat_in_L <- count_mat[, unique_cells_in_L, drop=FALSE]
-  count_mat_tp <- count_mat_in_L %*% Lmat
+  count_mat_in_L <- count_mat[unique_cells_in_L, , drop=FALSE]
+  count_mat_tp <- Matrix::t(count_mat_in_L) %*% Lmat
   
   # prepare input
   gcEffects_input_res_topic_list <- list()

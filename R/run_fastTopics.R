@@ -59,11 +59,11 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   
   # Determine baseline via 3 methods 
   cat("\nDetermining baseline\n")
-  if (baseline_method == "macs2"){
+  if (baseline_method == "gc"){
+    
     gc_baseline_res <- get_gc_baseline(count_matrix, Lmat) # peak-by-topic; require the column names to be peak IDs with chr_start_end format
     baseline_lambda <- gc_baseline_res$lambda_jk
     cat("Average Baseline by topics: ", paste(round(colMeans(baseline_lambda), 10)))
-    
     
   } else if (baseline_method == "average"){
     
