@@ -4,27 +4,28 @@
 \alias{get_annot_beds}
 \title{Generate BED Files from Topic Annotations}
 \usage{
-get_annot_beds(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.5)
+get_annot_beds(topics_res, output_dir, fuzzy = FALSE, cutoff = 0.9)
 }
 \arguments{
 \item{topics_res}{A list containing the factor matrices \code{Fmat} and \code{Lmat},
 differential expression results \code{de_res}, and p-values matrix \code{p_jk}.
 \itemize{
-\item topics_annot A matrix or data frame containing topic annotations (peaks x topics).
+\item \code{Fmat}: A matrix containing factor loadings (peaks x topics).
+\item \code{Pmat}: A matrix of p-values or probabilities (peaks x topics).
 Rows correspond to peaks with names in the format "chr:start-end".
 Columns correspond to topics.
-\item topics_prob A matrix probability of peak is in a topic
 }}
 
-\item{output_dir}{A character string specifying the output directory for the BED files.}
+\item{output_dir}{A character string specifying the base output directory for the BED files.}
 
 \item{fuzzy}{Logical value indicating whether to create fuzzy annotations (default: FALSE).}
 
 \item{cutoff}{Numeric value specifying the cutoff for binary annotations when \code{fuzzy = FALSE} (default: 0.5).}
 }
 \value{
-None. BED files are written to the specified output directory.
+A list of output folder paths (\code{bed_dir_list}), one for each topic.
 }
 \description{
 This function generates BED files for each topic based on the provided topic annotations.
+Each BED file is saved into its own folder, and a list of output folder paths is returned.
 }

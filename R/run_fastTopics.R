@@ -59,9 +59,11 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   
   # Determine baseline via 3 methods 
   cat("\nDetermining baseline\n")
-  if (baseline_method == "macs2"){
+  if (baseline_method == "gc"){
     
-    cat("Baseline: ", baseline)
+    gc_baseline_res <- get_gc_baseline(count_matrix, Lmat) # peak-by-topic; require the column names to be peak IDs with chr_start_end format
+    baseline_lambda <- gc_baseline_res$lambda_jk
+    cat("Average Baseline by topics: ", paste(round(colMeans(baseline_lambda), 10)))
     
   } else if (baseline_method == "average"){
     
@@ -74,9 +76,10 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
 
   } else if (baseline_method == "estimate") {
     
-      baseline <- get_average_bg(count_matrix, 
-                               cell_type = bl_celltype_cells, 
+      baseline <- get_average_bg(count_matrix,
+                               cell_type = bl_celltype_cells,
                                cell_type_peaks = bl_celltype_peak_file)
+      
       cat("Baseline: ", baseline)
     
   } else {

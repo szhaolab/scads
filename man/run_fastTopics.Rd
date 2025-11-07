@@ -4,12 +4,27 @@
 \alias{run_fastTopics}
 \title{Run fastTopics and Generate Topic Annotations}
 \usage{
-run_fastTopics(count_matrix, nTopics = 10, ...)
+run_fastTopics(
+  count_matrix,
+  nTopics = 10,
+  n_s = 1000,
+  n_c = 1,
+  baseline_method = "constant",
+  bl_celltype_cells = NULL,
+  bl_celltype_peak_file = NULL,
+  fdr_cutoff = 0.05,
+  outdir,
+  ...
+)
 }
 \arguments{
 \item{count_matrix}{A numeric matrix or sparse matrix of counts with cells as rows and peaks as columns.}
 
 \item{nTopics}{An integer specifying the number of topics to fit. Default is 10.}
+
+\item{n_s}{Number of samples for the DE analysis (default: 1000).}
+
+\item{n_c}{Number of cores for parallel processing in DE analysis (default: 1).}
 
 \item{...}{Additional arguments passed to \code{fastTopics::fit_topic_model()}.}
 }
@@ -25,6 +40,7 @@ the factor matrices along with differential expression results.
 The function ensures that the count matrix has cells as rows and peaks as columns.
 It then runs the fastTopics model, performs differential expression analysis,
 computes local false discovery rates (lfdr), and calculates p-values for each peak-topic pair.
+If \code{locfdr::locfdr} fails, it binarizes \code{Fmat} based on a threshold and computes \code{p_jk}.
 }
 \examples{
 \dontrun{

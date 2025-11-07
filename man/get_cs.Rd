@@ -4,36 +4,25 @@
 \alias{get_cs}
 \title{Compute Single-Cell Level Scores (c_i)}
 \usage{
-get_cs(topic_res, ldsc_res, trait)
+get_cs(topic_res, ldsc_res_dir, trait, nTopics)
 }
 \arguments{
-\item{topic_res}{Results from run_fastTopics
-\itemize{
-\item p_jk Matrix of probabilities of peaks in topics (peaks x topics), obtained from the F matrix of fastTopics.
-\item l_ik Matrix of topic proportions for each cell (cells x topics), obtained from the L matrix of fastTopics.
-}}
+\item{topic_res}{Results from run_fastTopics, with Pmat (J×K) and Lmat (I×K)}
 
-\item{ldsc_res}{Enrichment results from run_ldsc
-\itemize{
-\item tau_Ck Vector of per-topic heritability contributions (\eqn{\tau_{C_k}}) of length K (number of topics).
-}}
+\item{ldsc_res_dir}{Directory containing k*_output/results/Trait.results}
+
+\item{trait}{Trait name used in LDSC results files.}
+
+\item{nTopics}{Number of topics (K).}
 }
 \value{
-A vector of single-cell level scores (\eqn{c_i}) of length I (number of cells).
+A list with
+\itemize{
+\item cs: vector of length I (cells)
+\item var_cs: variance of each cs\link{i}
+\item ldsc_res_table: the raw tau_display table from LDSC
+}
 }
 \description{
-This function computes the single-cell level scores (\eqn{c_i}) based on the fastTopics model outputs
-and other required parameters.
-}
-\details{
-The function computes the scores based on the following corrected approximation:
-\deqn{
-c_i = \frac{ \left( \frac{E(M_i)}{E(N_i)} \left[ 1 - \frac{\text{Cov}(M_i, N_i)}{E(M_i) E(N_i)} + \frac{\text{Var}(N_i)}{[E(N_i)]^2} \right] \right) }{ \left( \frac{ \sum_{j=1}^{J} h_j }{ J } \right) }
-}
-where:
-\itemize{
-\item \eqn{E(M_i)} and \eqn{E(N_i)} are the expected values.
-\item \eqn{\text{Cov}(M_i, N_i)} is the covariance between \eqn{M_i} and \eqn{N_i}.
-\item \eqn{\text{Var}(N_i)} is the variance of \eqn{N_i}.
-}
+Compute Single-Cell Level Scores (c_i)
 }
