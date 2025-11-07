@@ -185,7 +185,8 @@ get_cs1 <- function(topic_res, ldsc_res_dir, trait, nTopics) {
     var_cs        = var_cs,
     z_cell        = z_cell,
     ldsc_res_table = tau_display,
-    cs_dat = list(M_i=M_i, N_i=N_i, Var_Mi = V_Mi))
+    cs_dat = list(M_i=M_i, N_i=N_i, Var_Mi = Var_Mi.res, 
+                  Var_Ni = Var_Ni.res, Cov_MN = Cov_MN.res))
   )
 }
 
