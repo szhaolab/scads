@@ -187,7 +187,7 @@ run_sldsc <- function(polyfun_path,
       "--overlap-annot",
       "--print-coefficients",
       "--print-delete-vals",
-      "--out", paste0(final_out, "_chr", chr)
+      "--out", final_out
     )
     
   } else if (n_annot == 22) {
