@@ -94,6 +94,7 @@ get_gc_baseline <- function(count_matrix, Lmat,
     count_mat <- count_matrix
   }
   peak_names <- colnames(count_mat)
+  peak_names <- gsub("[:-\\-]", "_", peak_names)
   
   # select cells in count matrix that only appear in matrix L
   unique_cells_in_L <- rownames(Lmat)
@@ -118,9 +119,21 @@ get_gc_baseline <- function(count_matrix, Lmat,
   for (k in 1:length(gcEffects_input_res_topic_list)) {
     cat("...... Estimating GC effects for topic ", colnames(count_mat_tp)[k],"\n")
     cur_gc_res <- gcEffects_input_res_topic_list[[k]]
+    print(cur_gc_res)
     gc <- cur_gc_res$gc
+    # print(gc)
     region <- cur_gc_res$region
+    # print(region)
     rc <- cur_gc_res$rc
+    # print(rc)
+    
+    # Add these diagnostic prints:
+  cat("......... GC summary: ", summary(cur_gc_res$gc), "\n")
+  cat("......... NA count in GC: ", sum(is.na(cur_gc_res$gc)), "\n")
+  cat("......... NA count in RC: ", sum(is.na(cur_gc_res$rc)), "\n")
+  cat("......... Inf count in GC: ", sum(is.infinite(cur_gc_res$gc)), "\n")
+  cat("......... Inf count in RC: ", sum(is.infinite(cur_gc_res$rc)), "\n")
+    
     adp_gcEffects_res_topic <- adp_gcEffects(gc=gc,
                                              region=region,
                                              rc=rc,
@@ -385,8 +398,16 @@ adp_gcEffects <- function(gc=gc,
   # rc <- c(rcfwd,rcrev)
   
   # browser()
-  idx <- gc>=gcrange[1] & gc<=gcrange[2] & !is.na(rc) & !is.na(gc)
-  dat <- data.frame(y=rc[idx],gc=gc[idx])
+  idx <- gc>=gcrange[1] & gc<=gcrange[2] & !is.na(rc) & !is.na(gc) #QX
+  # idx <- !is.na(gc) & !is.na(rc) & gc >= gcrange[1] & gc <= gcrange[2] & is.finite(gc) & is.finite(rc) #LY
+  dat <- data.frame(y=rc[idx], gc=gc[idx]) 
+  
+  # Add one safety check:
+  if(nrow(dat) < 100) {
+    stop("Insufficient data points after filtering (n=", nrow(dat), 
+         "). Check your data quality and gcrange parameter.")
+  }
+  
   # dat0 <- data.frame(y=rc,gc=gc)
   if(model=='poisson'){
     logp1 <- dpois(dat$y, lambda = mu1, log = TRUE)

@@ -50,6 +50,7 @@ scads <- function(count_matrix,
                   hm3_snps,
                   weights_pref,
                   continuous_topic_annot = FALSE,
+                  chrs = 1:22,
                   ...) {
   
   # 0) create directories 
@@ -62,7 +63,7 @@ scads <- function(count_matrix,
   cat("\nStart time: "); print(Sys.time())
   cat("\nCount matrix dimensions:", dim(count_matrix), "\n")
   out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c,
-                         baseline_method, bl_celltype, bl_celltype_peak_file, 
+                         baseline_method, bl_celltype, bl_celltype_peak_file,
                          outdir = outdir)
   saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
   # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
@@ -97,6 +98,7 @@ scads <- function(count_matrix,
     # If using continuous annotations, call run_sldsc_cont; else run_sldsc
     if (!continuous_topic_annot) {
       run_sldsc(
+        chrs          = chrs,
         polyfun_path  = polyfun_code_dir,
         ldsc_path     = ldsc_code_dir,
         sumstats_path = sumstats_dir,

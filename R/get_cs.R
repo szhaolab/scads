@@ -92,7 +92,7 @@ get_cs1 <- function(topic_res, ldsc_res_dir, trait, nTopics) {
   # 1) unpack
   p_jk <- topic_res$Pmat   # J x K
   l_ik <- topic_res$Lmat   # I x K
-  nTopics <- 26 # ncol(p_jk)
+  nTopics <- ncol(p_jk)
   
   # 2) read in LDSC results per topic
   tau_display <- NULL
@@ -165,7 +165,7 @@ get_cs1 <- function(topic_res, ldsc_res_dir, trait, nTopics) {
   
   Var_Ni.res <- Var_Ni(l_ik, p_jk)
   # Var_Mi.res <- Var_Mi(l_ik, p_jk, T_ck = e_Ck, v_j = 1)
-  Var_Mi.res <- Var_Mi(l_ik, p_jk, sigma_tau = se_e, mu_tau = e_Ck, v_j = 1)
+  Var_Mi.res <- Var_Mi(l_ik, p_jk, a_k, se_e)
   Cov_MN.res <- Cov_MN(l_ik, T_ck = e_Ck, p_jk)
   
   # Use formula from https://www.stat.cmu.edu/~hseltman/files/ratio.pdf 
@@ -178,6 +178,7 @@ get_cs1 <- function(topic_res, ldsc_res_dir, trait, nTopics) {
   p_jk <- rbind(p_jk, matrix(0, nrow = 6e6 - nrow(p_jk), ncol = nTopics))
   corm <- cor(p_jk, p_jk)
   corm.upper<- corm * upper.tri(corm, diag = TRUE)
+  z_topics <- (e_Ck-1)/se_e
   z_cell <- l_ik %*% z_topics/ sqrt(diag(l_ik %*% corm.upper %*% t(l_ik)))
   
   return(list(

@@ -69,7 +69,8 @@
 #' }
 #'
 #' @export
-run_sldsc <- function(polyfun_path,
+run_sldsc <- function(chrs,
+                      polyfun_path,
                       ldsc_path,
                       sumstats_path,
                       n,
@@ -130,7 +131,7 @@ run_sldsc <- function(polyfun_path,
   message("[run_sldsc] Found BED file(s): ", paste(bed_files, collapse = ", "))
   user_bed <- bed_files[1]
   
-  for (chr in 10) {
+  for (chr in chrs) {
     # (a) make_annot
     out_annot <- file.path(ann_dir, sprintf("%s.%d.annot.gz", trait, chr))
     bim_file  <- sprintf("%s%d.bim", onekg_path, chr)

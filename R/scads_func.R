@@ -13,9 +13,10 @@
 #' @importFrom fastTopics add_pseudocounts
 #' @importFrom fastTopics initialize.multithreading
 #' @importFrom fastTopics fit_poisson_models
-#' @importFrom fastTopics compute_lfc_stats
-#' @importFrom fastTopics compute_lfc_stats_multicore
 #' @importFrom fastTopics lpfromz
+#' @importFrom parallel splitIndices
+#' @importFrom pbapply pboptions
+#' @importFrom pbapply pblapply
 #' 
 
 # Create continuous annotation for S-LDSC
@@ -491,13 +492,212 @@ calculate_lambda_local_scATAC <- function(count_matrix,
   )
 }
 
+# Use compute_lfc_stats function from this instead of fastTopics
+compute_lfc_stats2 <- #LY
+  function (X, F, L, f0,
+            D = matrix(rnorm(1000*k),1000,ncol(F)),
+            U = matrix(runif(1000*k),1000,ncol(F)),
+            M = matrix(sample(k,1000*k,replace=TRUE),1000,k)-1,
+            lfc.stat = "le", conf.level = 0.68, rw = 0.3, e = 1e-15,
+            verbose = TRUE) {
+    
+    # Get the number of counts matrix columns (m) and the number of
+    # topics (k).
+    m <- nrow(F)
+    k <- ncol(F)
+    
+    # Allocate storage for the outputs.
+    est      <- matrix(0,m,k)
+    postmean <- matrix(0,m,k)
+    lower    <- matrix(0,m,k)
+    upper    <- matrix(0,m,k)
+    ar       <- matrix(0,m,k)
+    dimnames(est)      <- dimnames(F)
+    dimnames(postmean) <- dimnames(F)
+    dimnames(lower)    <- dimnames(F)
+    dimnames(upper)    <- dimnames(F)
+    dimnames(ar)       <- dimnames(F)
+    
+    # Fill in the outputs, row by row. The core computation is performed
+    # by compute_lfc_helper.
+    ls <- colSums(L)
+    if (verbose)
+      pb <- progress_bar$new(total = m)
+    for (j in 1:m) {
+      if (verbose)
+        pb$tick()
+      out <- compute_lfc_stats_helper2(j,X,F,L,D,U,M,ls,f0,lfc.stat, #LY
+                                      conf.level,rw,e) 
+      est[j,]      <- out$dat["est",]
+      postmean[j,] <- out$dat["postmean",]
+      lower[j,]    <- out$dat["lower",]
+      upper[j,]    <- out$dat["upper",]
+      ar[j,]       <- out$ar
+    }
+    
+    # Compute the z-scores, then output the LFC point estimates (est),
+    # the posterior means (postmean), lower and upper limits of the HPD
+    # intervals, the z-scores (z), and MCMC acceptance rates (ar).
+    return(list(ar       = ar,
+                est      = est/log(2),
+                postmean = postmean/log(2),
+                lower    = lower/log(2),
+                upper    = upper/log(2),
+                z        = fastTopics:::compute_zscores(postmean,lower,upper)))
+  }
 
+
+compute_lfc_vsnull2 <- function (f, f0, samples, conf.level) {
+
+  est0     <- log(f0) #SZ
+  est      <- log(f) - est0 #SZ
+  samples  <- samples - est0 #SZ
+  postmean <- colMeans(samples)
+  ans      <- fastTopics:::compute_hpd_intervals(samples,conf.level)
+  return(rbind(est      = est,
+               postmean = postmean,
+               lower    = ans$lower,
+               upper    = ans$upper))
+}
+
+
+# Modified compute_lfc_stats_helper function from fastTopics
+compute_lfc_stats_helper2 <- function (j, X, F, L, D, U, M, ls, f0, #LY
+                                      lfc.stat, conf.level, rw, e) {
+  k <- ncol(F)
+  if (fastTopics:::is.sparse.matrix(X)) {
+    dat <- fastTopics:::get.nonzeros(X,j)
+    out <- fastTopics:::simulate_posterior_poisson_sparse_rcpp(dat$x,L[dat$i,],ls,
+                                                  F[j,],D,U,M,rw,e)
+  } else
+    out <- fastTopics:::simulate_posterior_poisson_rcpp(X[,j],L,F[j,],D,U,M,rw,e)
+  if (lfc.stat == "vsnull")
+    dat <- compute_lfc_vsnull2(F[j,],f0[j,],out$samples,conf.level) #SZ
+  else if (lfc.stat == "le")
+    dat <- fastTopics:::compute_lfc_le(F[j,],out$samples,conf.level)
+  else
+    dat <- fastTopics:::compute_lfc_pairwise(F[j,],lfc.stat,out$samples,conf.level)
+  return(list(ar = out$ar,dat = dat))
+}
+
+# Modified compute_lfc_stats_multicore function from fastTopics 
+# Add this temporary debugging version to see what's actually failing:
+compute_lfc_stats_multicore_debug <- function (X, F, L, f0, D, U, M, lfc.stat,
+                                               conf.level, rw, e, nc, nsplit = 100,
+                                               verbose = TRUE) {
+  
+  m <- nrow(F)
+  k <- ncol(F)
+  
+  nsplit <- min(m, nsplit)
+  cols   <- parallel::splitIndices(m, nsplit)
+  dat    <- vector("list", nsplit)
+  
+  for (i in 1:nsplit) {
+    j <- cols[[i]]
+    dat[[i]] <- list(
+      X = X[, j, drop = FALSE],
+      F = F[j, , drop = FALSE],
+      f0 = f0[j, , drop = FALSE]
+    )
+  }
+  
+  # Test function with error capturing
+  parlapplyf <- function(dat, L, D, U, M, lfc.stat, conf.level, rw, e) {
+    tryCatch({
+      compute_lfc_stats2(dat$X, dat$F, L, dat$f0, D, U, M, lfc.stat, 
+                         conf.level, rw, e, verbose = FALSE)
+    }, error = function(err) {
+      # Return the error so we can see what went wrong
+      list(error = TRUE, message = as.character(err), 
+           traceback = as.character(sys.calls()))
+    })
+  }
+  
+  if (verbose)
+    op <- pbapply::pboptions(type = "txt", txt.width = 70)
+  else
+    op <- pbapply::pboptions(type = NULL)
+  
+  ans <- pbapply::pblapply(cl = nc, dat, parlapplyf, L, D, U, M, 
+                           lfc.stat, conf.level, rw, e)
+  
+  pbapply::pboptions(op)
+  
+  # Check for errors in results
+  for (i in 1:length(ans)) {
+    if (is.list(ans[[i]]) && !is.null(ans[[i]]$error) && ans[[i]]$error) {
+      cat("Error in worker", i, ":\n")
+      cat("Message:", ans[[i]]$message, "\n")
+      cat("Traceback:", paste(ans[[i]]$traceback, collapse = "\n"), "\n\n")
+    }
+  }
+  
+  return(ans)
+}
+
+compute_lfc_stats_multicore2 <- function (X, F, L, f0, D, U, M, lfc.stat, #LY
+                                         conf.level, rw, e, nc, nsplit = 100,
+                                         verbose = TRUE) {
+  
+  # Get the number of counts matrix columns (m) and the number of
+  # topics (k).
+  m <- nrow(F)
+  k <- ncol(F)
+  
+  # Split the data.
+  nsplit <- min(m,nsplit)
+  print("Splitting data") #LY
+  cols   <- parallel::splitIndices(m,nsplit)
+  dat    <- vector("list",nsplit)
+  for (i in 1:nsplit) {
+    j        <- cols[[i]]
+    dat[[i]] <- list(X = X[,j,drop = FALSE],F = F[j,,drop = FALSE],f0 = f0[j,]) #SZ 
+  }
+  
+  # Distribute the calculations using pblapply.
+  parlapplyf <- function (dat, L, D, U, M, lfc.stat, conf.level, rw, e)
+    compute_lfc_stats2(dat$X,dat$F,L,dat$f0,D,U,M,lfc.stat,conf.level,rw,e, #LY
+                      verbose = FALSE)
+  print(parlapplyf)
+  if (verbose)
+    op <- pbapply::pboptions(type = "txt",txt.width = 70)
+  else
+    op <- pbapply::pboptions(type = NULL)
+  ans <- pbapply::pblapply(cl = nc,dat,parlapplyf,L,D,U,M,lfc.stat,conf.level,rw,e)
+  pbapply::pboptions(op)
+  
+  # Combine the individual compute_lfc_stats outputs, and output the
+  # combined result.
+  out <- list(ar       = matrix(0,m,k),
+              est      = matrix(0,m,k),
+              postmean = matrix(0,m,k),
+              lower    = matrix(0,m,k),
+              upper    = matrix(0,m,k),
+              z        = matrix(0,m,k))
+  dimnames(out$ar)       <- dimnames(F)
+  dimnames(out$est)      <- dimnames(F)
+  dimnames(out$postmean) <- dimnames(F)
+  dimnames(out$lower)    <- dimnames(F)
+  dimnames(out$upper)    <- dimnames(F)
+  dimnames(out$z)        <- dimnames(F)
+  for (i in 1:nsplit) {
+    j <- cols[[i]]
+    out$ar[j,]       <- ans[[i]]$ar
+    out$est[j,]      <- ans[[i]]$est
+    out$postmean[j,] <- ans[[i]]$postmean
+    out$lower[j,]    <- ans[[i]]$lower
+    out$upper[j,]    <- ans[[i]]$upper
+    out$z[j,]        <- ans[[i]]$z
+  }
+  return(out)
+}
 
 # Modified de_analysis function from fastTopics
 de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
                           fit.method = c("scd","em","mu","ccd","glm"),
                           shrink.method = c("ash","none"), lfc.stat = "le",
-                          control = list(), verbose = TRUE, f0 = NULL, ...) {
+                          control = list(), verbose = TRUE, f0 = NULL, ...) { #LY
   
   # CHECK AND PROCESS INPUTS
   # ------------------------
@@ -576,24 +776,32 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   # Equivalently, this is the maximum-likelihood estimate of the
   # binomial probability in the "null" Binomial model x ~ Binom(s,p0).
   
-  # Check f0 input
+  # Check f0 input # LY----------------------------------------
   if (!is.null(f0)) {
     if (length(f0) == 1) {
       # Case 1: user provided a single background value
       background <- f0
       cat("Use f0 provided as single background:", background, "\n")
-      f0 <- rep(background, times = ncol(X))
+      f0 <- rep(background, times = ncol(X)) # vector 
+      # names(f0) <- colnames(X)
+      f0 <- matrix(rep(f0, times = k), ncol = k, byrow = F) # matrix   
+      cat("f0: ", dim(f0), "\n")
+      rownames(f0) <- colnames(X)
     } else if (length(f0) == ncol(X)) {
       # Case 2: user provided a vector matching number of columns
       cat("Use f0 provided as vector of length", length(f0), "\n")
+      names(f0) <- colnames(X)
+    } else if (is.matrix(baseline) || is.data.frame(baseline)) {
+      cat("Use f0 provided as a matrix", dim(f0), "\n", class(f0), "\n")
+      f0 <- as.matrix(baseline)
+      rownames(f0) <- colnames(X)
     } else {
-      stop("Length of f0 must be either 1 or equal to ncol(X).")
+      cat("f0 provided is unacceptable, please check")
     }
-    
-    names(f0) <- colnames(X)
   } else {
     cat("No f0 provided, using default behavior.\n")
   }
+  # LY, end----------------------------------------
   
   # # calc f0 
   # global_cutoff <- 10^find_kde_midpoint(log10(c(F)))
@@ -649,10 +857,10 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   ncb <- RhpcBLASctl::blas_get_num_procs()
   RhpcBLASctl::blas_set_num_threads(control$nc.blas)
   if (nc == 1)
-    out <- fastTopics:::compute_lfc_stats(X,F,L,f0,D,U,M,lfc.stat,control$conf.level,
+    out <- compute_lfc_stats2(X,F,L,f0,D,U,M,lfc.stat,control$conf.level, #LY
                                           control$rw,control$eps,verbose)
   else {
-    out <- fastTopics:::compute_lfc_stats_multicore(X,F,L,f0,D,U,M,lfc.stat,
+    out <- compute_lfc_stats_multicore2(X,F,L,f0,D,U,M,lfc.stat, #LY
                                                     control$conf.level,control$rw,
                                                     control$eps,control$nc,control$nsplit,
                                                     verbose)
