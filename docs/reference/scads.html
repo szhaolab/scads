@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
       </span>
     </div>
 
@@ -57,11 +57,23 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">scads</span><span class="op">(</span></span>
 <span>  <span class="va">count_matrix</span>,</span>
 <span>  nTopics <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  <span class="va">bed_dir</span>,</span>
+<span>  n_s <span class="op">=</span> <span class="fl">1000</span>,</span>
+<span>  n_c <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  baseline_method <span class="op">=</span> <span class="st">"constant"</span>,</span>
+<span>  bl_celltype <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  bl_celltype_peak_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">sumstats_dir</span>,</span>
 <span>  <span class="va">gwas_nsamps</span>,</span>
 <span>  <span class="va">gwas_trait</span>,</span>
 <span>  <span class="va">outdir</span>,</span>
+<span>  <span class="va">polyfun_code_dir</span>,</span>
+<span>  <span class="va">ldsc_code_dir</span>,</span>
+<span>  <span class="va">onekg_path</span>,</span>
+<span>  <span class="va">baseline_dir</span>,</span>
+<span>  <span class="va">frqfile_pref</span>,</span>
+<span>  <span class="va">hm3_snps</span>,</span>
+<span>  <span class="va">weights_pref</span>,</span>
+<span>  continuous_topic_annot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -76,8 +88,59 @@
 <dd><p>The number of topics (clusters) to fit. Default is 10.</p></dd>
 
 
-<dt>bed_dir</dt>
-<dd></dd>
+<dt>n_s</dt>
+<dd><p>Number of simulations for fastTopics-DE.</p></dd>
+
+
+<dt>n_c</dt>
+<dd><p>Number of cores to use for parallelization.</p></dd>
+
+
+<dt>sumstats_dir</dt>
+<dd><p>Directory with GWAS sumstats.</p></dd>
+
+
+<dt>gwas_nsamps</dt>
+<dd><p>Sample size of GWAS.</p></dd>
+
+
+<dt>gwas_trait</dt>
+<dd><p>GWAS trait name (e.g., "SIM").</p></dd>
+
+
+<dt>outdir</dt>
+<dd><p>Directory where outputs are saved.</p></dd>
+
+
+<dt>polyfun_code_dir</dt>
+<dd><p>Directory to access polyFUN (LDSC) code scripts; must be python3-compatible.</p></dd>
+
+
+<dt>ldsc_code_dir</dt>
+<dd><p>Directory to access LDSC code scripts.</p></dd>
+
+
+<dt>onekg_path</dt>
+<dd><p>Prefix to 1000G plink files in hg38 (e.g., "/path/1000G.EUR.hg38.").</p></dd>
+
+
+<dt>baseline_dir</dt>
+<dd><p>Prefix to baseline v2.2 annotation (e.g. "/path/baselineLD_v2.2/baselineLD.").</p></dd>
+
+
+<dt>frqfile_pref</dt>
+<dd><p>Prefix to the .frq or .afreq files (e.g. "/path/1000G.EUR.hg38.").</p></dd>
+
+
+<dt>hm3_snps</dt>
+<dd><p>Path to the HapMap3 no‐MHC SNP list (e.g. "hm3_no_MHC.list.txt").</p></dd>
+
+
+<dt>continuous_topic_annot</dt>
+<dd><p>Logical. If <code>TRUE</code>, create <em>continuous</em> topic annotations
+(via <code>get_continuous_annot_beds()</code>) and run <code>run_sldsc_cont()</code>.
+If <code>FALSE</code>, use the <em>binary</em> annotation approach (<code><a href="get_annot_beds.html">get_annot_beds()</a></code> and <code><a href="run_sldsc.html">run_sldsc()</a></code>).
+Default is <code>FALSE</code>.</p></dd>
 
 
 <dt>...</dt>
@@ -88,13 +151,22 @@
     <h2>Value</h2>
     
 
-<p>A list containing the fitted topic model, enrichment results, and cell scores.</p>
+<p>A list containing the fitted topic model (<code>out1</code>) and the cell scores (<code>cs_res</code>).</p>
     </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">scads</span><span class="op">(</span><span class="va">count_matrix</span>, <span class="va">GWAS_ss</span>, <span class="va">LD_reference</span>, nTopics <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in scads(count_matrix, GWAS_ss, LD_reference, nTopics = 15):</span> argument "outdir" is missing, with no default</span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">scads</span><span class="op">(</span><span class="va">count_matrix</span>, nTopics <span class="op">=</span> <span class="fl">15</span>, sumstats_dir<span class="op">=</span><span class="st">"/some/sumstats"</span>, gwas_nsamps<span class="op">=</span><span class="fl">60000</span>,</span></span>
+<span class="r-in"><span>                gwas_trait<span class="op">=</span><span class="st">"SIM"</span>, outdir<span class="op">=</span><span class="st">"results/"</span>, </span></span>
+<span class="r-in"><span>                onekg_path<span class="op">=</span><span class="st">"/some/path/1000G.EUR.hg38."</span>,</span></span>
+<span class="r-in"><span>                baseline_dir<span class="op">=</span><span class="st">"/some/path/baselineLD_v2.2/baselineLD."</span>,</span></span>
+<span class="r-in"><span>                frqfile_pref<span class="op">=</span><span class="st">"/some/path/1000G.EUR.hg38."</span>,</span></span>
+<span class="r-in"><span>                hm3_snps<span class="op">=</span><span class="st">"/some/path/hm3_no_MHC.list.txt"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1. Run FastTopics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Start time: [1] "2026-02-23 00:00:31 EST"</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in eval(expr, envir, enclos):</span> object 'count_matrix' not found</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

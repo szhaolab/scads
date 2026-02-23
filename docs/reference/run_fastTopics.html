@@ -19,7 +19,7 @@ the factor matrices along with differential expression results."><!-- mathjax --
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
       </span>
     </div>
 
@@ -58,7 +58,18 @@ the factor matrices along with differential expression results.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run_fastTopics</span><span class="op">(</span><span class="va">count_matrix</span>, nTopics <span class="op">=</span> <span class="fl">10</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run_fastTopics</span><span class="op">(</span></span>
+<span>  <span class="va">count_matrix</span>,</span>
+<span>  nTopics <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  n_s <span class="op">=</span> <span class="fl">1000</span>,</span>
+<span>  n_c <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  baseline_method <span class="op">=</span> <span class="st">"constant"</span>,</span>
+<span>  bl_celltype_cells <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  bl_celltype_peak_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  fdr_cutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  <span class="va">outdir</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -69,6 +80,14 @@ the factor matrices along with differential expression results.</p>
 
 <dt>nTopics</dt>
 <dd><p>An integer specifying the number of topics to fit. Default is 10.</p></dd>
+
+
+<dt>n_s</dt>
+<dd><p>Number of samples for the DE analysis (default: 1000).</p></dd>
+
+
+<dt>n_c</dt>
+<dd><p>Number of cores for parallel processing in DE analysis (default: 1).</p></dd>
 
 
 <dt>...</dt>
@@ -85,7 +104,8 @@ the factor matrices along with differential expression results.</p>
     <h2>Details</h2>
     <p>The function ensures that the count matrix has cells as rows and peaks as columns.
 It then runs the fastTopics model, performs differential expression analysis,
-computes local false discovery rates (lfdr), and calculates p-values for each peak-topic pair.</p>
+computes local false discovery rates (lfdr), and calculates p-values for each peak-topic pair.
+If <code><a href="https://rdrr.io/pkg/locfdr/man/locfdr.html" class="external-link">locfdr::locfdr</a></code> fails, it binarizes <code>Fmat</code> based on a threshold and computes <code>p_jk</code>.</p>
     </div>
 
     <div id="ref-examples">

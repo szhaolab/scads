@@ -19,7 +19,19 @@
     <loc>/index.html</loc>
   </url>
   <url>
+    <loc>/reference/adp_gcEffects.html</loc>
+  </url>
+  <url>
+    <loc>/reference/calculate_lambda_local_scATAC.html</loc>
+  </url>
+  <url>
     <loc>/reference/create_annotations.html</loc>
+  </url>
+  <url>
+    <loc>/reference/create_annotations2.html</loc>
+  </url>
+  <url>
+    <loc>/reference/create_continuous_annotation.html</loc>
   </url>
   <url>
     <loc>/reference/de_analysis2.html</loc>
@@ -28,16 +40,34 @@
     <loc>/reference/get_annot_beds.html</loc>
   </url>
   <url>
+    <loc>/reference/get_average_bg.html</loc>
+  </url>
+  <url>
     <loc>/reference/get_cs.html</loc>
   </url>
   <url>
+    <loc>/reference/get_cs2.html</loc>
+  </url>
+  <url>
+    <loc>/reference/get_gc_baseline.html</loc>
+  </url>
+  <url>
     <loc>/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/pred_baseline_mu0.html</loc>
+  </url>
+  <url>
+    <loc>/reference/prep_gcEffects_input.html</loc>
   </url>
   <url>
     <loc>/reference/run_fastTopics.html</loc>
   </url>
   <url>
     <loc>/reference/run_ldsc.html</loc>
+  </url>
+  <url>
+    <loc>/reference/run_sldsc.html</loc>
   </url>
   <url>
     <loc>/reference/scads.html</loc>
