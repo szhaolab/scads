@@ -32,7 +32,7 @@ git clone https://github.com/szhaolab/scads
  
 # How to run scads: 
 
-  - see [tutorial](docs/articles/Introduction.html).
+  - see [tutorial](https://github.com/szhaolab/scads/blob/main/docs/articles/Introduction.html).
  
 # Reference
 
