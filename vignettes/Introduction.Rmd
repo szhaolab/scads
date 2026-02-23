@@ -17,10 +17,12 @@ knitr::opts_chunk$set(
 
 ## Setup 
 
-Confirm [PolyFUN](https://github.com/omerwe/polyfun) and [LDSC](https://github.com/bulik/ldsc) exist and runs in your conda environment. See their websites for installation and usage guidance. This tutorial is run in command-line R. 
+Confirm [PolyFUN](https://github.com/omerwe/polyfun) and [LDSC](https://github.com/bulik/ldsc) exist and runs in your conda environment. See their websites for installation and usage guidance.
 
 ```{bash eval=F}
+# srun --mem-per-cpu=8GB --cpus-per-task=16 --time=8:00:00 --pty /bin/bash
 conda activate /dartfs/rc/lab/S/Szhao/liyang/conda/base_clone/
+# Rscript -e "rmarkdown::render('/dartfs/rc/lab/S/Szhao/liyang/scads/vignettes/Introduction.Rmd', output_file='/dartfs/rc/lab/S/Szhao/liyang/scads/vignettes/Introduction.html', output_format='html_document')"
 R
 ```
 
@@ -34,8 +36,6 @@ Load R packages
 setwd("/dartfs/rc/lab/S/Szhao/liyang/scads")
 devtools::load_all()
 library(scads)
-
-library(data.table)
 ```
 
 Load example data
@@ -55,40 +55,80 @@ Prepare a GWAS summary statistics file
 data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
 sumstats <- fread(data_file, header = T)
 head(sumstats)
-
-# if sumstats are hg19 then need to lift them over to hg38 to be compatible with S-LDSC
 ```
 
 ## Run scads
 
 1. Run fastTopics 
-
-  - fastTopics: fit model and obtain topics 
-  - obtain peaks associated with topics via KDE_cutoff per topic
-  - potential alternative if necessary (apply fastTopics-DE and locfdr)
   
-2. Create topic annotations for LDSC 
+2. Create topic annotations 
 
-3. Run S-LDSC 
+3. Run S-LDSC using topic annotations
 
-  - We will run hg38 version of S-LDSC using the recommended baseline_v2.2 model with the topic annotations
+  - We will run hg19 version of S-LDSC using the recommended baseline_v2.2 model 
   
 4. Calculate Cell Score 
 
-  - Use topic enrichment estimates 
-  - Output list of 2
-    1. out1 (fastTopics results)
-    2. cs (cell scores)
-  
 
 ```{r}
-set.seed(1)
-scads_res <- scads(demo_count_matrix, 
-                     nTopics = 5, 
-                     bed_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/bed_dir", 
-                     sumstats_dir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028", 
-                     gwas_nsamps = 45000, 
-                     gwas_trait = "SIM", 
-                     outdir = "/dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/simu_20241028/scads")
+count_matrix = demo_count_matrix
+n_topics = 5
+n_sims = 1000
+n_cores = 16
+bl_method = "average" # "gc"
+bl_ct = NULL
+bl_peaks =NULL
+sumstats_d = dirname(data_file)
+gwas_n = 764667
+trait = "SIM"
+
+myHomeDir <- "/dartfs/rc/lab/S/Szhao/"
+# /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/
+
+output_dir = paste0(myHomeDir, "liyang/SCSviaTM/analysis/test_260222")
+polyfun_d= paste0(myHomeDir, "liyang/polyfun/")
+ldsc_d = paste0(myHomeDir, "liyang/ldsc/")
+onekg_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.")
+# onekg_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.10.")
+
+baseline_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.")
+# baseline_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.10.")
+
+frq_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC.")
+# frq_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC.10.")
+
+hm3_file = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/hm3_no_MHC.list.txt")
+weights_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
+# weights_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.10.")
+
+cont_topics = FALSE
 ```
+
+```{r}
+set.seed(1234)
+scads_res <- scads(
+  count_matrix,
+  nTopics                 = n_topics,
+  n_s                     = n_sims,
+  n_c                     = n_cores,
+  baseline_method         = bl_method,
+  bl_celltype             = bl_ct,
+  bl_celltype_peak_file   = bl_peaks,
+  sumstats_dir            = sumstats_d,
+  gwas_nsamps             = gwas_n,
+  gwas_trait              = trait,
+  outdir                  = output_dir,
+  polyfun_code_dir        = polyfun_d,
+  ldsc_code_dir           = ldsc_d,
+  onekg_path              = onekg_pref,
+  baseline_dir            = baseline_pref,
+  frqfile_pref            = frq_pref,
+  hm3_snps                = hm3_file,
+  weights_pref            = weights_pref,
+  continuous_topic_annot  = cont_topics, 
+  chrs                    = 10
+)
+```
+  
+
 

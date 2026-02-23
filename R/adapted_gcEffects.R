@@ -71,7 +71,7 @@
 #'
 #' @export
 
-get_gc_baseline <- function(count_matrix, Lmat,
+get_gc_baseline <- function(count_matrix, Lmat, Fmat, outdir,
                              genome="hg19",
                              peakwidth = 501,
                              emtrace = FALSE,
@@ -93,13 +93,82 @@ get_gc_baseline <- function(count_matrix, Lmat,
   } else {
     count_mat <- count_matrix
   }
-  peak_names <- colnames(count_mat)
-  peak_names <- gsub("[:-\\-]", "_", peak_names)
   
-  # select cells in count matrix that only appear in matrix L
-  unique_cells_in_L <- rownames(Lmat)
-  count_mat_in_L <- count_mat[unique_cells_in_L, , drop=FALSE]
-  count_mat_tp <- Matrix::t(count_mat_in_L) %*% Lmat
+  if (nrow(count_mat) > ncol(count_mat)) {
+    count_mat <- Matrix::t(count_mat)
+  }
+  print(dim(count_mat))
+  
+  # Get peak names from columns (peaks are in columns)
+  peak_names <- colnames(count_mat)
+  # Only convert peak names if necessary (check format first)
+  if (any(grepl(":", peak_names))) {
+    # If using colon format like "chr1:10234-10734"
+    peak_names <- gsub(":", "_", peak_names)
+    peak_names <- gsub("-", "_", peak_names)
+  }
+  # Otherwise peak_names are already in correct format: e.g. "chr1_10234_10734"
+  
+  # Check for NAs in peak names
+  if (any(is.na(peak_names))) {
+    stop("Found NA values in peak names. Check colnames of count_matrix.")
+  }
+  
+  # Select cells in count matrix that only appear in matrix L
+  # unique_cells_in_L <- rownames(Lmat)
+  # Make sure dimensions align
+  # count_mat should be: cells (rows) × peaks (columns)
+  # Lmat should be: cells (rows) × topics (columns)
+  # if (!all(unique_cells_in_L %in% rownames(count_mat))) {
+  #   stop("Not all cells in Lmat are present in count_matrix rownames")
+  # }
+  # count_mat_in_L <- count_mat[unique_cells_in_L, , drop=FALSE]
+  # Matrix multiplication: (peaks × cells)^T %*% (cells × topics) = (peaks × topics)
+  # count_mat_tp <- Matrix::t(count_mat_in_L) %*% Lmat
+  
+  # ## Obtain pseudobulk (memory usage is massive)
+  # rate_matrix <- tcrossprod(Lmat, Fmat)
+  # # c_k <- colSums(count_mat * tcrossprod(Lmat[, k, drop=F], F_scaled[,k , drop = F])/rate_matrix)
+  # weights <- count_mat / rate_matrix
+  # rm(rate_matrix)
+  # count_mat_tp <- Fmat * (Matrix::t(weights) %*% Lmat)
+  # saveRDS(count_mat_tp, file.path(outdir, "count_mat_tp.rds"))
+  
+  ## Obtain pseudobulk (save memory)
+  # 1. Extract the non-zero coordinates from count_mat
+  # summary() on a sparse matrix gives a dataframe with:
+  # i (row index), j (col index), x (value)
+  cat("\nGet Triplets")
+  triplets <- Matrix::summary(as(count_mat, "dgCMatrix"))
+  # 2. Compute the 'rate' ONLY at these non-zero coordinates
+  # Instead of a full matrix multiplication, we do a "lookup and dot product"
+  # We extract the specific rows of L and F corresponding to each non-zero count
+  # L_subset: (N_nonzero x K)
+  # F_subset: (N_nonzero x K)
+  cat("\nGet L_subset")
+  L_subset <- Lmat[triplets$i, , drop = FALSE] 
+  cat("\nGet F_subset")
+  F_subset <- Fmat[triplets$j, , drop = FALSE] 
+  # Compute dot product for each pair (equivalent to the specific cell in tcrossprod)
+  cat("\nCalc rate values")
+  rate_values <- rowSums(L_subset * F_subset)
+  # 3. Perform the division just for these values
+  # w_ij = count_ij / rate_ij
+  cat("\nCalc weight values")
+  weight_values <- triplets$x / rate_values
+  # 4. Reconstruct the sparse 'weights' matrix
+  # We create a new sparse matrix using the original indices but the new values
+  weights <- sparseMatrix(
+    i = triplets$i,
+    j = triplets$j,
+    x = weight_values,
+    dims = dim(count_mat)
+  )
+  # 6. Final Calculation
+  cat("\nGet pseudobulk count matrix")
+  count_mat_tp <- Fmat * (Matrix::t(weights) %*% Lmat)
+  saveRDS(count_mat_tp, file.path(outdir, "count_mat_tp.rds"))
+  rm(weights, weight_values, rate_values, F_subset, L_subset, count_mat)
   
   # prepare input
   gcEffects_input_res_topic_list <- list()
@@ -119,7 +188,7 @@ get_gc_baseline <- function(count_matrix, Lmat,
   for (k in 1:length(gcEffects_input_res_topic_list)) {
     cat("...... Estimating GC effects for topic ", colnames(count_mat_tp)[k],"\n")
     cur_gc_res <- gcEffects_input_res_topic_list[[k]]
-    print(cur_gc_res)
+    # print(cur_gc_res)
     gc <- cur_gc_res$gc
     # print(gc)
     region <- cur_gc_res$region
@@ -128,6 +197,7 @@ get_gc_baseline <- function(count_matrix, Lmat,
     # print(rc)
     
     # Add these diagnostic prints:
+  cat("Topic ", k, "\n")
   cat("......... GC summary: ", summary(cur_gc_res$gc), "\n")
   cat("......... NA count in GC: ", sum(is.na(cur_gc_res$gc)), "\n")
   cat("......... NA count in RC: ", sum(is.na(cur_gc_res$rc)), "\n")
@@ -137,7 +207,7 @@ get_gc_baseline <- function(count_matrix, Lmat,
     adp_gcEffects_res_topic <- adp_gcEffects(gc=gc,
                                              region=region,
                                              rc=rc,
-                                             model=('nbinom'),
+                                             model=('poisson'), # model=('nbinom'),
                                              emtrace = emtrace,
                                              plot = plot,
                                              gcrange = gcrange,
@@ -146,17 +216,23 @@ get_gc_baseline <- function(count_matrix, Lmat,
                                              p=p,converge=converge,
                                              max_pts = max_pts,
                                              max_line = max_line)
+    cat("...... Plotted Topic ", k, "\n")
     adp_gcEffects_res_topic_list[[k]] <- adp_gcEffects_res_topic
   }
   cat("...... Baseline models for are fitted. \n")
   
   # get predicted baseline mu0 for all regions
   pred_mu0_list <- list()
+  pred_mu1_list <- list()
   for (k in 1:length(gcEffects_input_res_topic_list)) {
     pred_mu0_list[[k]] <- pred_baseline_mu0(adp_gcEffects_res_topic_list[[k]], 
                                             gcEffects_input_res_topic_list[[k]]$gc)
+    pred_mu1_list[[k]] <- predict(adp_gcEffects_res_topic_list[[k]]$lmns1, 
+                                  data.frame(gc = gcEffects_input_res_topic_list[[k]]$gc), 
+                                  type = "response")
   }
   names(pred_mu0_list) <- colnames(count_mat_tp)
+  names(pred_mu1_list) <- colnames(count_mat_tp)
   
   # get lambda
   lambda_j_list <- list()
@@ -166,7 +242,8 @@ get_gc_baseline <- function(count_matrix, Lmat,
   for (k in 1:length(pred_mu0_list)) {
     N_k <- sum(count_mat_tp[,k])
     lambda_j_list[[k]] <- pred_mu0_list[[k]] / N_k
-    N_k_list <- c(N_k, N_k_list)
+    ## N_k_list <- c(N_k, N_k_list) ## indexing is reversed - k5, k4, k3, k2, k1
+    N_k_list <- c(N_k_list, N_k)
     gc_list[[k]] <- gcEffects_input_res_topic_list[[k]]$gc
     # rc_list[[k]] <- gcEffects_input_res_topic_list[[k]]$rc
   }
@@ -175,8 +252,12 @@ get_gc_baseline <- function(count_matrix, Lmat,
   names(gc_list) <- colnames(count_mat_tp)
   lambda_jk <- as.data.frame(do.call(cbind, lambda_j_list))
   rownames(lambda_jk) <- peak_names
+  
+  rm(count_mat_tp)
   return(list(
     lambda_jk = lambda_jk,
+    mu0_jk = as.data.frame(do.call(cbind, pred_mu0_list)),
+    mu1_jk = as.data.frame(do.call(cbind, pred_mu1_list)),
     N_k = N_k_list,
     gc_k = gc_list
     # rc_k = rc_list
@@ -461,6 +542,7 @@ adp_gcEffects <- function(gc=gc,
     idx0 <- sample.int(tmp,min(100000,tmp))
     rbPal <- colorRampPalette(c('skyblue','pink'))
     color <- rbPal(20)[as.numeric(cut(z[idx0],breaks = 20))]
+    pdf(file=paste0(outdir, sprintf("/GC_plot_%s.pdf", idx0)))
     plot(dat$gc[idx0],dat$y[idx0]+0.5,col=color,xlim=gcrange,pch=20,
          main=paste(model,samptype),
          xlab='Effective GC content',ylab="Read counts",log='y',yaxt='n')
@@ -469,6 +551,7 @@ adp_gcEffects <- function(gc=gc,
     lines(dat$gc[idx00],predY1[idx00]+0.5,col='red',lwd=3)
     lines(dat$gc[idx00],predY0[idx00]+0.5,col='blue',lwd=3)
     axis(side=2, at=c(0,2^(0:10))+0.5, labels=c(0,2^(0:10)))
+    dev.off()
   }
   
   ### gc effects

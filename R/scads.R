@@ -139,7 +139,7 @@ scads <- function(count_matrix,
   # 4) calc the cell score
   cat("\n4. Calculate cell scores\n")
   cat("\nStart time:", Sys.time(), "\n")
-  cs_res <- get_cs1(topic_res  = out1,
+  cs_res <- get_cs(topic_res  = out1,
                    ldsc_res_dir = outdir,
                    trait      = gwas_trait,
                    nTopics    = nTopics)
