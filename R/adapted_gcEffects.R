@@ -94,9 +94,9 @@ get_gc_baseline <- function(count_matrix, Lmat, Fmat, outdir,
     count_mat <- count_matrix
   }
   
-  if (nrow(count_mat) > ncol(count_mat)) {
-    count_mat <- Matrix::t(count_mat)
-  }
+  # if (nrow(count_mat) > ncol(count_mat)) {
+  #   count_mat <- Matrix::t(count_mat)
+  # }
   print(dim(count_mat))
   
   # Get peak names from columns (peaks are in columns)
@@ -347,7 +347,16 @@ prep_gcEffects_input <- function(rc,
   nr <- region
   seqs <- getSeq(genome,nr) # slow
   gcpos <- startIndex(vmatchPattern("S", seqs, fixed="subject")) # a list of the positions within each window that are G or C
-  gc <- round(sapply(gcpos,function(x) sum(weight[x])),3)
+  
+  # gc <- round(sapply(gcpos,function(x) sum(weight[x])),3) # commented out 3/9/2026
+  # Compute GC per-peak using actual sequence length (handles variable-width peaks)
+  gc <- round(sapply(seq_along(seqs), function(i) {
+    seq_len <- width(seqs)[i]
+    w <- rep(1, seq_len) / seq_len   # uniform weight over actual peak length
+    pos <- gcpos[[i]]
+    pos_valid <- pos[pos <= seq_len]  # safety guard (should always be true)
+    sum(w[pos_valid])
+  }), 3)
   
   ### round all values in rc to integers
   if (verbose) {

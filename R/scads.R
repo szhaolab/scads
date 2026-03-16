@@ -62,6 +62,13 @@ scads <- function(count_matrix,
   cat("\n1. Run FastTopics\n")
   cat("\nStart time: "); print(Sys.time())
   cat("\nCount matrix dimensions:", dim(count_matrix), "\n")
+  
+  cat("\nTransposing matrix for fastTopics")
+  count_matrix <- Matrix::t(count_matrix)
+  print(dim(count_matrix))
+  cat("\nTransposed count matrix dimensions", dim(count_matrix), "\n")
+  
+  # Ensure that count_matrix has cells as rows and peaks as columns
   out1 <- run_fastTopics(count_matrix, nTopics, n_s, n_c,
                          baseline_method, bl_celltype, bl_celltype_peak_file,
                          outdir = outdir)

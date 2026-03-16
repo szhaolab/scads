@@ -28,14 +28,6 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
                            fdr_cutoff = 0.05,
                            outdir, ...) {
   
-  # Ensure that count_matrix has cells as rows and peaks as columns 
-  # Transpose if necessary (assuming more peaks than cells )
-  # Assuming num_peaks > num_cells
-  if (nrow(count_matrix) > ncol(count_matrix)) {
-    count_matrix <- Matrix::t(count_matrix)
-  }
-  # count_matrix <- Matrix::t(count_matrix)
-  print(dim(count_matrix))
   
   if (is.null(rownames(count_matrix))) {
     rownames(count_matrix) <- paste0("cell_", 1:nrow(count_matrix))
@@ -77,20 +69,6 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
     
     gc_baseline_res <- get_gc_baseline(count_matrix_filtered, Lmat, Fmat, outdir, plot=FALSE) # peak-by-topic; require the column names to be peak IDs with chr_start_end format
     baseline <- gc_baseline_res$lambda_jk # mu0 / N_k
-    
-    # # Adjust for pseudocount
-    # n_cells_k <- nrow(count_matrix_filtered)/nTopics
-    # total_reads <- sum(count_matrix_filtered)
-    # avg_reads_per_cell <- total_reads/n_cells
-    # f_nonpeak_mean <- 4e-7 # need to calc or take from user
-    # scale <- (n_cells_k * avg_reads_per_cell * f_nonpeak_mean + n_cells_k * 0.01)/(n_cells_k * avg_reads_per_cell * f_nonpeak_mean)
-    # baseline <- scale * baseline
-    
-    # Calculate per-element average
-    # gc_baseline_res$mu_avg <- (gc_baseline_res$mu0_jk + gc_baseline_res$mu1_jk) / 2
-    # gc_baseline_res$lambda_avg_jk <- sweep(gc_baseline_res$mu_avg, 2, gc_baseline_res$N_k, FUN = "/")
-    # baseline <- gc_baseline_res$lambda_avg_jk
-    
     print(baseline[1:5,1:nTopics])
     cat("Average GC baseline by topics: ", paste(round(colMeans(baseline, na.rm = TRUE), 10)))
     
@@ -151,32 +129,8 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   p_jk[p_jk<0] <- 0
   print(colSums(p_jk))
 
-  # # Below was for 2-sided test - SKIP
-  # z <- de_res$z
-  # z[is.na(z)] <- 0
-  # p_jk <- ifelse(qvals < fdr_cutoff, 1, 0)*sign(z)
-  
-  # ## try a Poisson test 
-  # # 1. Get count_mat_tp (Peaks x Topics)
-  # count_mat_tp <- readRDS(file.path(outdir, "count_mat_tp.rds"))
-  # # 2. Get your Expected Background Counts (Expected_kj)
-  # # Expected = Total_Reads_in_Topic (N_k) * Background_Rate (lambda_jk or baseline)
-  # # Ensure lambda_jk is aligned with obs_counts
-  # N_k <- colSums(count_mat_tp)
-  # expected_counts <- sweep(baseline, 2, N_k, "*")
-  # # # 3. Calculate P-values (Vectorized)
-  # # # "What is the probability of seeing this many reads (or more) 
-  # # # given the background expectation?"
-  # obs_mat <- as.matrix(count_mat_tp)
-  # exp_mat <- as.matrix(expected_counts)
-  # p_values <- ppois(
-  #   q = obs_mat - 1, 
-  #   lambda = exp_mat, 
-  #   lower.tail = FALSE
-  # )
-  # q_values <- apply(p_values, 2, p.adjust, method = "BH")
-  # # 4. get Pmat
-  # p_jk <- ifelse(q_values < fdr_cutoff, 1, 0) # fdr_cutoff is 0.05
+  # Clean up 
+  rm(count_matrix_filtered)
   
   # Return results as a list
   return(list(
