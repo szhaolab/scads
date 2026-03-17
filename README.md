@@ -1,4 +1,4 @@
-# scads (Single Cell ATAC-seq Disease Score) <img src="man/figures/scads_logo_gemini.png" align="right" height="139" />
+# scads (Single Cell ATAC-seq Disease Score)  <img src="man/figures/scads_logo_gemini.png" align="right" height="139" style="float:right; height:139px;" />
 
 The goal of `scads` is to provide a statistical framework for integrating GWAS and scATAC-seq data for quantifying genetic disease risk in single cells.
 
@@ -29,7 +29,7 @@ git clone https://github.com/szhaolab/scads
  
 # How to run scads: 
 
-  - see [tutorial](https://github.com/szhaolab/scads/blob/main/docs/articles/Introduction.html).
+  - see [tutorial](https://github.com/szhaolab/scads/articles/Introduction.html).
  
 # Reference
 

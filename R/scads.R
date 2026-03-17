@@ -1,23 +1,26 @@
-#' scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score
+#' scads: A package for using scATAC-seq data and GWAS sumstats to calculate disease cell score
 #'
 #' @param count_matrix A peak-by-cell count matrix.
 #' @param nTopics The number of topics (clusters) to fit. Default is 10.
 #' @param n_s Number of simulations for fastTopics-DE.
 #' @param n_c Number of cores to use for parallelization.
-#' @param sumstats_dir Directory with GWAS sumstats.
+#' @param sumstats_dir Directory containing GWAS sumstats (file format: TRAIT.sumstats.txt.gz).
 #' @param gwas_nsamps Sample size of GWAS.
-#' @param gwas_trait GWAS trait name (e.g., "SIM").
+#' @param gwas_trait GWAS trait name (e.g., "SIM", "IBD").
 #' @param outdir Directory where outputs are saved.
 #' @param polyfun_code_dir Directory to access polyFUN (LDSC) code scripts; must be python3-compatible.
 #' @param ldsc_code_dir Directory to access LDSC code scripts.
-#' @param onekg_path Prefix to 1000G plink files in hg38 (e.g., "/path/1000G.EUR.hg38.").
-#' @param baseline_dir Prefix to baseline v2.2 annotation (e.g. "/path/baselineLD_v2.2/baselineLD.").
-#' @param frqfile_pref Prefix to the .frq or .afreq files (e.g. "/path/1000G.EUR.hg38.").
-#' @param hm3_snps Path to the HapMap3 no‐MHC SNP list (e.g. "hm3_no_MHC.list.txt").
+#' @param onekg_path Prefix to 1000G plink files in hg19 (/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.). (use hg38 version if input data is hg38).
+#' @param baseline_dir Prefix to 1000G baseline v2.2 annotation in hg19 (e.g. "/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD."). (use hg38 version if input data is hg38).
+#' @param frqfile_pref Prefix to the 1000G  .frq or .afreq files in hg19 (e.g. "/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC."). (use hg38 version if input data is hg38).
+#' @param hm3_snps Path to the HapMap3 no‐MHC SNP list in hg19 (e.g. "/LDSCORE/zenodo/hm3_no_MHC.list.txt").(use hg38 version if input data is hg38).
+#' @param weights_pref Path to the 1000G weights in hg19 (e.g. "/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.").(use hg38 version if input data is hg38).
 #' @param continuous_topic_annot Logical. If \code{TRUE}, create \emph{continuous} topic annotations 
 #'   (via \code{get_continuous_annot_beds()}) and run \code{run_sldsc_cont()}. 
 #'   If \code{FALSE}, use the \emph{binary} annotation approach (\code{get_annot_beds()} and \code{run_sldsc()}). 
 #'   Default is \code{FALSE}.
+#' @param chrs Number of chromosomes for S-LDSC (Default is chr1-22)
+#' @param genome Genome build (Default is hg19)
 #' @param ... Additional arguments passed to internal functions.
 #'
 #' @return A list containing the fitted topic model (\code{out1}) and the cell scores (\code{cs_res}).
@@ -51,6 +54,7 @@ scads <- function(count_matrix,
                   weights_pref,
                   continuous_topic_annot = FALSE,
                   chrs = 1:22,
+                  genome = "hg19",
                   ...) {
   
   # 0) create directories 
