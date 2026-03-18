@@ -9,7 +9,7 @@
 #' @param n_s Number of samples for the DE analysis (default: 1000).
 #' @param n_c Number of cores for parallel processing in DE analysis (default: 1).
 #' @param ... Additional arguments passed to `fastTopics::fit_topic_model()`.
-#' @return A list containing the factor matrices `Fmat` and `Lmat`, differential expression results `de_res`, and p-values matrix `p_jk`.
+#' @return A list containing the factor matrices `Fmat` and `Lmat`, differential expression results `de_res`, p-values matrix `p_jk` and caculated baseline `baseline`.
 #' @details
 #' The function ensures that the count matrix has cells as rows and peaks as columns.
 #' It then runs the fastTopics model, performs differential expression analysis,
@@ -26,7 +26,8 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
                            bl_celltype_cells = NULL, 
                            bl_celltype_peak_file = NULL,
                            fdr_cutoff = 0.05,
-                           outdir, ...) {
+                           outdir,
+                           genome = "hg19", ...) {
   
   
   if (is.null(rownames(count_matrix))) {
@@ -67,7 +68,7 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   cat("\nDetermining baseline\n")
   if (baseline_method == "gc"){
     
-    gc_baseline_res <- get_gc_baseline(count_matrix_filtered, Lmat, Fmat, outdir, plot=FALSE) # peak-by-topic; require the column names to be peak IDs with chr_start_end format
+    gc_baseline_res <- get_gc_baseline(count_matrix_filtered, Lmat, Fmat, outdir, genome, plot=FALSE) # peak-by-topic; require the column names to be peak IDs with chr_start_end format
     baseline <- gc_baseline_res$lambda_jk # mu0 / N_k
     print(baseline[1:5,1:nTopics])
     cat("Average GC baseline by topics: ", paste(round(colMeans(baseline, na.rm = TRUE), 10)))

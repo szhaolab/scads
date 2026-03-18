@@ -11,7 +11,7 @@
 #'      Columns correspond to topics.
 #' @param output_dir A character string specifying the base output directory for the BED files.
 #' @param fuzzy Logical value indicating whether to create fuzzy annotations (default: FALSE).
-#' @param cutoff Numeric value specifying the cutoff for binary annotations when `fuzzy = FALSE` (default: 0.5).
+#' @param cutoff Numeric value specifying the cutoff for binary annotations when `fuzzy = FALSE` (default: 0.9).
 #'
 #' @return A list of output folder paths (`bed_dir_list`), one for each topic.
 #' @importFrom stringr str_extract

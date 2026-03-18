@@ -1,4 +1,4 @@
-#' Run S-LDSC Pipeline (hg38) with a Custom BED + Baseline v2.2
+#' Run S-LDSC Pipeline: Calculate disease cell score using hg19 BED and Baseline v2.2
 #'
 #' This function runs the S-LDSC pipeline using PolyFun scripts for:
 #'   1) Munging summary statistics ("munge_polyfun_sumstats.py"),
@@ -6,33 +6,22 @@
 #'   3) Computing LD scores with "ldsc.py --l2",
 #'   4) Performing final heritability estimation ("ldsc.py --h2")
 #'      by combining the custom annotation with baseline v2.2 annotations.
+#'      
+#' @param chrs Number of chromosomes for running S-LDSC (Default is 1:22).
+#' @param polyfun_code_dir Directory to access polyFUN code scripts (e.g., \code{munge_polyfun_sumstats.py}); must be python3-compatible.
+#' @param ldsc_code_dir Directory to access LDSC code scripts (e.g., \code{make_annot.py}, \code{ldsc.py}).
+#' @param sumstats_path Directory containing the cleaned GWAS summary statistics file (format: \code{<trait>_sumstats.txt.gz}).
+#' @param n Sample size of GWAS.
+#' @param trait GWAS trait name (e.g., "SIM", "IBD").
+#' @param onekg_path Prefix to 1000G plink files in hg19 (e.g., \code{"/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC."}).
+#' @param bed_dir Directory containing the user-supplied BED file(s) in hg19. Only the first \code{.bed} found is used.
+#' @param baseline_dir Prefix to 1000G baseline v2.2 annotation in hg19 (e.g., \code{"/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD."}).
+#' @param frqfile_pref Prefix to the 1000G .frq or .afreq files in hg19 (e.g., \code{"/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC."}).
+#' @param hm3_snps Path to the HapMap3 no-MHC SNP list in hg19 (e.g., \code{"/LDSCORE/zenodo/hm3_no_MHC.list.txt"}).
+#' @param weights_pref Path to the 1000G weights in hg19 (e.g., \code{"/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC."}).
+#' @param out_dir Directory where outputs are saved. The function creates \code{annotations/<trait>} and \code{results} subdirectories.
 #'
-#' @param polyfun_path A character string specifying the directory containing the PolyFun scripts 
-#'   (e.g.,\code{ldsc.py}, \code{munge_polyfun_sumstats.py}).
-#' @param ldsc_path A character string specifying the directory containing the ldsc script ( (e.g., \code{make_annot.py})
-#' @param sumstats_path A character string specifying the directory with the cleaned summary 
-#'   statistics file \code{<trait>_sumstats.txt.gz}.
-#' @param n Integer. The number of samples in the GWAS.
-#' @param trait A character string representing the GWAS trait (e.g., \code{"SIM"}).
-#' @param onekg_path A character string specifying the prefix to 1000 Genomes Plink files in hg38,
-#'   e.g. \code{"/path/1000G.EUR.hg38."}. Each chromosome file is then 
-#'   \code{1000G.EUR.hg38.1.bed/.bim/.fam}, etc.
-#' @param bed_dir A character string specifying the directory containing the user-supplied BED file(s)
-#'   in hg38. Only the first \code{.bed} found is used to create the annotation.
-#' @param baseline_dir A character string specifying the prefix to baseline v2.2 annotations for LDSC,
-#'   e.g. \code{"/path/baselineLD_v2.2/baselineLD."}.
-#' @param frqfile_pref A character string specifying the prefix to allele frequency files in hg38,
-#'   used by LDSC (e.g. \code{"/path/1000G.EUR.hg38."}).
-#' @param hm3_snps A character string specifying the path to the HapMap3 SNP file 
-#'   (e.g. \code{"hm3_no_MHC.list.txt"}).
-#' @param out_dir A character string specifying the output directory for LDSC results. 
-#'   The function will create:
-#'   \itemize{
-#'     \item \code{"annotations/<trait>"} for annotation files
-#'     \item \code{"results"} for final LDSC logs/results
-#'   }
-#'
-#' @details
+#'#' @details
 #' **Step-by-step**:
 #' \enumerate{
 #'   \item Munge summary stats \code{<trait>_sumstats.txt.gz} into a parquet with 
@@ -48,25 +37,25 @@
 #'         for SNP filtering.
 #' }
 #'
-#' @return No object is returned. All intermediate files (\code{.annot.gz}, \code{.ldscore.gz}, etc.)
-#'   are written to \code{out_dir/annotations/<trait>}, and the final LDSC results (\code{.log} / 
-#'   \code{.results}) to \code{out_dir/results}.
+#' @return No object is returned. All intermediate files (\code{.annot.gz}, \code{.ldscore.gz}) and final 
+#' LDSC results (\code{.log}, \code{.results}) are written to \code{out_dir}.
 #'
 #' @examples
 #' \dontrun{
-#' run_sldsc(
-#'   polyfun_path = "/path/polyfun",
-#'   sumstats_path= "/path/sumstats",
-#'   n            = 60000,
-#'   trait        = "SIM",
-#'   onekg_path   = "/path/1000G.EUR.hg38.",
-#'   bed_dir      = "/path/my_bedfiles",
-#'   baseline_dir = "/path/baselineLD_v2.2/baselineLD.",
-#'   frqfile_pref = "/path/1000G.EUR.hg38.",
-#'   hm3_snps     = "/path/hm3_no_MHC.list.txt",
-#'   out_dir      = "/path/k1_annotations"
-#' )
+#' run_sldsc(chrs = 1:22,
+#'           polyfun_code_dir = "/path/polyfun/",
+#'           ldsc_code_dir = "/path/ldsc/",
+#'           sumstats_path = "/path/sumstats/",
+#'           n = 60000, trait = "SIM",
+#'           onekg_path = "/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.",
+#'           bed_dir = "/path/my_bedfiles/",
+#'           baseline_dir = "/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.",
+#'           frqfile_pref = "/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC.",
+#'           hm3_snps = "/LDSCORE/zenodo/hm3_no_MHC.list.txt",
+#'           weights_pref = "/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.",
+#'           out_dir = "results/")
 #' }
+#'
 #'
 #' @export
 run_sldsc <- function(chrs,
