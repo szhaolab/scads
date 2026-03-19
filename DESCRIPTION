@@ -2,7 +2,7 @@ Package: scads
 Title: What the Package Does (One Line, Title Case)
 Version: 0.1.0
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+    person("L", "Yu", , "first.last@example.com", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
@@ -24,10 +24,12 @@ Imports:
     MASS,
     Matrix,
     parallel,
+    pbapply,
     plyranges,
     reticulate,
     RhpcBLASctl,
     rtracklayer,
+    stringr,
     SummarizedExperiment,
     tibble,
     vroom
@@ -37,7 +39,8 @@ Suggests:
     ggplot2,
     knitr,
     rmarkdown
-VignetteBuilder: knitr
+VignetteBuilder: knitr 
+BuildVignettes: false
 Depends: 
     R (>= 2.10)
 LazyData: true

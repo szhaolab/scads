@@ -56,21 +56,13 @@
         </td>
         <td><p>Adaptive GC Effects Estimation for ChIP-seq Read Counts</p></td>
       </tr><tr><td>
-          <p><code><a href="calculate_lambda_local_scATAC.html">calculate_lambda_local_scATAC()</a></code> </p>
-        </td>
-        <td><p>Calculate Local Background (Lambda) for scATAC-seq Peaks (Per-Cell Model)</p></td>
-      </tr><tr><td>
-          <p><code><a href="create_annotations.html">create_annotations()</a></code> </p>
-        </td>
-        <td><p>Create SNP Annotations Based on BED Files and Baseline Annotations</p></td>
-      </tr><tr><td>
-          <p><code><a href="create_annotations2.html">create_annotations2()</a></code> </p>
-        </td>
-        <td><p>Create SNP Annotations Based on BED Files and Baseline Annotations</p></td>
-      </tr><tr><td>
-          <p><code><a href="create_continuous_annotation.html">create_continuous_annotation()</a></code> </p>
+          <p><code><a href="compute_lfc_stats2.html">compute_lfc_stats2()</a></code> </p>
         </td>
         <td><p>Helper functions for scads</p></td>
+      </tr><tr><td>
+          <p><code><a href="demo_count_matrix.html">demo_count_matrix</a></code> </p>
+        </td>
+        <td><p>Demo count matrix</p></td>
       </tr><tr><td>
           <p><code><a href="get_annot_beds.html">get_annot_beds()</a></code> </p>
         </td>
@@ -80,13 +72,13 @@
         </td>
         <td><p>Estimate “background” accessibility rate from a reference cell‐type peak list</p></td>
       </tr><tr><td>
+          <p><code><a href="get_continuous_annot_beds.html">get_continuous_annot_beds()</a></code> </p>
+        </td>
+        <td><p>Generate Continuous BED Files from Topic Annotations</p></td>
+      </tr><tr><td>
           <p><code><a href="get_cs.html">get_cs()</a></code> </p>
         </td>
         <td><p>Compute Single-Cell Level Scores (c_i)</p></td>
-      </tr><tr><td>
-          <p><code><a href="get_cs2.html">get_cs2()</a></code> </p>
-        </td>
-        <td><p>Compute Single‑Cell Topic Enrichment Scores (c_i)</p></td>
       </tr><tr><td>
           <p><code><a href="get_gc_baseline.html">get_gc_baseline()</a></code> </p>
         </td>
@@ -104,17 +96,17 @@
         </td>
         <td><p>Run fastTopics and Generate Topic Annotations</p></td>
       </tr><tr><td>
-          <p><code><a href="run_ldsc.html">run_ldsc()</a></code> </p>
-        </td>
-        <td><p>Run LDSC Pipeline</p></td>
-      </tr><tr><td>
           <p><code><a href="run_sldsc.html">run_sldsc()</a></code> </p>
         </td>
-        <td><p>Run S-LDSC Pipeline (hg38) with a Custom BED + Baseline v2.2</p></td>
+        <td><p>Run S-LDSC Pipeline: Calculate disease cell score using hg19 BED and Baseline v2.2</p></td>
+      </tr><tr><td>
+          <p><code><a href="run_sldsc_cont.html">run_sldsc_cont()</a></code> </p>
+        </td>
+        <td><p>Run S-LDSC Pipeline (hg38) with a Custom <em>Continuous</em> BED + Baseline v2.2</p></td>
       </tr><tr><td>
           <p><code><a href="scads.html">scads()</a></code> </p>
         </td>
-        <td><p>scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score</p></td>
+        <td><p>scads: A package for using scATAC-seq data and GWAS sumstats to calculate disease cell score</p></td>
       </tr></tbody></table></div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -124,7 +116,7 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by First Last.</p>
+  <p></p><p>Developed by L Yu.</p>
 </div>
 
 <div class="pkgdown">

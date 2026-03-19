@@ -7,6 +7,8 @@
 get_gc_baseline(
   count_matrix,
   Lmat,
+  Fmat,
+  outdir,
   genome = "hg19",
   peakwidth = 501,
   emtrace = FALSE,

@@ -20,7 +20,7 @@ Columns correspond to topics.
 
 \item{fuzzy}{Logical value indicating whether to create fuzzy annotations (default: FALSE).}
 
-\item{cutoff}{Numeric value specifying the cutoff for binary annotations when \code{fuzzy = FALSE} (default: 0.5).}
+\item{cutoff}{Numeric value specifying the cutoff for binary annotations when \code{fuzzy = FALSE} (default: 0.9).}
 }
 \value{
 A list of output folder paths (\code{bed_dir_list}), one for each topic.

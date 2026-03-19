@@ -2,14 +2,14 @@
 % Please edit documentation in R/scads.R
 \name{scads}
 \alias{scads}
-\title{scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score}
+\title{scads: A package for using scATAC-seq data and GWAS sumstats to calculate disease cell score}
 \usage{
 scads(
   count_matrix,
   nTopics = 10,
   n_s = 1000,
   n_c = 8,
-  baseline_method = "constant",
+  baseline_method = "gc",
   bl_celltype = NULL,
   bl_celltype_peak_file = NULL,
   sumstats_dir,
@@ -24,6 +24,8 @@ scads(
   hm3_snps,
   weights_pref,
   continuous_topic_annot = FALSE,
+  chrs = 1:22,
+  genome = "hg19",
   ...
 )
 }
@@ -36,11 +38,17 @@ scads(
 
 \item{n_c}{Number of cores to use for parallelization.}
 
-\item{sumstats_dir}{Directory with GWAS sumstats.}
+\item{baseline_method}{Method for calculating baseline f_kj0 (Default is gc; other options: constant, average, estimate)}
+
+\item{bl_celltype}{Use only if baseline_method == "estimate", otherwise NULL}
+
+\item{bl_celltype_peak_file}{Use only if baseline_method == "estimate", otherwise NULL}
+
+\item{sumstats_dir}{Directory containing GWAS sumstats (file format: TRAIT.sumstats.txt.gz).}
 
 \item{gwas_nsamps}{Sample size of GWAS.}
 
-\item{gwas_trait}{GWAS trait name (e.g., "SIM").}
+\item{gwas_trait}{GWAS trait name (e.g., "SIM", "IBD").}
 
 \item{outdir}{Directory where outputs are saved.}
 
@@ -48,33 +56,43 @@ scads(
 
 \item{ldsc_code_dir}{Directory to access LDSC code scripts.}
 
-\item{onekg_path}{Prefix to 1000G plink files in hg38 (e.g., "/path/1000G.EUR.hg38.").}
+\item{onekg_path}{Prefix to 1000G plink files in hg19 (/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.). (use hg38 version if input data is hg38).}
 
-\item{baseline_dir}{Prefix to baseline v2.2 annotation (e.g. "/path/baselineLD_v2.2/baselineLD.").}
+\item{baseline_dir}{Prefix to 1000G baseline v2.2 annotation in hg19 (e.g. "/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD."). (use hg38 version if input data is hg38).}
 
-\item{frqfile_pref}{Prefix to the .frq or .afreq files (e.g. "/path/1000G.EUR.hg38.").}
+\item{frqfile_pref}{Prefix to the 1000G  .frq or .afreq files in hg19 (e.g. "/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC."). (use hg38 version if input data is hg38).}
 
-\item{hm3_snps}{Path to the HapMap3 no‐MHC SNP list (e.g. "hm3_no_MHC.list.txt").}
+\item{hm3_snps}{Path to the HapMap3 no‐MHC SNP list in hg19 (e.g. "/LDSCORE/zenodo/hm3_no_MHC.list.txt").(use hg38 version if input data is hg38).}
+
+\item{weights_pref}{Path to the 1000G weights in hg19 (e.g. "/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.").(use hg38 version if input data is hg38).}
 
 \item{continuous_topic_annot}{Logical. If \code{TRUE}, create \emph{continuous} topic annotations
 (via \code{get_continuous_annot_beds()}) and run \code{run_sldsc_cont()}.
 If \code{FALSE}, use the \emph{binary} annotation approach (\code{get_annot_beds()} and \code{run_sldsc()}).
 Default is \code{FALSE}.}
 
+\item{chrs}{Number of chromosomes for running S-LDSC (Default is chr1-22)}
+
+\item{genome}{Genome build (Default is hg19)}
+
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
-A list containing the fitted topic model (\code{out1}) and the cell scores (\code{cs_res}).
+A list containing the fitted topic model (\code{out1}) and the cell scores (\code{cs_res}) results.
 }
 \description{
-scads: A function for using scATAC-seq data and GWAS sumstats to calculate disease cell score
+scads: A package for using scATAC-seq data and GWAS sumstats to calculate disease cell score
 }
 \examples{
+\dontrun{
 result <- scads(count_matrix, nTopics = 15, sumstats_dir="/some/sumstats", gwas_nsamps=60000,
                 gwas_trait="SIM", outdir="results/", 
-                onekg_path="/some/path/1000G.EUR.hg38.",
-                baseline_dir="/some/path/baselineLD_v2.2/baselineLD.",
-                frqfile_pref="/some/path/1000G.EUR.hg38.",
-                hm3_snps="/some/path/hm3_no_MHC.list.txt")
+                polyfun_code_dir = "/some/path/polyfun/", ldsc_code_dir = "/some/path/ldsc/",
+                onekg_path="/some/path/1000G.EUR.QC.",
+                baseline_dir="/some/path/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.",
+                frqfile_pref="/some/path/1000G_Phase3_frq/1000G.EUR.QC.",
+                hm3_snps="/some/path/hm3_no_MHC.list.txt", 
+                weights_pref="/some/path/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
 
+}
 }

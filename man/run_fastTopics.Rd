@@ -14,6 +14,7 @@ run_fastTopics(
   bl_celltype_peak_file = NULL,
   fdr_cutoff = 0.05,
   outdir,
+  genome = "hg19",
   ...
 )
 }
@@ -29,7 +30,7 @@ run_fastTopics(
 \item{...}{Additional arguments passed to \code{fastTopics::fit_topic_model()}.}
 }
 \value{
-A list containing the factor matrices \code{Fmat} and \code{Lmat}, differential expression results \code{de_res}, and p-values matrix \code{p_jk}.
+A list containing the factor matrices \code{Fmat} and \code{Lmat}, differential expression results \code{de_res}, p-values matrix \code{p_jk} and caculated baseline \code{baseline}.
 }
 \description{
 This function runs the fastTopics model on the provided count matrix,

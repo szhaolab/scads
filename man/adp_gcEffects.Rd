@@ -104,6 +104,7 @@ The fitted curves can reveal whether sequencing depth or read coverage is
 biased by GC content, separately for peak-enriched and background regions.
 }
 \examples{
+\dontrun{
 set.seed(1)
 gc <- runif(10000, 0.2, 0.9)
 rc <- rpois(10000, lambda = exp(5 * (gc - 0.5)^2))
@@ -111,6 +112,7 @@ res <- adp_gcEffects(gc = gc, rc = rc, model = "poisson", plot = TRUE)
 
 # visualize the estimated GC effects
 print(res$g)
+}
 
 
 }

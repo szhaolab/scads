@@ -1,3 +1,7 @@
 ^scads\.Rproj$
 ^\.Rproj\.user$
 ^\.github$
+^vignettes/Introduction\.Rmd$
+^README\\.html$
+^_pkgdown\\.yml$
+^docs$

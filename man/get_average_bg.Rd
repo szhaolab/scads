@@ -20,5 +20,7 @@ A single numeric: the estimated baseline accessibility probability.
 Estimate “background” accessibility rate from a reference cell‐type peak list
 }
 \examples{
+\dontrun{
 get_average_bg(cm, "CD8", "cd8_peaks.bed")
+}
 }

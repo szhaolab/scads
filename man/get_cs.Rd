@@ -7,7 +7,7 @@
 get_cs(topic_res, ldsc_res_dir, trait, nTopics)
 }
 \arguments{
-\item{topic_res}{Results from run_fastTopics, with Pmat (J×K) and Lmat (I×K)}
+\item{topic_res}{Results from run_fastTopics_res, with Pmat (J×K) and Lmat (I×K)}
 
 \item{ldsc_res_dir}{Directory containing k*_output/results/Trait.results}
 
@@ -18,9 +18,12 @@ get_cs(topic_res, ldsc_res_dir, trait, nTopics)
 \value{
 A list with
 \itemize{
-\item cs: vector of length I (cells)
-\item var_cs: variance of each cs\link{i}
-\item ldsc_res_table: the raw tau_display table from LDSC
+\item cs: cell scores (vector of length I)
+\item z_cell: z-score accounting for variance
+\item p_cell: p-value for assessing score reliability
+\item ldsc_res_table: the raw tau_display table from S-LDSC
+\item ash_res: results from running ASH on S-LDSC enrichment estimates
+\item cs_dat: intermediate estimates for calculating cell score
 }
 }
 \description{

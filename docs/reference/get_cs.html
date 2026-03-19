@@ -60,7 +60,7 @@
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>topic_res</dt>
-<dd><p>Results from run_fastTopics, with Pmat (J×K) and Lmat (I×K)</p></dd>
+<dd><p>Results from run_fastTopics_res, with Pmat (J×K) and Lmat (I×K)</p></dd>
 
 
 <dt>ldsc_res_dir</dt>
@@ -79,9 +79,12 @@
     <h2>Value</h2>
     
 
-<p>A list with</p><ul><li><p>cs: vector of length I (cells)</p></li>
-<li><p>var_cs: variance of each csi</p></li>
-<li><p>ldsc_res_table: the raw tau_display table from LDSC</p></li>
+<p>A list with</p><ul><li><p>cs: cell scores (vector of length I)</p></li>
+<li><p>z_cell: z-score accounting for variance</p></li>
+<li><p>p_cell: p-value for assessing score reliability</p></li>
+<li><p>ldsc_res_table: the raw tau_display table from S-LDSC</p></li>
+<li><p>ash_res: results from running ASH on S-LDSC enrichment estimates</p></li>
+<li><p>cs_dat: intermediate estimates for calculating cell score</p></li>
 </ul></div>
 
   </div>
