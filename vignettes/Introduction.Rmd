@@ -85,7 +85,7 @@ trait = "SIM"
 myHomeDir <- "/dartfs/rc/lab/S/Szhao/"
 # /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/
 
-output_dir = paste0(myHomeDir, "liyang/SCSviaTM/analysis/test_260318_gc")
+output_dir = paste0(myHomeDir, "liyang/SCSviaTM/analysis/test_260318_gc/")
 polyfun_d= paste0(myHomeDir, "liyang/polyfun/")
 ldsc_d = paste0(myHomeDir, "liyang/ldsc/")
 onekg_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.")

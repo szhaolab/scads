@@ -160,7 +160,8 @@ scads <- function(count_matrix,
                    ldsc_res_dir = outdir,
                    trait      = gwas_trait,
                    nTopics    = nTopics)
-  cat("\nCell score summary: ", summary(cs), "\n")
+  
+  cat("\nCell score summary: ", summary(cs_res$cs), "\n")
 
   cat("\nEnd time:", Sys.time(), "\n")
 
