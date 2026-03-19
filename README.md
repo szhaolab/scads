@@ -29,7 +29,7 @@ git clone https://github.com/szhaolab/scads
  
 # How to run scads: 
 
-  - see [tutorial](https://github.com/szhaolab/scads/articles/Introduction.html).
+  - see [tutorial](https://szhaolab.github.io/scads/articles/Introduction.html).
  
 # Reference
 
