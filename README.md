@@ -24,7 +24,7 @@ git clone https://github.com/szhaolab/scads
   install.packages("remotes")
   
   # Install scads package from your GitHub repository
-  remotes::install_github("szhaolab/scads", ref = "v0.0.1")
+  remotes::install_github("szhaolab/scads")
 ```
  
 # How to run scads: 

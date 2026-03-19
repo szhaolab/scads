@@ -29,6 +29,7 @@
 #' @return A list containing the fitted topic model (\code{out1}) and the cell scores (\code{cs_res}) results.
 #'
 #' @examples
+#' \dontrun{
 #' result <- scads(count_matrix, nTopics = 15, sumstats_dir="/some/sumstats", gwas_nsamps=60000,
 #'                 gwas_trait="SIM", outdir="results/", 
 #'                 polyfun_code_dir = "/some/path/polyfun/", ldsc_code_dir = "/some/path/ldsc/",
@@ -38,6 +39,7 @@
 #'                 hm3_snps="/some/path/hm3_no_MHC.list.txt", 
 #'                 weights_pref="/some/path/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
 #'
+#' }
 #' @export
 scads <- function(count_matrix, 
                   nTopics = 10, 

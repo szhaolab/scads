@@ -458,6 +458,7 @@ prep_gcEffects_input <- function(rc,
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' set.seed(1)
 #' gc <- runif(10000, 0.2, 0.9)
 #' rc <- rpois(10000, lambda = exp(5 * (gc - 0.5)^2))
@@ -465,6 +466,7 @@ prep_gcEffects_input <- function(rc,
 #' 
 #' # visualize the estimated GC effects
 #' print(res$g)
+#' }
 #' 
 #' 
 adp_gcEffects <- function(gc=gc,

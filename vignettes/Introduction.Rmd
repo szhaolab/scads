@@ -3,9 +3,10 @@ title: "Quick Tutorial on scads"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Quick Tutorial on scads}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Introduction}
+  %\VignetteEngine{knitr::knitr}
   %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{}
 ---
 
 ```{r, include = FALSE}
