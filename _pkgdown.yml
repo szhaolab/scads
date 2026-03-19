@@ -1,7 +1,11 @@
 template:
   bootstrap: 3
 
-# Explicitly link the logo for the navbar
+articles:
+  - title: Introduction
+    contents:
+    - Introduction
+
 navbar:
   components:
     home:
@@ -10,6 +14,5 @@ navbar:
       src: man/figures/scads_logo_gemini.png
       href: index.html
 
-# This helps some templates handle the scaling
 figures:
   dev: png
