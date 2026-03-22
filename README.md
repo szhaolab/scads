@@ -110,7 +110,38 @@ git clone https://github.com/szhaolab/scads.git
 remotes::install_local("path/to/scads")
 ```
 
-### Step 6: Verify the installation
+### Step 6: Download S-LDSC reference data
+
+`scads` requires reference files from the S-LDSC baseline LD v2.2 model (hg19). Download and extract them into a local directory (e.g., `~/LDSCORE/`).
+
+> **Disk usage:** The compressed downloads total ~1 GB. After extraction, the reference data requires ~4 GB.
+
+```bash
+mkdir -p ~/LDSCORE && cd ~/LDSCORE
+
+# Download from Zenodo (~1 GB total)
+curl -fSL -o 1000G_Phase3_plinkfiles.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_plinkfiles.tgz?download=1"
+curl -fSL -o 1000G_Phase3_baselineLD_v2.2_ldscores.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_baselineLD_v2.2_ldscores.tgz?download=1"
+curl -fSL -o 1000G_Phase3_frq.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_frq.tgz?download=1"
+curl -fSL -o 1000G_Phase3_weights_hm3_no_MHC.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_weights_hm3_no_MHC.tgz?download=1"
+curl -fSL -o hm3_no_MHC.list.txt \
+  "https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"
+
+# Extract
+tar -xzf 1000G_Phase3_plinkfiles.tgz
+tar -xzf 1000G_Phase3_frq.tgz
+tar -xzf 1000G_Phase3_weights_hm3_no_MHC.tgz
+
+# Baseline LD extracts flat files, so create a subdirectory first
+mkdir -p 1000G_Phase3_baselineLD_v2.2_ldscores
+tar -xzf 1000G_Phase3_baselineLD_v2.2_ldscores.tgz -C 1000G_Phase3_baselineLD_v2.2_ldscores
+```
+
+### Step 7: Verify the installation
 
 ```r
 library(scads)

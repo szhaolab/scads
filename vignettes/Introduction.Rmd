@@ -16,123 +16,202 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Setup 
+## Prerequisites
 
-Confirm [PolyFUN](https://github.com/omerwe/polyfun) and [LDSC](https://github.com/bulik/ldsc) exist and runs in your conda environment. See their websites for installation and usage guidance.
+Before running this tutorial, make sure you have completed all installation steps described in the [README](https://github.com/szhaolab/scads#installation):
 
-```{bash eval=F}
-# srun --mem-per-cpu=8GB --cpus-per-task=16 --time=8:00:00 --pty /bin/bash
-conda activate /dartfs/rc/lab/S/Szhao/liyang/conda/base_clone/
-# Rscript -e "rmarkdown::render('/dartfs/rc/lab/S/Szhao/liyang/scads/vignettes/Introduction.Rmd', output_file='/dartfs/rc/lab/S/Szhao/liyang/scads/vignettes/Introduction.html', output_format='html_document')"
+1. **polyFUN** and **LDSC** are cloned and the `polyfun` conda environment is set up.
+2. **scads** R package is installed with all dependencies.
+3. **S-LDSC reference data** has been downloaded (see below).
+
+## Download S-LDSC reference data
+
+`scads` requires reference files from the S-LDSC baseline LD model. Download and extract them into a local directory (e.g., `~/LDSCORE/`). All files are available from [Zenodo](https://zenodo.org/records/10515792).
+
+> **Disk usage:** The compressed downloads total ~1 GB. After extraction, the reference data requires ~4 GB of disk space.
+
+```{bash eval=FALSE}
+# Create a directory for the reference data
+mkdir -p ~/LDSCORE
+
+# Download reference files from Zenodo (~1 GB total)
+cd ~/LDSCORE
+curl -fSL -o 1000G_Phase3_plinkfiles.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_plinkfiles.tgz?download=1"            # 275 MB
+curl -fSL -o 1000G_Phase3_baselineLD_v2.2_ldscores.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_baselineLD_v2.2_ldscores.tgz?download=1"  # 645 MB
+curl -fSL -o 1000G_Phase3_frq.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_frq.tgz?download=1"                   # 82 MB
+curl -fSL -o 1000G_Phase3_weights_hm3_no_MHC.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_weights_hm3_no_MHC.tgz?download=1"    # 12 MB
+curl -fSL -o hm3_no_MHC.list.txt \
+  "https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"                    # 12 MB
+
+# Extract archives
+tar -xzf 1000G_Phase3_plinkfiles.tgz
+tar -xzf 1000G_Phase3_frq.tgz
+tar -xzf 1000G_Phase3_weights_hm3_no_MHC.tgz
+
+# The baseline LD archive extracts files directly (not into a subdirectory),
+# so create one first:
+mkdir -p 1000G_Phase3_baselineLD_v2.2_ldscores
+tar -xzf 1000G_Phase3_baselineLD_v2.2_ldscores.tgz -C 1000G_Phase3_baselineLD_v2.2_ldscores
+
+# (Optional) Remove the .tgz files to free ~1 GB of disk space
+# rm -f *.tgz
+```
+
+After extraction, you should have the following directory structure:
+
+```
+~/LDSCORE/
+├── 1000G_EUR_Phase3_plink/          # 1000G.EUR.QC.{1..22}.{bed,bim,fam}
+├── 1000G_Phase3_baselineLD_v2.2_ldscores/  # baselineLD.{1..22}.{annot.gz,l2.ldscore.gz,...}
+├── 1000G_Phase3_frq/                # 1000G.EUR.QC.{1..22}.frq
+├── 1000G_Phase3_weights_hm3_no_MHC/ # weights.hm3_noMHC.{1..22}.l2.ldscore.gz
+└── hm3_no_MHC.list.txt
+```
+
+## Start an R session
+
+Activate the `polyfun` conda environment **before** starting R. This ensures that `python3` (called internally by `scads`) resolves to the environment with the required Python packages.
+
+```{bash eval=FALSE}
+conda activate polyfun
 R
 ```
 
-Load R packages
+Load the scads package:
 
 ```{r setup}
-# library(remotes)
-# remotes::install_github("szhaolab/scads")
-# library(scads)
-
-setwd("/dartfs/rc/lab/S/Szhao/liyang/scads")
-devtools::load_all()
 library(scads)
+library(data.table)
 ```
 
-Load example data
+## Load example data
+
+`scads` ships with a small demo count matrix (peak-by-cell) and simulated GWAS summary statistics for chromosome 10.
 
 ```{r}
-# Access the dataset
+# Load demo peak-by-cell count matrix
 data("demo_count_matrix")
 
-# Examine dataset
+# Examine the dataset
 dim(demo_count_matrix)
-demo_count_matrix[1:5,1:5]
+demo_count_matrix[1:5, 1:5]
 ```
 
-Prepare a GWAS summary statistics file 
+Load the example GWAS summary statistics:
 
 ```{r}
 data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
-sumstats <- fread(data_file, header = T)
+sumstats <- fread(data_file, header = TRUE)
 head(sumstats)
+```
+
+## Configure paths
+
+Set the paths to match your local environment. You need to specify:
+
+- **`polyfun_d`** / **`ldsc_d`**: where polyFUN and LDSC are cloned.
+- **`ldscore_dir`**: where the S-LDSC reference data was downloaded.
+- **`output_dir`**: where scads will write its results.
+
+```{r}
+# ── User-specific paths (edit these) ──────────────────────────────────────────
+polyfun_d    <- path.expand("~/polyfun/")
+ldsc_d       <- path.expand("~/ldsc/")
+ldscore_dir  <- path.expand("~/LDSCORE/")
+output_dir   <- path.expand("~/scads_output/")
+
+# ── Reference data paths (derived from ldscore_dir) ──────────────────────────
+onekg_pref    <- file.path(ldscore_dir, "1000G_EUR_Phase3_plink", "1000G.EUR.QC.")
+baseline_pref <- file.path(ldscore_dir, "1000G_Phase3_baselineLD_v2.2_ldscores", "baselineLD.")
+frq_pref      <- file.path(ldscore_dir, "1000G_Phase3_frq", "1000G.EUR.QC.")
+hm3_file      <- file.path(ldscore_dir, "hm3_no_MHC.list.txt")
+weights_pref  <- file.path(ldscore_dir, "1000G_Phase3_weights_hm3_no_MHC", "weights.hm3_noMHC.")
+```
+
+Verify that the key files exist before proceeding:
+
+```{r}
+stopifnot(
+  "polyfun ldsc.py not found"    = file.exists(file.path(polyfun_d, "ldsc.py")),
+  "ldsc make_annot.py not found" = file.exists(file.path(ldsc_d, "make_annot.py")),
+  "1000G plink files not found"  = file.exists(paste0(onekg_pref, "10.bim")),
+  "Baseline LD files not found"  = file.exists(paste0(baseline_pref, "10.l2.ldscore.gz")),
+  "Frequency files not found"    = file.exists(paste0(frq_pref, "10.frq")),
+  "HapMap3 SNP list not found"   = file.exists(hm3_file),
+  "Weight files not found"       = file.exists(paste0(weights_pref, "10.l2.ldscore.gz"))
+)
+cat("All paths verified.\n")
+```
+
+## Set analysis parameters
+
+```{r}
+count_matrix <- demo_count_matrix
+n_topics     <- 5
+n_sims       <- 1000
+n_cores      <- 8        # adjust to the number of cores available on your machine
+bl_method    <- "gc"
+bl_ct        <- NULL
+bl_peaks     <- NULL
+sumstats_d   <- dirname(data_file)
+gwas_n       <- 764667
+trait         <- "SIM"
+cont_topics  <- FALSE
 ```
 
 ## Run scads
 
-1. Run fastTopics 
-  
-2. Create topic annotations 
+The `scads()` function runs the full pipeline:
 
-3. Run S-LDSC using topic annotations
+1. **fastTopics** — fits a topic model on the count matrix.
+2. **Create topic annotations** — generates BED files for each topic.
+3. **S-LDSC** — runs stratified LD score regression for each topic annotation using the baseline LD v2.2 model.
+4. **Calculate cell scores** — computes a per-cell disease score.
 
-  - We will run hg19 version of S-LDSC using the recommended baseline_v2.2 model 
-  
-4. Calculate Cell Score 
-
-
-```{r}
-count_matrix = demo_count_matrix
-n_topics = 5
-n_sims = 1000
-n_cores = 16
-bl_method = "gc" 
-bl_ct = NULL
-bl_peaks =NULL
-sumstats_d = dirname(data_file)
-gwas_n = 764667
-trait = "SIM"
-
-myHomeDir <- "/dartfs/rc/lab/S/Szhao/"
-# /dartfs/rc/lab/S/Szhao/liyang/SCSviaTM/analysis/
-
-output_dir = paste0(myHomeDir, "liyang/SCSviaTM/analysis/test_260318_gc/")
-polyfun_d= paste0(myHomeDir, "liyang/polyfun/")
-ldsc_d = paste0(myHomeDir, "liyang/ldsc/")
-onekg_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.")
-# onekg_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_EUR_Phase3_plink/1000G.EUR.QC.10.")
-
-baseline_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.")
-# baseline_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.10.")
-
-frq_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC.")
-# frq_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_frq/1000G.EUR.QC.10.")
-
-hm3_file = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/hm3_no_MHC.list.txt")
-weights_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.")
-# weights_pref = paste0(myHomeDir, "fine-mapping/LDSCORE/zenodo/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.10.")
-
-cont_topics = FALSE
-```
+> **Note:** This tutorial runs on **chromosome 10 only** (`chrs = 10`) to keep runtime short. For a real analysis, use the default `chrs = 1:22` to run on all autosomes.
 
 ```{r}
 set.seed(1234)
 scads_res <- scads(
   count_matrix,
-  nTopics                 = n_topics,
-  n_s                     = n_sims,
-  n_c                     = n_cores,
-  baseline_method         = bl_method,
-  bl_celltype             = bl_ct,
-  bl_celltype_peak_file   = bl_peaks,
-  sumstats_dir            = sumstats_d,
-  gwas_nsamps             = gwas_n,
-  gwas_trait              = trait,
-  outdir                  = output_dir,
-  polyfun_code_dir        = polyfun_d,
-  ldsc_code_dir           = ldsc_d,
-  onekg_path              = onekg_pref,
-  baseline_dir            = baseline_pref,
-  frqfile_pref            = frq_pref,
-  hm3_snps                = hm3_file,
-  weights_pref            = weights_pref,
-  continuous_topic_annot  = cont_topics, 
-  chrs                    = 10,
-  genome                  = "hg19"
+  nTopics                = n_topics,
+  n_s                    = n_sims,
+  n_c                    = n_cores,
+  baseline_method        = bl_method,
+  bl_celltype            = bl_ct,
+  bl_celltype_peak_file  = bl_peaks,
+  sumstats_dir           = sumstats_d,
+  gwas_nsamps            = gwas_n,
+  gwas_trait             = trait,
+  outdir                 = output_dir,
+  polyfun_code_dir       = polyfun_d,
+  ldsc_code_dir          = ldsc_d,
+  onekg_path             = onekg_pref,
+  baseline_dir           = baseline_pref,
+  frqfile_pref           = frq_pref,
+  hm3_snps               = hm3_file,
+  weights_pref           = weights_pref,
+  continuous_topic_annot = cont_topics,
+  chrs                   = 10,
+  genome                 = "hg19"
 )
-
-saveRDS(scads_res, file = paste0(output_dir, "scads_res.rds"))
 ```
-  
 
+## Examine results
 
+```{r}
+# Save results
+saveRDS(scads_res, file = file.path(output_dir, "scads_res.rds"))
+
+# Cell scores
+summary(scads_res$cs_res$cs)
+```
+
+The result is a list with two elements:
+
+- **`out1`**: the fitted fastTopics model and topic annotations.
+- **`cs_res`**: the per-cell disease scores.
