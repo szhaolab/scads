@@ -97,8 +97,8 @@ get_gc_baseline <- function(count_matrix, Lmat, Fmat, outdir,
   # if (nrow(count_mat) > ncol(count_mat)) {
   #   count_mat <- Matrix::t(count_mat)
   # }
-  print(dim(count_mat))
-  
+  message("Count matrix dimensions: ", nrow(count_mat), " x ", ncol(count_mat))
+
   # Get peak names from columns (peaks are in columns)
   peak_names <- colnames(count_mat)
   # Only convert peak names if necessary (check format first)

@@ -169,7 +169,6 @@ compute_lfc_stats_multicore2 <- function (X, F, L, f0, D, U, M, lfc.stat, #LY
   
   # Split the data.
   nsplit <- min(m,nsplit)
-  print("Splitting data") #LY
   cols   <- parallel::splitIndices(m,nsplit)
   dat    <- vector("list",nsplit)
   for (i in 1:nsplit) {
@@ -186,7 +185,6 @@ compute_lfc_stats_multicore2 <- function (X, F, L, f0, D, U, M, lfc.stat, #LY
   parlapplyf <- function (dat, L, D, U, M, lfc.stat, conf.level, rw, e)
     compute_lfc_stats2(dat$X,dat$F,L,dat$f0,D,U,M,lfc.stat,conf.level,rw,e, #LY
                        verbose = FALSE)
-  print(parlapplyf)
   if (verbose)
     op <- pbapply::pboptions(type = "txt",txt.width = 70)
   else
@@ -362,8 +360,10 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
   nc <- fastTopics:::initialize.multithreading(control$nc,verbose)
   F <- fastTopics:::fit_poisson_models(X,L,fit.method,control$eps,control$numiter,
                                        control$tol,control$nc)
-  print(head(F))
-  print(summary(F))
+  if (verbose) {
+    cat("F matrix summary:\n")
+    print(summary(F))
+  }
   F <- pmax(F,control$minval)
   dimnames(F) <- dimnames(fit$F)
   

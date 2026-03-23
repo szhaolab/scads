@@ -84,7 +84,7 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
 
   } else if (baseline_method == "estimate") {
     
-      baseline <<- get_average_bg(count_matrix_filtered,
+      baseline <- get_average_bg(count_matrix_filtered,
                                cell_type = bl_celltype_cells,
                                cell_type_peaks = bl_celltype_peak_file)
       
@@ -92,7 +92,7 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
     
   } else {
     
-      baseline <<- 1e-7
+      baseline <- 1e-7
       cat("Baseline: ", baseline)
   }
   
@@ -116,19 +116,10 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
   print(summary(de_res$z))
 
   # Binarize Fmat per topic using z-score from DE and apply FDR
-  total_bins <- ceiling(3e9 / 500) # number of genomic bins that could be tested
-  # nrow(Fmat) * nTopics # actual number of tests
-  ## Get one-side p-value
-  pvals <- 1 - pnorm(de_res$z)
-  # pvals <- 2 * pnorm(-abs(de_res$z)) # two-sided - previously used
-  ## Get adjusted p‑values
-  qvals <- apply(pvals, 2, function(col) p.adjust(col,
-                                                  method = "fdr",
-                                                  n = total_bins))
-  qvals[is.na(qvals)] <- 1 # set missing to largest p-value
-  p_jk <- ifelse(qvals < fdr_cutoff, 1, 0)
-  p_jk[p_jk<0] <- 0
-  print(colSums(p_jk))
+  pval_res <- compute_topic_pvalues(de_res$z, fdr_cutoff = fdr_cutoff)
+  p_jk <- pval_res$p_jk
+  cat("\nSignificant peaks per topic:\n")
+  print(pval_res$n_sig_per_topic)
 
   # Clean up 
   rm(count_matrix_filtered)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/scads_func.R
 \name{get_average_bg}
 \alias{get_average_bg}
-\title{Estimate “background” accessibility rate from a reference cell‐type peak list}
+\title{Estimate "background" accessibility rate from a reference cell‐type peak list}
 \usage{
 get_average_bg(count_matrix, cell_type_cells, cell_type_peaks)
 }
@@ -17,7 +17,7 @@ get_average_bg(count_matrix, cell_type_cells, cell_type_peaks)
 A single numeric: the estimated baseline accessibility probability.
 }
 \description{
-Estimate “background” accessibility rate from a reference cell‐type peak list
+Estimate "background" accessibility rate from a reference cell‐type peak list
 }
 \examples{
 \dontrun{

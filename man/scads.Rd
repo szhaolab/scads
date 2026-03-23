@@ -26,6 +26,9 @@ scads(
   continuous_topic_annot = FALSE,
   chrs = 1:22,
   genome = "hg19",
+  save_intermediates = TRUE,
+  resume_from_step = NULL,
+  verbose = TRUE,
   ...
 )
 }
@@ -74,6 +77,14 @@ Default is \code{FALSE}.}
 \item{chrs}{Number of chromosomes for running S-LDSC (Default is chr1-22)}
 
 \item{genome}{Genome build (Default is hg19)}
+
+\item{save_intermediates}{Logical. If \code{TRUE}, saves intermediate results (fastTopics, BED dirs,
+cell scores) to \code{outdir} as RDS files. Default is \code{TRUE}.}
+
+\item{resume_from_step}{Integer (1-4). If specified, resumes the pipeline from this step,
+loading prior intermediate results from \code{outdir}. Default is \code{NULL} (run all steps).}
+
+\item{verbose}{Logical. If \code{TRUE}, prints progress messages. Default is \code{TRUE}.}
 
 \item{...}{Additional arguments passed to internal functions.}
 }

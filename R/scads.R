@@ -26,6 +26,12 @@
 #' @param genome Genome build (Default is hg19)
 #' @param ... Additional arguments passed to internal functions.
 #'
+#' @param save_intermediates Logical. If \code{TRUE}, saves intermediate results (fastTopics, BED dirs,
+#'   cell scores) to \code{outdir} as RDS files. Default is \code{TRUE}.
+#' @param resume_from_step Integer (1-4). If specified, resumes the pipeline from this step,
+#'   loading prior intermediate results from \code{outdir}. Default is \code{NULL} (run all steps).
+#' @param verbose Logical. If \code{TRUE}, prints progress messages. Default is \code{TRUE}.
+#'
 #' @return A list containing the fitted topic model (\code{out1}) and the cell scores (\code{cs_res}) results.
 #'
 #' @examples
@@ -62,110 +68,127 @@ scads <- function(count_matrix,
                   continuous_topic_annot = FALSE,
                   chrs = 1:22,
                   genome = "hg19",
+                  save_intermediates = TRUE,
+                  resume_from_step = NULL,
+                  verbose = TRUE,
                   ...) {
-  
-  # 0) create directories 
+
+  # 0) create directories
   if (!dir.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
   }
-  
-  # 1) run fastTopics
-  cat("\n1. Run FastTopics\n")
-  cat("\nStart time: "); print(Sys.time())
-  cat("\nCount matrix dimensions:", dim(count_matrix), "\n")
-  
-  cat("\nTransposing matrix for fastTopics")
-  count_matrix_t <- Matrix::t(count_matrix)
-  print(dim(count_matrix))
-  cat("\nTransposed count matrix dimensions", dim(count_matrix_t), "\n")
-  rm(count_matrix)
-  
-  # Ensure that count_matrix has cells as rows and peaks as columns
-  out1 <- run_fastTopics(count_matrix_t, nTopics, n_s, n_c,
-                         baseline_method, bl_celltype, bl_celltype_peak_file,
-                         outdir = outdir, genome = genome)
-  saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
-  # out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
-  
-  # 2) get topic annotations (bed files)
-  cat("\n2. Get topic annotations\n")
-  cat("\nStart time: "); print(Sys.time())
 
-  if (!continuous_topic_annot) {
-    # Binary (peak-based) annotation approach
-    beddir_list <- get_annot_beds(topics_res = out1, output_dir = outdir)
+  # Helper for checkpoint loading
+  start_step <- if (!is.null(resume_from_step)) resume_from_step else 1
+
+  if (start_step > 1) {
+    scads_log("Resuming from step ", start_step, verbose = verbose)
+  }
+
+  # 1) run fastTopics
+  if (start_step <= 1) {
+    scads_log("Step 1: Running FastTopics", verbose = verbose)
+    scads_log("Count matrix dimensions: ", nrow(count_matrix), " x ", ncol(count_matrix), verbose = verbose)
+
+    scads_log("Transposing matrix for fastTopics", verbose = verbose)
+    count_matrix_t <- Matrix::t(count_matrix)
+    scads_log("Transposed dimensions: ", nrow(count_matrix_t), " x ", ncol(count_matrix_t), verbose = verbose)
+    rm(count_matrix)
+
+    out1 <- run_fastTopics(count_matrix_t, nTopics, n_s, n_c,
+                           baseline_method, bl_celltype, bl_celltype_peak_file,
+                           outdir = outdir, genome = genome)
+    if (save_intermediates) {
+      saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))
+      scads_log("Saved fastTopics results to: ", file.path(outdir, "run_fastTopics_res.rds"), verbose = verbose)
+    }
   } else {
-    # Continuous annotation approach
-    beddir_list <- get_continuous_annot_beds(topics_res = out1, output_dir = outdir)
+    scads_log("Loading fastTopics results from checkpoint", verbose = verbose)
+    out1 <- readRDS(file.path(outdir, "run_fastTopics_res.rds"))
+  }
+
+  # 2) get topic annotations (bed files)
+  if (start_step <= 2) {
+    scads_log("Step 2: Generating topic annotations", verbose = verbose)
+
+    if (!continuous_topic_annot) {
+      beddir_list <- get_annot_beds(topics_res = out1, output_dir = outdir)
+    } else {
+      beddir_list <- get_continuous_annot_beds(topics_res = out1, output_dir = outdir)
+    }
+    if (save_intermediates) {
+      saveRDS(beddir_list, file.path(outdir, "beddir_list.rds"))
+      scads_log("Saved BED dir list to: ", file.path(outdir, "beddir_list.rds"), verbose = verbose)
+    }
+  } else {
+    scads_log("Loading BED dir list from checkpoint", verbose = verbose)
+    beddir_list <- readRDS(file.path(outdir, "beddir_list.rds"))
   }
 
   # 3) run LDSC
-  cat("\n3. Run LDSC\n")
-  cat("\nStart time: "); print(Sys.time())
+  if (start_step <= 3) {
+    scads_log("Step 3: Running S-LDSC", verbose = verbose)
 
-  num_cores <- parallel::detectCores(logical = FALSE)
-  num_tasks <- length(beddir_list)
-  mc_cores_to_use <- min(num_cores, num_tasks, 5)
+    num_cores <- parallel::detectCores(logical = FALSE)
+    num_tasks <- length(beddir_list)
+    mc_cores_to_use <- min(num_cores, num_tasks, 5)
+    scads_log("Using ", mc_cores_to_use, " cores for ", num_tasks, " topics", verbose = verbose)
 
-  cat("\nUsing", mc_cores_to_use, "cores for", num_tasks, "tasks.\n")
+    parallel::mclapply(seq_along(beddir_list), function(i) {
+      scads_log("Starting S-LDSC for topic ", i, verbose = verbose)
+      if (!continuous_topic_annot) {
+        run_sldsc(
+          chrs          = chrs,
+          polyfun_path  = polyfun_code_dir,
+          ldsc_path     = ldsc_code_dir,
+          sumstats_path = sumstats_dir,
+          n             = gwas_nsamps,
+          trait         = gwas_trait,
+          onekg_path    = onekg_path,
+          bed_dir       = beddir_list[[i]],
+          baseline_dir  = baseline_dir,
+          frqfile_pref  = frqfile_pref,
+          hm3_snps      = hm3_snps,
+          weights_pref  = weights_pref,
+          out_dir       = beddir_list[[i]]
+        )
+      } else {
+        run_sldsc_cont(
+          polyfun_path  = polyfun_code_dir,
+          ldsc_path     = ldsc_code_dir,
+          sumstats_path = sumstats_dir,
+          n             = gwas_nsamps,
+          trait         = gwas_trait,
+          onekg_path    = onekg_path,
+          bed_dir       = beddir_list[[i]],
+          baseline_dir  = baseline_dir,
+          frqfile_pref  = frqfile_pref,
+          hm3_snps      = hm3_snps,
+          out_dir       = beddir_list[[i]]
+        )
+      }
+      scads_log("Completed S-LDSC for topic ", i, verbose = verbose)
+    }, mc.cores = mc_cores_to_use)
 
-  # sldsc_results <- 
-  parallel::mclapply(seq_along(beddir_list), function(i) {
-
-    #tryCatch({
-    cat("\nStart time for topic", i, ":", Sys.time(), "\n")
-    # If using continuous annotations, call run_sldsc_cont; else run_sldsc
-    if (!continuous_topic_annot) {
-      run_sldsc(
-        chrs          = chrs,
-        polyfun_path  = polyfun_code_dir,
-        ldsc_path     = ldsc_code_dir,
-        sumstats_path = sumstats_dir,
-        n             = gwas_nsamps,
-        trait         = gwas_trait,
-        onekg_path    = onekg_path,
-        bed_dir       = beddir_list[[i]],
-        baseline_dir  = baseline_dir,
-        frqfile_pref  = frqfile_pref,
-        hm3_snps      = hm3_snps,
-        weights_pref  = weights_pref,
-        out_dir       = beddir_list[[i]]
-      )
-    } else {
-      run_sldsc_cont(
-        polyfun_path  = polyfun_code_dir,
-        ldsc_path     = ldsc_code_dir,
-        sumstats_path = sumstats_dir,
-        n             = gwas_nsamps,
-        trait         = gwas_trait,
-        onekg_path    = onekg_path,
-        bed_dir       = beddir_list[[i]],
-        baseline_dir  = baseline_dir,
-        frqfile_pref  = frqfile_pref,
-        hm3_snps      = hm3_snps,
-        out_dir       = beddir_list[[i]]
-      )
-    }
-    # }, error = function(e) e)
-
-    cat("\nStop time for topic", i, ":", Sys.time(), "\n")
-  }, mc.cores = mc_cores_to_use)
-
-  # print(sldsc_results[sapply(sldsc_results, inherits, "error")])
-
-  cat("\nStop time:", Sys.time(), "\n")
+    scads_log("S-LDSC completed for all topics", verbose = verbose)
+  }
 
   # 4) calc the cell score
-  cat("\n4. Calculate cell scores\n")
-  cat("\nStart time:", Sys.time(), "\n")
+  scads_log("Step 4: Calculating cell scores", verbose = verbose)
   cs_res <- get_cs(topic_res  = out1,
                    ldsc_res_dir = outdir,
                    trait      = gwas_trait,
                    nTopics    = nTopics)
-  
-  cat("\nCell score summary: ", summary(cs_res$cs), "\n")
 
-  cat("\nEnd time:", Sys.time(), "\n")
+  if (save_intermediates) {
+    saveRDS(cs_res, file.path(outdir, "cs_res.rds"))
+    scads_log("Saved cell score results to: ", file.path(outdir, "cs_res.rds"), verbose = verbose)
+  }
+
+  scads_log("Cell score summary:", verbose = verbose)
+  if (verbose) print(summary(cs_res$cs))
+
+  scads_log("Pipeline complete", verbose = verbose)
 
   return(list(cs_res = cs_res, out1 = out1))
 }

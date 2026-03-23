@@ -1,12 +1,16 @@
 Package: scads
-Title: What the Package Does (One Line, Title Case)
-Version: 0.1.0
-Authors@R: 
-    person("L", "Yu", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Title: Single-Cell ATAC-seq Disease Scoring via Topic Modeling and S-LDSC
+Version: 0.2.0
+Authors@R: c(
+    person("Li", "Yu", role = c("aut", "cre"), email = "li.yu@dartmouth.edu"),
+    person("Siming", "Zhao", role = "aut"))
+Description: Computes per-cell disease relevance scores from single-cell
+    ATAC-seq data and GWAS summary statistics. The pipeline fits a topic
+    model (via fastTopics), creates topic-specific genomic annotations,
+    runs stratified LD score regression (S-LDSC), and combines enrichment
+    estimates with cell-level topic loadings to produce a cell-level
+    disease score.
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
@@ -33,12 +37,14 @@ Imports:
     SummarizedExperiment,
     tibble,
     vroom
-Suggests: 
+Suggests:
     R.utils,
     data.table,
     ggplot2,
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
 VignetteBuilder: knitr 
 BuildVignettes: false
 Depends: 

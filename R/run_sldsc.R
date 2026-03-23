@@ -103,12 +103,9 @@ run_sldsc <- function(chrs,
   }
   
   munged_out  <- file.path(out_dir, sprintf("%s_munged_sumstats.parquet", trait))
-  cmd_munge <- paste(
-    "python3", file.path(polyfun_path, "munge_polyfun_sumstats.py"),
-    "--sumstats", sumstats_gz,
-    "--n", n,
-    "--out", munged_out
-  )
+  cmd_munge <- build_sldsc_command("munge",
+    polyfun_path = polyfun_path, sumstats_gz = sumstats_gz,
+    n = n, munged_out = munged_out)
   message("\n[run_sldsc] Step 1: Munging sumstats:\n", cmd_munge)
   system(cmd_munge)
   
@@ -125,29 +122,19 @@ run_sldsc <- function(chrs,
     out_annot <- file.path(ann_dir, sprintf("%s.%d.annot.gz", trait, chr))
     bim_file  <- sprintf("%s%d.bim", onekg_path, chr)
     
-    cmd_annot <- paste(
-      "python3", file.path(ldsc_path, "make_annot.py"),
-      "--bed-file", user_bed,
-      "--bimfile", bim_file,
-      "--annot-file", out_annot
-    )
+    cmd_annot <- build_sldsc_command("annot",
+      ldsc_path = ldsc_path, user_bed = user_bed,
+      bim_file = bim_file, out_annot = out_annot)
     message("\n[run_sldsc] Step 2a: make_annot:\n", cmd_annot)
     system(cmd_annot)
-    
+
     # (b) ldsc.py --l2
     out_prefix <- file.path(ann_dir, sprintf("%s.%d", trait, chr))
     bfile_chr  <- sprintf("%s%d", onekg_path, chr)
-    
-    cmd_l2 <- paste(
-      "python3", file.path(polyfun_path, "ldsc.py"),
-      "--l2",
-      "--bfile", bfile_chr,
-      "--print-snps", hm3_snps,
-      "--ld-wind-cm 1",
-      "--annot", out_annot,
-      "--thin-annot",
-      "--out", out_prefix
-    )
+
+    cmd_l2 <- build_sldsc_command("l2",
+      polyfun_path = polyfun_path, bfile_chr = bfile_chr,
+      hm3_snps = hm3_snps, out_annot = out_annot, out_prefix = out_prefix)
     message("\n[run_sldsc] Step 2b: ldsc --l2:\n", cmd_l2)
     system(cmd_l2)
     message("\nFinish step 2b: ", cmd_l2)
@@ -164,36 +151,23 @@ run_sldsc <- function(chrs,
   message("\n Number of chromosomes with annotation: ", n_annot)
   
   if (n_annot == 1) {
-    # for one chromosome 
-    cmd_h2 <- paste(
-      "python3", file.path(polyfun_path, "ldsc.py"),
-      "--h2", munged_out,
-      "--ref-ld", paste0(
-        file.path(ann_dir, paste0(trait, ".", chr)), ",",
-        paste0(baseline_dir,chr)
-      ),
-      "--frqfile", paste0(frqfile_pref, chr),
-      "--w-ld", paste0(weights_pref, chr),
-      "--overlap-annot",
-      "--print-coefficients",
-      "--print-delete-vals",
-      "--out", final_out
-    )
-    
+    cmd_h2 <- build_sldsc_command("h2",
+      polyfun_path = polyfun_path, munged_out = munged_out,
+      ref_ld = file.path(ann_dir, paste0(trait, ".", chr)),
+      baseline_dir = paste0(baseline_dir, chr),
+      frqfile = paste0(frqfile_pref, chr),
+      w_ld = paste0(weights_pref, chr),
+      final_out = final_out, use_chr = FALSE)
+
   } else if (n_annot == 22) {
-    # for all chromosomes (1-22)
-    cmd_h2 <- paste(
-      "python3", file.path(polyfun_path, "ldsc.py"),
-      "--h2", munged_out,
-      "--ref-ld-chr", paste0(file.path(ann_dir, paste0(trait, ".")), ",", baseline_dir),
-      "--frqfile-chr", frqfile_pref,
-      "--w-ld-chr", weights_pref,
-      "--overlap-annot",
-      "--print-coefficients",
-      "--print-delete-vals",
-      "--out", final_out
-    )
-    
+    cmd_h2 <- build_sldsc_command("h2",
+      polyfun_path = polyfun_path, munged_out = munged_out,
+      ref_ld = file.path(ann_dir, paste0(trait, ".")),
+      baseline_dir = baseline_dir,
+      frqfile = frqfile_pref,
+      w_ld = weights_pref,
+      final_out = final_out, use_chr = TRUE)
+
   } else {
     # Invalid number of annotation files
     stop("Please check number of CHR — S-LDSC only takes in either one chromosome or 22 chromosomes.")

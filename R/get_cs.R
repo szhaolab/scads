@@ -14,7 +14,13 @@
 #'   
 #' @export
 get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics) {
-  
+
+  # --- Input validation ---
+  if (is.null(topic_res$Pmat)) stop("topic_res must contain 'Pmat' (peaks x topics binary matrix)")
+  if (is.null(topic_res$Lmat)) stop("topic_res must contain 'Lmat' (cells x topics loading matrix)")
+  if (!dir.exists(ldsc_res_dir)) stop("ldsc_res_dir does not exist: ", ldsc_res_dir)
+  if (!is.character(trait) || nchar(trait) == 0) stop("trait must be a non-empty string")
+
   # 1) unpack
   p_jk <- topic_res$Pmat   # J x K
   l_ik <- topic_res$Lmat   # I x K

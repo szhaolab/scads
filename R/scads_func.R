@@ -1,5 +1,5 @@
 
-#' Estimate “background” accessibility rate from a reference cell‐type peak list
+#' Estimate "background" accessibility rate from a reference cell‐type peak list
 #'
 #' @param count_matrix A peaks-by-cells matrix (dgCMatrix or dense).
 #' @param cell_type_cells list of cells of the specific cell type
@@ -21,53 +21,33 @@ get_average_bg <- function(count_matrix,
     ranges   = IRanges(start = CTpeaks$V2, end = CTpeaks$V3)
   )
 
-  ## 1b) Convert all peaks in count marix into a GRanges object
+  ## 1b) Convert all peaks in count matrix into a GRanges object
   cells <- readRDS(cell_type_cells)
-  print(head(cells))
   cm <- count_matrix[cells,]
-  print(dim(cm))
-  print(class(cm))
-  # if (!is.matrix(cm)) {
-  #   cm <- as.matrix(cm)
-  # }
-  # print(class(cm))
   peak_ids <- colnames(cm)
-  print(head(peak_ids))
-  ## Normalize separators: replace “:”, “-” or any mix with “_”
+
+  ## Normalize separators: replace ":", "-" or any mix with "_"
   peak_ids_norm <- gsub("[:\\-]", "_", peak_ids)
-  # print(head(peak_ids_norm))
   ## Split into chromosome / start / end
   parts <- strsplit(peak_ids_norm, "_", fixed = TRUE)
-  print(head(parts))
-  # bind into a 3-column matrix
   mat <- do.call(rbind, parts)
-  print(dim(mat))
-  ## Turn into numeric where appropriate
   chr   <- mat[,1]
   start <- as.integer(mat[,2])
   end   <- as.integer(mat[,3])
-  
-  print("Start")
-  print(head(start))
-  print(sum(is.na(start)))
-  print("End")
-  print(head(end))
-  print(sum(is.na(end)))
 
-  ## Build your GRanges
+  ## Build GRanges
   gr_peaks <- GenomicRanges::GRanges(seqnames = chr,
                       ranges   = IRanges::IRanges(start = start, end = end))
 
   ## 2) Find which peaks overlap any CT peaks
   is_overlap <- overlapsAny(gr_peaks, gr_ct, ignore.strand=TRUE)
-  print(table(is_overlap))
 
   ## 3) Subset the counts‐matrix accordingly and compare total reads.
 
   # 3b) Sum *across cells* for each peak
   peak_totals <- colSums(cm)
 
-  # 3c) Now split “overlapping” vs. “non‐overlapping” peaks
+  # 3c) Now split "overlapping" vs. "non‐overlapping" peaks
   overlapped_peaks     <- which(is_overlap)
   non_overlapped_peaks <- which(!is_overlap)
 
@@ -79,7 +59,7 @@ get_average_bg <- function(count_matrix,
     n_peaks     = c(length(overlapped_peaks), length(non_overlapped_peaks)),
     total_reads = c(sum_overlap_reads, sum_non_overlap_reads)
   )
-  print(dt)
+  message("Overlap summary:\n", paste(capture.output(print(dt)), collapse = "\n"))
 
   n_cells <- nrow(count_matrix)
   reads_per_cell <- (sum_overlap_reads + sum_non_overlap_reads)/n_cells # reads per cell
