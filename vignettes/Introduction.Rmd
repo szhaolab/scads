@@ -633,7 +633,8 @@ if (!requireNamespace("uwot", quietly = TRUE)) {
 
   # Compute UMAP from topic loadings
   set.seed(42)
-  umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 15, min_dist = 0.3)
+  umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 15, min_dist = 0.05,
+                             spread = 2, metric = "cosine")
 
   umap_df <- data.frame(
     UMAP1 = umap_coords[, 1],
