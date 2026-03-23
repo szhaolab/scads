@@ -633,7 +633,7 @@ if (!requireNamespace("uwot", quietly = TRUE)) {
 
   # Compute UMAP from topic loadings
   set.seed(42)
-  umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 15, min_dist = 0.3)
+  umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 350, min_dist = 0.8)
 
   umap_df <- data.frame(
     UMAP1 = umap_coords[, 1],
@@ -686,7 +686,7 @@ pipeline in one call. The updated `scads()` function supports:
   each step for inspection and checkpointing.
 - **`resume_from_step`**: Resume from step 1, 2, 3, or 4, loading prior results
   from `outdir`.
-- **`verbose = TRUE`** (default): Prints timestamped progress messages.
+- **`verbose = TRUE`** (default): Prints time stamped progress messages.
 
 ```{r eval=FALSE}
 set.seed(1234)
