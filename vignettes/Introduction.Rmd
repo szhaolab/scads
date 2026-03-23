@@ -495,6 +495,206 @@ simulated and do not contain a real disease signal.
 
 ---
 
+## Visualizing results
+
+After running the pipeline, it is important to inspect intermediate and final
+results. This section shows diagnostic plots for each stage. The visualizations
+use `ggplot2`, `fastTopics`, and `uwot` (for UMAP), which are listed in the
+package `Suggests`.
+
+```{r eval=FALSE}
+library(ggplot2)
+library(patchwork)
+```
+
+### Topic model diagnostics
+
+#### Distribution of factor loadings (Fmat)
+
+The factor loading matrix `Fmat` (peaks x topics) contains the Poisson rate
+parameters for each peak in each topic. Examining the distribution of log10(F)
+per topic reveals whether the model separates foreground (high F) from
+background (low F) peaks.
+
+```{r eval=FALSE}
+Fmat <- out1$Fmat
+
+# Histogram of log10(Fmat) per topic
+fmat_df <- do.call(rbind, lapply(1:ncol(Fmat), function(k) {
+  data.frame(
+    log10F = log10(Fmat[, k]),
+    topic  = paste0("k", k)
+  )
+}))
+
+ggplot(fmat_df, aes(x = log10F)) +
+  geom_histogram(bins = 100, fill = "steelblue", color = "white", linewidth = 0.1) +
+  facet_wrap(~topic, scales = "free_y") +
+  labs(title = "Distribution of log10(F) per topic",
+       x = "log10(F)", y = "Count") +
+  theme_minimal()
+```
+
+#### Binarized Fmat heatmap
+
+We can also check how many peaks exceed the genome-wide baseline rate
+`f0 = 1 / (3e9 / 500)`. This gives a rough sense of topic specificity before
+the formal DE test.
+
+```{r eval=FALSE}
+f0_threshold <- 1 / (3e9 / 500)
+Fmat_bin <- (Fmat > f0_threshold) + 0
+
+cat("Peaks above f0 threshold per topic:\n")
+print(colSums(Fmat_bin))
+
+# Heatmap of binarized Fmat (subsample rows for visibility)
+set.seed(42)
+idx <- sample(nrow(Fmat_bin), min(500, nrow(Fmat_bin)))
+heatmap(as.matrix(Fmat_bin[idx, ]),
+        Rowv = NA, col = c("grey90", "firebrick"),
+        scale = "none", margins = c(5, 2),
+        main = "Binarized F > f0 (500 random peaks)")
+```
+
+#### Structure plot
+
+The `fastTopics` structure plot shows how cells are distributed across topics.
+Each vertical bar represents a cell, colored by its topic proportions (from the
+`Lmat` loading matrix). Cells dominated by a single topic form clusters.
+
+```{r eval=FALSE}
+fastTopics::structure_plot(out1$fastTopics_fit)
+```
+
+### S-LDSC enrichment summary
+
+#### Enrichment bar plot
+
+Visualizing enrichment estimates with error bars helps identify which topics
+carry disease signal. Topics with positive enrichment (and small standard error)
+are the informative ones.
+
+```{r eval=FALSE}
+ldsc_tab <- cs_res$ldsc_res_table
+
+# Add ASH-shrunk estimates
+ldsc_tab$ASH_Enrichment <- cs_res$ash_res$PosteriorMean
+
+# Bar plot of enrichment per topic
+ggplot(ldsc_tab, aes(x = Category, y = Enrichment)) +
+  geom_col(fill = "steelblue", width = 0.6) +
+  geom_errorbar(aes(ymin = Enrichment - 1.96 * Enrichment_std_error,
+                     ymax = Enrichment + 1.96 * Enrichment_std_error),
+                width = 0.2) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+  labs(title = "S-LDSC enrichment per topic",
+       subtitle = "Dashed line = no enrichment (1.0). Error bars = 95% CI.",
+       x = "Topic", y = "Enrichment") +
+  theme_minimal()
+```
+
+#### S-LDSC results table
+
+```{r eval=FALSE}
+# Full results table
+print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
+                    "Enrichment_std_error", "ASH_Enrichment")])
+```
+
+> **Interpreting enrichment:** For this demo with simulated GWAS data, all
+> enrichment values are negative (no true signal). In a real analysis, topics
+> with enrichment significantly > 1 indicate disease-relevant chromatin programs.
+
+### Cell score distribution
+
+#### Histogram of cell scores
+
+```{r eval=FALSE}
+cs_df <- data.frame(cs = cs_res$cs)
+
+ggplot(cs_df, aes(x = cs)) +
+  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of cell scores",
+       x = "Cell score", y = "Count") +
+  theme_minimal()
+```
+
+#### Z-score distribution
+
+The z-scores account for variance in enrichment estimates and correlation
+between topic annotations. Under the null (no disease signal), z-scores should
+be approximately standard normal.
+
+```{r eval=FALSE}
+z_df <- data.frame(z = as.numeric(cs_res$z_cell))
+z_df <- z_df[is.finite(z_df$z), , drop = FALSE]
+
+ggplot(z_df, aes(x = z)) +
+  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = c(-1.96, 1.96), linetype = "dashed", color = "red") +
+  labs(title = "Distribution of cell z-scores",
+       subtitle = "Dashed lines = +/-1.96 (p = 0.05 threshold)",
+       x = "Z-score", y = "Count") +
+  theme_minimal()
+```
+
+### UMAP visualization
+
+UMAP provides a 2D embedding of cells based on the topic loading matrix (`Lmat`).
+Coloring cells by their disease score reveals whether disease-relevant cells
+cluster together.
+
+```{r eval=FALSE}
+if (!requireNamespace("uwot", quietly = TRUE)) {
+  message("Install 'uwot' for UMAP: install.packages('uwot')")
+} else {
+  # Compute UMAP from topic loadings
+  set.seed(42)
+  umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 15, min_dist = 0.3)
+
+  umap_df <- data.frame(
+    UMAP1 = umap_coords[, 1],
+    UMAP2 = umap_coords[, 2],
+    cell_score = cs_res$cs,
+    z_score = as.numeric(cs_res$z_cell)
+  )
+
+  # Color by cell score
+  p1 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = cell_score)) +
+    geom_point(size = 0.8, alpha = 0.7) +
+    scale_color_viridis_c(option = "C") +
+    labs(title = "UMAP colored by cell score", color = "Score") +
+    theme_minimal()
+
+  # Color by z-score
+  p2 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = z_score)) +
+    geom_point(size = 0.8, alpha = 0.7) +
+    scale_color_gradient2(low = "blue", mid = "grey90", high = "red", midpoint = 0) +
+    labs(title = "UMAP colored by z-score", color = "Z") +
+    theme_minimal()
+
+  # Color by dominant topic
+  dominant_topic <- paste0("k", apply(out1$Lmat, 1, which.max))
+  umap_df$topic <- dominant_topic
+
+  p3 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = topic)) +
+    geom_point(size = 0.8, alpha = 0.7) +
+    labs(title = "UMAP colored by dominant topic", color = "Topic") +
+    theme_minimal()
+
+  # Combine plots
+  print(p3 + p1 + p2 + plot_layout(ncol = 3))
+}
+```
+
+> **Note:** With the demo simulated GWAS data, cell scores are uniform (~1) so
+> the score UMAP will show no variation. With real GWAS data (e.g., IBD, as in
+> the PBMC analysis), disease-relevant cell types will show elevated scores and
+> cluster on the UMAP.
+
+---
+
 ## Running the full pipeline with `scads()`
 
 Instead of running each step manually, you can use `scads()` to run the entire

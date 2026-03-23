@@ -883,6 +883,188 @@ statistics are simulated and do not contain a real disease signal.</p>
 <hr />
 </div>
 </div>
+<div id="visualizing-results" class="section level2">
+<h2>Visualizing results</h2>
+<p>After running the pipeline, it is important to inspect intermediate
+and final results. This section shows diagnostic plots for each stage.
+The visualizations use <code>ggplot2</code>, <code>fastTopics</code>,
+and <code>uwot</code> (for UMAP), which are listed in the package
+<code>Suggests</code>.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span></code></pre></div>
+<div id="topic-model-diagnostics" class="section level3">
+<h3>Topic model diagnostics</h3>
+<div id="distribution-of-factor-loadings-fmat" class="section level4">
+<h4>Distribution of factor loadings (Fmat)</h4>
+<p>The factor loading matrix <code>Fmat</code> (peaks x topics) contains
+the Poisson rate parameters for each peak in each topic. Examining the
+distribution of log10(F) per topic reveals whether the model separates
+foreground (high F) from background (low F) peaks.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>Fmat <span class="ot">&lt;-</span> out1<span class="sc">$</span>Fmat</span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a><span class="co"># Histogram of log10(Fmat) per topic</span></span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>fmat_df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(Fmat), <span class="cf">function</span>(k) {</span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>    <span class="at">log10F =</span> <span class="fu">log10</span>(Fmat[, k]),</span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>    <span class="at">topic  =</span> <span class="fu">paste0</span>(<span class="st">&quot;k&quot;</span>, k)</span>
+<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a>  )</span>
+<span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a>}))</span>
+<span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a><span class="fu">ggplot</span>(fmat_df, <span class="fu">aes</span>(<span class="at">x =</span> log10F)) <span class="sc">+</span></span>
+<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">100</span>, <span class="at">fill =</span> <span class="st">&quot;steelblue&quot;</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">linewidth =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>topic, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
+<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Distribution of log10(F) per topic&quot;</span>,</span>
+<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">&quot;log10(F)&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="sc">+</span></span>
+<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+</div>
+<div id="binarized-fmat-heatmap" class="section level4">
+<h4>Binarized Fmat heatmap</h4>
+<p>We can also check how many peaks exceed the genome-wide baseline rate
+<code>f0 = 1 / (3e9 / 500)</code>. This gives a rough sense of topic
+specificity before the formal DE test.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>f0_threshold <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="fl">3e9</span> <span class="sc">/</span> <span class="dv">500</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a>Fmat_bin <span class="ot">&lt;-</span> (Fmat <span class="sc">&gt;</span> f0_threshold) <span class="sc">+</span> <span class="dv">0</span></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Peaks above f0 threshold per topic:</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">colSums</span>(Fmat_bin))</span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a></span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a><span class="co"># Heatmap of binarized Fmat (subsample rows for visibility)</span></span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a>idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">nrow</span>(Fmat_bin), <span class="fu">min</span>(<span class="dv">500</span>, <span class="fu">nrow</span>(Fmat_bin)))</span>
+<span id="cb22-10"><a href="#cb22-10" tabindex="-1"></a><span class="fu">heatmap</span>(<span class="fu">as.matrix</span>(Fmat_bin[idx, ]),</span>
+<span id="cb22-11"><a href="#cb22-11" tabindex="-1"></a>        <span class="at">Rowv =</span> <span class="cn">NA</span>, <span class="at">col =</span> <span class="fu">c</span>(<span class="st">&quot;grey90&quot;</span>, <span class="st">&quot;firebrick&quot;</span>),</span>
+<span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a>        <span class="at">scale =</span> <span class="st">&quot;none&quot;</span>, <span class="at">margins =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">2</span>),</span>
+<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a>        <span class="at">main =</span> <span class="st">&quot;Binarized F &gt; f0 (500 random peaks)&quot;</span>)</span></code></pre></div>
+</div>
+<div id="structure-plot" class="section level4">
+<h4>Structure plot</h4>
+<p>The <code>fastTopics</code> structure plot shows how cells are
+distributed across topics. Each vertical bar represents a cell, colored
+by its topic proportions (from the <code>Lmat</code> loading matrix).
+Cells dominated by a single topic form clusters.</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>fastTopics<span class="sc">::</span><span class="fu">structure_plot</span>(out1<span class="sc">$</span>fastTopics_fit)</span></code></pre></div>
+</div>
+</div>
+<div id="s-ldsc-enrichment-summary" class="section level3">
+<h3>S-LDSC enrichment summary</h3>
+<div id="enrichment-bar-plot" class="section level4">
+<h4>Enrichment bar plot</h4>
+<p>Visualizing enrichment estimates with error bars helps identify which
+topics carry disease signal. Topics with positive enrichment (and small
+standard error) are the informative ones.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>ldsc_tab <span class="ot">&lt;-</span> cs_res<span class="sc">$</span>ldsc_res_table</span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a><span class="co"># Add ASH-shrunk estimates</span></span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>ldsc_tab<span class="sc">$</span>ASH_Enrichment <span class="ot">&lt;-</span> cs_res<span class="sc">$</span>ash_res<span class="sc">$</span>PosteriorMean</span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a><span class="co"># Bar plot of enrichment per topic</span></span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a><span class="fu">ggplot</span>(ldsc_tab, <span class="fu">aes</span>(<span class="at">x =</span> Category, <span class="at">y =</span> Enrichment)) <span class="sc">+</span></span>
+<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">fill =</span> <span class="st">&quot;steelblue&quot;</span>, <span class="at">width =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a>  <span class="fu">geom_errorbar</span>(<span class="fu">aes</span>(<span class="at">ymin =</span> Enrichment <span class="sc">-</span> <span class="fl">1.96</span> <span class="sc">*</span> Enrichment_std_error,</span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a>                     <span class="at">ymax =</span> Enrichment <span class="sc">+</span> <span class="fl">1.96</span> <span class="sc">*</span> Enrichment_std_error),</span>
+<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a>                <span class="at">width =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="at">color =</span> <span class="st">&quot;red&quot;</span>) <span class="sc">+</span></span>
+<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;S-LDSC enrichment per topic&quot;</span>,</span>
+<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">&quot;Dashed line = no enrichment (1.0). Error bars = 95% CI.&quot;</span>,</span>
+<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">&quot;Topic&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Enrichment&quot;</span>) <span class="sc">+</span></span>
+<span id="cb24-16"><a href="#cb24-16" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+</div>
+<div id="s-ldsc-results-table" class="section level4">
+<h4>S-LDSC results table</h4>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># Full results table</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="fu">print</span>(ldsc_tab[, <span class="fu">c</span>(<span class="st">&quot;Category&quot;</span>, <span class="st">&quot;Prop._SNPs&quot;</span>, <span class="st">&quot;Prop._h2&quot;</span>, <span class="st">&quot;Enrichment&quot;</span>,</span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>                    <span class="st">&quot;Enrichment_std_error&quot;</span>, <span class="st">&quot;ASH_Enrichment&quot;</span>)])</span></code></pre></div>
+<blockquote>
+<p><strong>Interpreting enrichment:</strong> For this demo with
+simulated GWAS data, all enrichment values are negative (no true
+signal). In a real analysis, topics with enrichment significantly &gt; 1
+indicate disease-relevant chromatin programs.</p>
+</blockquote>
+</div>
+</div>
+<div id="cell-score-distribution" class="section level3">
+<h3>Cell score distribution</h3>
+<div id="histogram-of-cell-scores" class="section level4">
+<h4>Histogram of cell scores</h4>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>cs_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">cs =</span> cs_res<span class="sc">$</span>cs)</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a><span class="fu">ggplot</span>(cs_df, <span class="fu">aes</span>(<span class="at">x =</span> cs)) <span class="sc">+</span></span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">50</span>, <span class="at">fill =</span> <span class="st">&quot;steelblue&quot;</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>) <span class="sc">+</span></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Distribution of cell scores&quot;</span>,</span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">&quot;Cell score&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="sc">+</span></span>
+<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+</div>
+<div id="z-score-distribution" class="section level4">
+<h4>Z-score distribution</h4>
+<p>The z-scores account for variance in enrichment estimates and
+correlation between topic annotations. Under the null (no disease
+signal), z-scores should be approximately standard normal.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a>z_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">z =</span> <span class="fu">as.numeric</span>(cs_res<span class="sc">$</span>z_cell))</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>z_df <span class="ot">&lt;-</span> z_df[<span class="fu">is.finite</span>(z_df<span class="sc">$</span>z), , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a><span class="fu">ggplot</span>(z_df, <span class="fu">aes</span>(<span class="at">x =</span> z)) <span class="sc">+</span></span>
+<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">50</span>, <span class="at">fill =</span> <span class="st">&quot;steelblue&quot;</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>) <span class="sc">+</span></span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">1.96</span>, <span class="fl">1.96</span>), <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="at">color =</span> <span class="st">&quot;red&quot;</span>) <span class="sc">+</span></span>
+<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Distribution of cell z-scores&quot;</span>,</span>
+<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">&quot;Dashed lines = +/-1.96 (p = 0.05 threshold)&quot;</span>,</span>
+<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">&quot;Z-score&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Count&quot;</span>) <span class="sc">+</span></span>
+<span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+</div>
+</div>
+<div id="umap-visualization" class="section level3">
+<h3>UMAP visualization</h3>
+<p>UMAP provides a 2D embedding of cells based on the topic loading
+matrix (<code>Lmat</code>). Coloring cells by their disease score
+reveals whether disease-relevant cells cluster together.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">requireNamespace</span>(<span class="st">&quot;uwot&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&quot;Install &#39;uwot&#39; for UMAP: install.packages(&#39;uwot&#39;)&quot;</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>  <span class="co"># Compute UMAP from topic loadings</span></span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a>  umap_coords <span class="ot">&lt;-</span> uwot<span class="sc">::</span><span class="fu">umap</span>(out1<span class="sc">$</span>Lmat, <span class="at">n_neighbors =</span> <span class="dv">15</span>, <span class="at">min_dist =</span> <span class="fl">0.3</span>)</span>
+<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a></span>
+<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a>  umap_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a>    <span class="at">UMAP1 =</span> umap_coords[, <span class="dv">1</span>],</span>
+<span id="cb28-10"><a href="#cb28-10" tabindex="-1"></a>    <span class="at">UMAP2 =</span> umap_coords[, <span class="dv">2</span>],</span>
+<span id="cb28-11"><a href="#cb28-11" tabindex="-1"></a>    <span class="at">cell_score =</span> cs_res<span class="sc">$</span>cs,</span>
+<span id="cb28-12"><a href="#cb28-12" tabindex="-1"></a>    <span class="at">z_score =</span> <span class="fu">as.numeric</span>(cs_res<span class="sc">$</span>z_cell)</span>
+<span id="cb28-13"><a href="#cb28-13" tabindex="-1"></a>  )</span>
+<span id="cb28-14"><a href="#cb28-14" tabindex="-1"></a></span>
+<span id="cb28-15"><a href="#cb28-15" tabindex="-1"></a>  <span class="co"># Color by cell score</span></span>
+<span id="cb28-16"><a href="#cb28-16" tabindex="-1"></a>  p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(umap_df, <span class="fu">aes</span>(<span class="at">x =</span> UMAP1, <span class="at">y =</span> UMAP2, <span class="at">color =</span> cell_score)) <span class="sc">+</span></span>
+<span id="cb28-17"><a href="#cb28-17" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">0.8</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb28-18"><a href="#cb28-18" tabindex="-1"></a>    <span class="fu">scale_color_viridis_c</span>(<span class="at">option =</span> <span class="st">&quot;C&quot;</span>) <span class="sc">+</span></span>
+<span id="cb28-19"><a href="#cb28-19" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;UMAP colored by cell score&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Score&quot;</span>) <span class="sc">+</span></span>
+<span id="cb28-20"><a href="#cb28-20" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb28-21"><a href="#cb28-21" tabindex="-1"></a></span>
+<span id="cb28-22"><a href="#cb28-22" tabindex="-1"></a>  <span class="co"># Color by z-score</span></span>
+<span id="cb28-23"><a href="#cb28-23" tabindex="-1"></a>  p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(umap_df, <span class="fu">aes</span>(<span class="at">x =</span> UMAP1, <span class="at">y =</span> UMAP2, <span class="at">color =</span> z_score)) <span class="sc">+</span></span>
+<span id="cb28-24"><a href="#cb28-24" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">0.8</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb28-25"><a href="#cb28-25" tabindex="-1"></a>    <span class="fu">scale_color_gradient2</span>(<span class="at">low =</span> <span class="st">&quot;blue&quot;</span>, <span class="at">mid =</span> <span class="st">&quot;grey90&quot;</span>, <span class="at">high =</span> <span class="st">&quot;red&quot;</span>, <span class="at">midpoint =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb28-26"><a href="#cb28-26" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;UMAP colored by z-score&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Z&quot;</span>) <span class="sc">+</span></span>
+<span id="cb28-27"><a href="#cb28-27" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb28-28"><a href="#cb28-28" tabindex="-1"></a></span>
+<span id="cb28-29"><a href="#cb28-29" tabindex="-1"></a>  <span class="co"># Color by dominant topic</span></span>
+<span id="cb28-30"><a href="#cb28-30" tabindex="-1"></a>  dominant_topic <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;k&quot;</span>, <span class="fu">apply</span>(out1<span class="sc">$</span>Lmat, <span class="dv">1</span>, which.max))</span>
+<span id="cb28-31"><a href="#cb28-31" tabindex="-1"></a>  umap_df<span class="sc">$</span>topic <span class="ot">&lt;-</span> dominant_topic</span>
+<span id="cb28-32"><a href="#cb28-32" tabindex="-1"></a></span>
+<span id="cb28-33"><a href="#cb28-33" tabindex="-1"></a>  p3 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(umap_df, <span class="fu">aes</span>(<span class="at">x =</span> UMAP1, <span class="at">y =</span> UMAP2, <span class="at">color =</span> topic)) <span class="sc">+</span></span>
+<span id="cb28-34"><a href="#cb28-34" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">0.8</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb28-35"><a href="#cb28-35" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;UMAP colored by dominant topic&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Topic&quot;</span>) <span class="sc">+</span></span>
+<span id="cb28-36"><a href="#cb28-36" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb28-37"><a href="#cb28-37" tabindex="-1"></a></span>
+<span id="cb28-38"><a href="#cb28-38" tabindex="-1"></a>  <span class="co"># Combine plots</span></span>
+<span id="cb28-39"><a href="#cb28-39" tabindex="-1"></a>  <span class="fu">print</span>(p3 <span class="sc">+</span> p1 <span class="sc">+</span> p2 <span class="sc">+</span> <span class="fu">plot_layout</span>(<span class="at">ncol =</span> <span class="dv">3</span>))</span>
+<span id="cb28-40"><a href="#cb28-40" tabindex="-1"></a>}</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> With the demo simulated GWAS data, cell scores
+are uniform (~1) so the score UMAP will show no variation. With real
+GWAS data (e.g., IBD, as in the PBMC analysis), disease-relevant cell
+types will show elevated scores and cluster on the UMAP.</p>
+</blockquote>
+<hr />
+</div>
+</div>
 <div id="running-the-full-pipeline-with-scads" class="section level2">
 <h2>Running the full pipeline with <code>scads()</code></h2>
 <p>Instead of running each step manually, you can use
@@ -897,65 +1079,65 @@ checkpointing.</li>
 <li><strong><code>verbose = TRUE</code></strong> (default): Prints
 timestamped progress messages.</li>
 </ul>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
-<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>scads_res <span class="ot">&lt;-</span> <span class="fu">scads</span>(</span>
-<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>  count_matrix,</span>
-<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>  <span class="at">nTopics                =</span> n_topics,</span>
-<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>  <span class="at">n_s                    =</span> n_sims,</span>
-<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>  <span class="at">n_c                    =</span> n_cores,</span>
-<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>  <span class="at">baseline_method        =</span> bl_method,</span>
-<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>  <span class="at">bl_celltype            =</span> bl_ct,</span>
-<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>  <span class="at">bl_celltype_peak_file  =</span> bl_peaks,</span>
-<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>  <span class="at">sumstats_dir           =</span> sumstats_d,</span>
-<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a>  <span class="at">gwas_nsamps            =</span> gwas_n,</span>
-<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a>  <span class="at">gwas_trait             =</span> trait,</span>
-<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a>  <span class="at">outdir                 =</span> output_dir,</span>
-<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a>  <span class="at">polyfun_code_dir       =</span> polyfun_d,</span>
-<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a>  <span class="at">ldsc_code_dir          =</span> ldsc_d,</span>
-<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a>  <span class="at">onekg_path             =</span> onekg_pref,</span>
-<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a>  <span class="at">baseline_dir           =</span> baseline_pref,</span>
-<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a>  <span class="at">frqfile_pref           =</span> frq_pref,</span>
-<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a>  <span class="at">hm3_snps               =</span> hm3_file,</span>
-<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a>  <span class="at">weights_pref           =</span> weights_pref,</span>
-<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a>  <span class="at">continuous_topic_annot =</span> cont_topics,</span>
-<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a>  <span class="at">chrs                   =</span> <span class="dv">10</span>,</span>
-<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a>  <span class="at">genome                 =</span> <span class="st">&quot;hg19&quot;</span>,</span>
-<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a>  <span class="at">save_intermediates     =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a>  <span class="at">verbose                =</span> <span class="cn">TRUE</span></span>
-<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>scads_res <span class="ot">&lt;-</span> <span class="fu">scads</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>  count_matrix,</span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>  <span class="at">nTopics                =</span> n_topics,</span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>  <span class="at">n_s                    =</span> n_sims,</span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>  <span class="at">n_c                    =</span> n_cores,</span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a>  <span class="at">baseline_method        =</span> bl_method,</span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a>  <span class="at">bl_celltype            =</span> bl_ct,</span>
+<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a>  <span class="at">bl_celltype_peak_file  =</span> bl_peaks,</span>
+<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a>  <span class="at">sumstats_dir           =</span> sumstats_d,</span>
+<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a>  <span class="at">gwas_nsamps            =</span> gwas_n,</span>
+<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a>  <span class="at">gwas_trait             =</span> trait,</span>
+<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a>  <span class="at">outdir                 =</span> output_dir,</span>
+<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a>  <span class="at">polyfun_code_dir       =</span> polyfun_d,</span>
+<span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>  <span class="at">ldsc_code_dir          =</span> ldsc_d,</span>
+<span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a>  <span class="at">onekg_path             =</span> onekg_pref,</span>
+<span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a>  <span class="at">baseline_dir           =</span> baseline_pref,</span>
+<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a>  <span class="at">frqfile_pref           =</span> frq_pref,</span>
+<span id="cb29-19"><a href="#cb29-19" tabindex="-1"></a>  <span class="at">hm3_snps               =</span> hm3_file,</span>
+<span id="cb29-20"><a href="#cb29-20" tabindex="-1"></a>  <span class="at">weights_pref           =</span> weights_pref,</span>
+<span id="cb29-21"><a href="#cb29-21" tabindex="-1"></a>  <span class="at">continuous_topic_annot =</span> cont_topics,</span>
+<span id="cb29-22"><a href="#cb29-22" tabindex="-1"></a>  <span class="at">chrs                   =</span> <span class="dv">10</span>,</span>
+<span id="cb29-23"><a href="#cb29-23" tabindex="-1"></a>  <span class="at">genome                 =</span> <span class="st">&quot;hg19&quot;</span>,</span>
+<span id="cb29-24"><a href="#cb29-24" tabindex="-1"></a>  <span class="at">save_intermediates     =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb29-25"><a href="#cb29-25" tabindex="-1"></a>  <span class="at">verbose                =</span> <span class="cn">TRUE</span></span>
+<span id="cb29-26"><a href="#cb29-26" tabindex="-1"></a>)</span></code></pre></div>
 <div id="resuming-from-a-checkpoint" class="section level3">
 <h3>Resuming from a checkpoint</h3>
 <p>If Step 3 (S-LDSC) completed but you want to re-run Step 4 with
 different parameters, or if the pipeline was interrupted, you can
 resume:</p>
-<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="co"># Resume from Step 4 (loads fastTopics results and BED dirs from saved files)</span></span>
-<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>scads_res <span class="ot">&lt;-</span> <span class="fu">scads</span>(</span>
-<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a>  count_matrix,</span>
-<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>  <span class="at">nTopics         =</span> n_topics,</span>
-<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>  <span class="at">sumstats_dir    =</span> sumstats_d,</span>
-<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>  <span class="at">gwas_nsamps     =</span> gwas_n,</span>
-<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>  <span class="at">gwas_trait      =</span> trait,</span>
-<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a>  <span class="at">outdir          =</span> output_dir,</span>
-<span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a>  <span class="at">polyfun_code_dir =</span> polyfun_d,</span>
-<span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a>  <span class="at">ldsc_code_dir   =</span> ldsc_d,</span>
-<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a>  <span class="at">onekg_path      =</span> onekg_pref,</span>
-<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a>  <span class="at">baseline_dir    =</span> baseline_pref,</span>
-<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a>  <span class="at">frqfile_pref    =</span> frq_pref,</span>
-<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a>  <span class="at">hm3_snps        =</span> hm3_file,</span>
-<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a>  <span class="at">weights_pref    =</span> weights_pref,</span>
-<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a>  <span class="at">chrs            =</span> <span class="dv">10</span>,</span>
-<span id="cb21-17"><a href="#cb21-17" tabindex="-1"></a>  <span class="at">resume_from_step =</span> <span class="dv">4</span></span>
-<span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a><span class="co"># Resume from Step 4 (loads fastTopics results and BED dirs from saved files)</span></span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>scads_res <span class="ot">&lt;-</span> <span class="fu">scads</span>(</span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a>  count_matrix,</span>
+<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>  <span class="at">nTopics         =</span> n_topics,</span>
+<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a>  <span class="at">sumstats_dir    =</span> sumstats_d,</span>
+<span id="cb30-6"><a href="#cb30-6" tabindex="-1"></a>  <span class="at">gwas_nsamps     =</span> gwas_n,</span>
+<span id="cb30-7"><a href="#cb30-7" tabindex="-1"></a>  <span class="at">gwas_trait      =</span> trait,</span>
+<span id="cb30-8"><a href="#cb30-8" tabindex="-1"></a>  <span class="at">outdir          =</span> output_dir,</span>
+<span id="cb30-9"><a href="#cb30-9" tabindex="-1"></a>  <span class="at">polyfun_code_dir =</span> polyfun_d,</span>
+<span id="cb30-10"><a href="#cb30-10" tabindex="-1"></a>  <span class="at">ldsc_code_dir   =</span> ldsc_d,</span>
+<span id="cb30-11"><a href="#cb30-11" tabindex="-1"></a>  <span class="at">onekg_path      =</span> onekg_pref,</span>
+<span id="cb30-12"><a href="#cb30-12" tabindex="-1"></a>  <span class="at">baseline_dir    =</span> baseline_pref,</span>
+<span id="cb30-13"><a href="#cb30-13" tabindex="-1"></a>  <span class="at">frqfile_pref    =</span> frq_pref,</span>
+<span id="cb30-14"><a href="#cb30-14" tabindex="-1"></a>  <span class="at">hm3_snps        =</span> hm3_file,</span>
+<span id="cb30-15"><a href="#cb30-15" tabindex="-1"></a>  <span class="at">weights_pref    =</span> weights_pref,</span>
+<span id="cb30-16"><a href="#cb30-16" tabindex="-1"></a>  <span class="at">chrs            =</span> <span class="dv">10</span>,</span>
+<span id="cb30-17"><a href="#cb30-17" tabindex="-1"></a>  <span class="at">resume_from_step =</span> <span class="dv">4</span></span>
+<span id="cb30-18"><a href="#cb30-18" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 </div>
 <div id="examine-final-results" class="section level2">
 <h2>Examine final results</h2>
-<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="co"># Save results</span></span>
-<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="fu">saveRDS</span>(scads_res, <span class="at">file =</span> <span class="fu">file.path</span>(output_dir, <span class="st">&quot;scads_res.rds&quot;</span>))</span>
-<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a></span>
-<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="co"># Cell scores</span></span>
-<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Cell score summary:</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a><span class="fu">summary</span>(scads_res<span class="sc">$</span>cs_res<span class="sc">$</span>cs)</span></code></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="co"># Save results</span></span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a><span class="fu">saveRDS</span>(scads_res, <span class="at">file =</span> <span class="fu">file.path</span>(output_dir, <span class="st">&quot;scads_res.rds&quot;</span>))</span>
+<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a><span class="co"># Cell scores</span></span>
+<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Cell score summary:</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a><span class="fu">summary</span>(scads_res<span class="sc">$</span>cs_res<span class="sc">$</span>cs)</span></code></pre></div>
 <p>The result is a list with two elements:</p>
 <ul>
 <li><strong><code>out1</code></strong>: The fitted fastTopics model,
@@ -1051,21 +1233,21 @@ cluster with <code>mc.cores</code>.</td>
 <div id="checking-intermediate-results" class="section level3">
 <h3>Checking intermediate results</h3>
 <p>You can load and inspect intermediate files at any point:</p>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="co"># Check fastTopics results</span></span>
-<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>out1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(output_dir, <span class="st">&quot;run_fastTopics_res.rds&quot;</span>))</span>
-<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Topics:&quot;</span>, <span class="fu">ncol</span>(out1<span class="sc">$</span>Lmat), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Peaks per topic:&quot;</span>, <span class="fu">colSums</span>(out1<span class="sc">$</span>Pmat), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a></span>
-<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a><span class="co"># Check S-LDSC results for a specific topic</span></span>
-<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">read.table</span>(</span>
-<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a>  <span class="fu">file.path</span>(output_dir, <span class="st">&quot;k1_output/results/SIM.results&quot;</span>),</span>
-<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a>  <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
-<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a>)</span>
-<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Topic k1 enrichment:&quot;</span>, res<span class="sc">$</span>Enrichment[<span class="dv">1</span>], <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a></span>
-<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a><span class="co"># Check cell scores</span></span>
-<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a>cs_res <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(output_dir, <span class="st">&quot;cs_res.rds&quot;</span>))</span>
-<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Score range:&quot;</span>, <span class="fu">range</span>(cs_res<span class="sc">$</span>cs), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="co"># Check fastTopics results</span></span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a>out1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(output_dir, <span class="st">&quot;run_fastTopics_res.rds&quot;</span>))</span>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Topics:&quot;</span>, <span class="fu">ncol</span>(out1<span class="sc">$</span>Lmat), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Peaks per topic:&quot;</span>, <span class="fu">colSums</span>(out1<span class="sc">$</span>Pmat), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a></span>
+<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a><span class="co"># Check S-LDSC results for a specific topic</span></span>
+<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">read.table</span>(</span>
+<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a>  <span class="fu">file.path</span>(output_dir, <span class="st">&quot;k1_output/results/SIM.results&quot;</span>),</span>
+<span id="cb33-9"><a href="#cb33-9" tabindex="-1"></a>  <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb33-10"><a href="#cb33-10" tabindex="-1"></a>)</span>
+<span id="cb33-11"><a href="#cb33-11" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Topic k1 enrichment:&quot;</span>, res<span class="sc">$</span>Enrichment[<span class="dv">1</span>], <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb33-12"><a href="#cb33-12" tabindex="-1"></a></span>
+<span id="cb33-13"><a href="#cb33-13" tabindex="-1"></a><span class="co"># Check cell scores</span></span>
+<span id="cb33-14"><a href="#cb33-14" tabindex="-1"></a>cs_res <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(output_dir, <span class="st">&quot;cs_res.rds&quot;</span>))</span>
+<span id="cb33-15"><a href="#cb33-15" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Score range:&quot;</span>, <span class="fu">range</span>(cs_res<span class="sc">$</span>cs), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code></pre></div>
 </div>
 </div>
 
