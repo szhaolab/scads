@@ -125,3 +125,27 @@ read_preprocess_bed <- function(f) {
   return(gr)
 }
 
+# Defensive helper function for formatting peak names
+normalize_peak_names <- function(nms) {
+  # 1. Strip whitespace
+  nms <- trimws(nms)
+  
+  # 2. If format is "chr1_12345_67890" → "chr1:12345-67890"
+  nms <- gsub("^(chr[^_]+)_([0-9]+)_([0-9]+)$", "\\1:\\2-\\3", nms)
+  
+  # 3. If format is "chr1:12345:67890" → "chr1:12345-67890"
+  nms <- sub("^([^:]+:[0-9]+):([0-9]+)", "\\1-\\2", nms)
+  
+  # 4. Check what's still malformed after fixes
+  valid_pattern <- "^[^:]+:[0-9]+-[0-9]+(:[+\\-\\*])?$"
+  bad <- !grepl(valid_pattern, nms)
+  if (any(bad)) {
+    warning(sprintf(
+      "%d rowname(s) could not be parsed as genomic ranges and will be dropped:\n%s",
+      sum(bad),
+      paste(head(nms[bad], 5), collapse = "\n")
+    ))
+  }
+  
+  nms
+}
