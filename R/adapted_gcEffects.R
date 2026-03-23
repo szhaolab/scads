@@ -158,7 +158,7 @@ get_gc_baseline <- function(count_matrix, Lmat, Fmat, outdir,
   weight_values <- triplets$x / rate_values
   # 4. Reconstruct the sparse 'weights' matrix
   # We create a new sparse matrix using the original indices but the new values
-  weights <- sparseMatrix(
+  weights <- Matrix::sparseMatrix(
     i = triplets$i,
     j = triplets$j,
     x = weight_values,

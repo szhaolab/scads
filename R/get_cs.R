@@ -73,7 +73,7 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics) {
   #--- accounting for correlation of topic annotations in LDSC.---
   # get number of total peaks based on peak width 
   gr_peaks <- GRanges(rownames(p_jk))
-  med_peak_width <- median(width(gr_peaks))
+  med_peak_width <- median(GenomicRanges::width(gr_peaks))
   cat("\nMedian peak width: ", med_peak_width, "\n")
   
   num_total_peaks <- 3e9 / med_peak_width
