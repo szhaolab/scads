@@ -12,7 +12,9 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
 )
 ```
 
@@ -115,6 +117,38 @@ Load the scads package:
 ```{r setup}
 library(scads)
 library(data.table)
+library(ggplot2)
+```
+
+```{r load-demo-results, include=FALSE}
+# Load pre-computed results shipped with the package so that
+# all summary and visualization chunks produce real output.
+demo_res_file <- system.file("extdata", "demo_results.rds", package = "scads")
+# Fallback: when knitting from source tree before installation
+if (!nzchar(demo_res_file)) {
+  demo_res_file <- file.path(dirname(getwd()), "inst", "extdata", "demo_results.rds")
+}
+if (file.exists(demo_res_file)) {
+  demo_res <- readRDS(demo_res_file)
+  out1 <- list(
+    fastTopics_fit = demo_res$fastTopics_fit,
+    Fmat = demo_res$Fmat,
+    Lmat = demo_res$Lmat,
+    Pmat = demo_res$Pmat,
+    de_res = list(z = demo_res$de_z)
+  )
+  cs_res <- list(
+    cs = demo_res$cs,
+    z_cell = demo_res$z_cell,
+    p_cell = demo_res$p_cell,
+    ldsc_res_table = demo_res$ldsc_res_table,
+    ash_res = list(PosteriorMean = demo_res$ash_PosteriorMean)
+  )
+  n_topics <- ncol(out1$Fmat)
+  has_demo <- TRUE
+} else {
+  has_demo <- FALSE
+}
 ```
 
 ## Load example data
@@ -164,13 +198,13 @@ Set the paths to match your local environment. You need to specify:
 - **`output_dir`**: where scads will write its results.
 
 ```{r eval=FALSE}
-# ── User-specific paths (edit these) ──────────────────────────────────────────
+# -- User-specific paths (edit these) -----------------------------------------
 polyfun_d    <- path.expand("~/polyfun/")
 ldsc_d       <- path.expand("~/ldsc/")
 ldscore_dir  <- path.expand("~/LDSCORE/")
 output_dir   <- path.expand("~/scads_output/")
 
-# ── Reference data paths (derived from ldscore_dir) ──────────────────────────
+# -- Reference data paths (derived from ldscore_dir) --------------------------
 onekg_pref    <- file.path(ldscore_dir, "1000G_EUR_Phase3_plink", "1000G.EUR.QC.")
 baseline_pref <- file.path(ldscore_dir, "1000G_Phase3_baselineLD_v2.2_ldscores", "baselineLD.")
 frq_pref      <- file.path(ldscore_dir, "1000G_Phase3_frq", "1000G.EUR.QC.")
@@ -276,7 +310,7 @@ saveRDS(out1, file.path(output_dir, "run_fastTopics_res.rds"))
 
 **Examine Step 1 results:**
 
-```{r eval=FALSE}
+```{r}
 # Topic model dimensions
 cat("Factor matrix F (peaks x topics):", dim(out1$Fmat), "\n")
 cat("Loading matrix L (cells x topics):", dim(out1$Lmat), "\n")
@@ -285,18 +319,6 @@ cat("Binary peak matrix P (peaks x topics):", dim(out1$Pmat), "\n")
 # Number of significant peaks per topic (after FDR correction)
 cat("\nSignificant peaks per topic:\n")
 print(colSums(out1$Pmat))
-```
-
-Expected output for the demo dataset:
-
-```
-Factor matrix F (peaks x topics): 12971 5
-Loading matrix L (cells x topics): 500 5
-Binary peak matrix P (peaks x topics): 12971 5
-
-Significant peaks per topic:
-  k1   k2   k3   k4   k5
-3995 8380 6827 5417 6309
 ```
 
 The binary peak matrix `Pmat` indicates which peaks are significantly enriched
@@ -324,41 +346,19 @@ cat("Step 2 runtime:", round(difftime(t2_end, t2_start, units = "secs"), 1), "se
 saveRDS(beddir_list, file.path(output_dir, "beddir_list.rds"))
 ```
 
-**Examine Step 2 results:**
-
-```{r eval=FALSE}
-# Show output directories created
-cat("BED directories per topic:\n")
-for (k in names(beddir_list)) {
-  bed_files <- list.files(beddir_list[[k]], pattern = "\\.bed$")
-  cat(sprintf("  %s: %s (%s)\n", k, beddir_list[[k]], paste(bed_files, collapse = ", ")))
-}
-```
-
-Expected output:
-
-```
-BED directories per topic:
-  k1: ~/scads_output/k1_output (k1_annotations.bed)
-  k2: ~/scads_output/k2_output (k2_annotations.bed)
-  k3: ~/scads_output/k3_output (k3_annotations.bed)
-  k4: ~/scads_output/k4_output (k4_annotations.bed)
-  k5: ~/scads_output/k5_output (k5_annotations.bed)
-```
-
 ### Step 3: Run S-LDSC per topic
 
 **What this step does:**
 
 For each topic annotation, this step runs the full S-LDSC pipeline:
 
-1. **Munge summary statistics** — converts GWAS sumstats to the format expected
+1. **Munge summary statistics** -- converts GWAS sumstats to the format expected
    by LDSC (parquet file via `munge_polyfun_sumstats.py`).
-2. **Create annotation** — for each chromosome, marks which 1000G SNPs fall
+2. **Create annotation** -- for each chromosome, marks which 1000G SNPs fall
    within topic peaks (via `make_annot.py`).
-3. **Compute LD scores** — calculates LD scores for the custom annotation
+3. **Compute LD scores** -- calculates LD scores for the custom annotation
    (via `ldsc.py --l2`).
-4. **Heritability estimation** — runs partitioned heritability analysis
+4. **Heritability estimation** -- runs partitioned heritability analysis
    combining the custom annotation with the baseline LD v2.2 model
    (via `ldsc.py --h2`).
 
@@ -403,21 +403,11 @@ cat("\nStep 3 total runtime:", round(difftime(t3_end, t3_start, units = "mins"),
 
 **Examine Step 3 results:**
 
-```{r eval=FALSE}
-# Read S-LDSC results for each topic
-cat("\n--- S-LDSC enrichment results per topic ---\n")
-for (k in 1:n_topics) {
-  res_f <- file.path(output_dir, paste0("k", k, "_output"), "results",
-                     paste0(trait, ".results"))
-  if (file.exists(res_f)) {
-    res <- read.table(res_f, header = TRUE, sep = "\t", check.names = FALSE)
-    cat(sprintf("\nTopic k%d:\n", k))
-    cat(sprintf("  Prop. SNPs:       %.4f\n", res$`Prop._SNPs`[1]))
-    cat(sprintf("  Prop. h2:         %.4f\n", res$`Prop._h2`[1]))
-    cat(sprintf("  Enrichment:       %.2f (SE = %.2f)\n",
-                res$Enrichment[1], res$Enrichment_std_error[1]))
-  }
-}
+```{r}
+cat("--- S-LDSC enrichment results per topic ---\n\n")
+ldsc_tab <- cs_res$ldsc_res_table
+print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2",
+                    "Enrichment", "Enrichment_std_error")])
 ```
 
 The enrichment value indicates how much GWAS heritability is concentrated in
@@ -461,7 +451,7 @@ saveRDS(cs_res, file.path(output_dir, "cs_res.rds"))
 
 **Examine Step 4 results:**
 
-```{r eval=FALSE}
+```{r}
 cat("Cell score summary:\n")
 print(summary(cs_res$cs))
 
@@ -470,9 +460,6 @@ print(summary(as.numeric(cs_res$z_cell)))
 
 cat("\nNumber of significant cells (p < 0.05):", sum(cs_res$p_cell < 0.05), "\n")
 cat("Number of significant cells (p < 0.01):", sum(cs_res$p_cell < 0.01), "\n")
-
-cat("\nS-LDSC enrichment table:\n")
-print(cs_res$ldsc_res_table[, c("Category", "Prop._SNPs", "Enrichment", "Enrichment_std_error")])
 
 cat("\nASH-shrunk enrichment estimates:\n")
 print(cs_res$ash_res$PosteriorMean)
@@ -498,14 +485,7 @@ simulated and do not contain a real disease signal.
 ## Visualizing results
 
 After running the pipeline, it is important to inspect intermediate and final
-results. This section shows diagnostic plots for each stage. The visualizations
-use `ggplot2`, `fastTopics`, and `uwot` (for UMAP), which are listed in the
-package `Suggests`.
-
-```{r eval=FALSE}
-library(ggplot2)
-library(patchwork)
-```
+results. This section shows diagnostic plots for each stage.
 
 ### Topic model diagnostics
 
@@ -516,7 +496,7 @@ parameters for each peak in each topic. Examining the distribution of log10(F)
 per topic reveals whether the model separates foreground (high F) from
 background (low F) peaks.
 
-```{r eval=FALSE}
+```{r fig.width=8, fig.height=5}
 Fmat <- out1$Fmat
 
 # Histogram of log10(Fmat) per topic
@@ -541,7 +521,7 @@ We can also check how many peaks exceed the genome-wide baseline rate
 `f0 = 1 / (3e9 / 500)`. This gives a rough sense of topic specificity before
 the formal DE test.
 
-```{r eval=FALSE}
+```{r fig.width=6, fig.height=5}
 f0_threshold <- 1 / (3e9 / 500)
 Fmat_bin <- (Fmat > f0_threshold) + 0
 
@@ -563,7 +543,7 @@ The `fastTopics` structure plot shows how cells are distributed across topics.
 Each vertical bar represents a cell, colored by its topic proportions (from the
 `Lmat` loading matrix). Cells dominated by a single topic form clusters.
 
-```{r eval=FALSE}
+```{r fig.width=8, fig.height=3}
 fastTopics::structure_plot(out1$fastTopics_fit)
 ```
 
@@ -575,7 +555,7 @@ Visualizing enrichment estimates with error bars helps identify which topics
 carry disease signal. Topics with positive enrichment (and small standard error)
 are the informative ones.
 
-```{r eval=FALSE}
+```{r fig.width=6, fig.height=4}
 ldsc_tab <- cs_res$ldsc_res_table
 
 # Add ASH-shrunk estimates
@@ -596,7 +576,7 @@ ggplot(ldsc_tab, aes(x = Category, y = Enrichment)) +
 
 #### S-LDSC results table
 
-```{r eval=FALSE}
+```{r}
 # Full results table
 print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
                     "Enrichment_std_error", "ASH_Enrichment")])
@@ -610,7 +590,7 @@ print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
 
 #### Histogram of cell scores
 
-```{r eval=FALSE}
+```{r fig.width=6, fig.height=4}
 cs_df <- data.frame(cs = cs_res$cs)
 
 ggplot(cs_df, aes(x = cs)) +
@@ -626,7 +606,7 @@ The z-scores account for variance in enrichment estimates and correlation
 between topic annotations. Under the null (no disease signal), z-scores should
 be approximately standard normal.
 
-```{r eval=FALSE}
+```{r fig.width=6, fig.height=4}
 z_df <- data.frame(z = as.numeric(cs_res$z_cell))
 z_df <- z_df[is.finite(z_df$z), , drop = FALSE]
 
@@ -645,10 +625,12 @@ UMAP provides a 2D embedding of cells based on the topic loading matrix (`Lmat`)
 Coloring cells by their disease score reveals whether disease-relevant cells
 cluster together.
 
-```{r eval=FALSE}
+```{r fig.width=10, fig.height=4, message=FALSE}
 if (!requireNamespace("uwot", quietly = TRUE)) {
   message("Install 'uwot' for UMAP: install.packages('uwot')")
 } else {
+  library(patchwork)
+
   # Compute UMAP from topic loadings
   set.seed(42)
   umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 15, min_dist = 0.3)
@@ -660,31 +642,31 @@ if (!requireNamespace("uwot", quietly = TRUE)) {
     z_score = as.numeric(cs_res$z_cell)
   )
 
-  # Color by cell score
-  p1 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = cell_score)) +
-    geom_point(size = 0.8, alpha = 0.7) +
-    scale_color_viridis_c(option = "C") +
-    labs(title = "UMAP colored by cell score", color = "Score") +
-    theme_minimal()
-
-  # Color by z-score
-  p2 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = z_score)) +
-    geom_point(size = 0.8, alpha = 0.7) +
-    scale_color_gradient2(low = "blue", mid = "grey90", high = "red", midpoint = 0) +
-    labs(title = "UMAP colored by z-score", color = "Z") +
-    theme_minimal()
-
   # Color by dominant topic
   dominant_topic <- paste0("k", apply(out1$Lmat, 1, which.max))
   umap_df$topic <- dominant_topic
 
   p3 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = topic)) +
     geom_point(size = 0.8, alpha = 0.7) +
-    labs(title = "UMAP colored by dominant topic", color = "Topic") +
-    theme_minimal()
+    labs(title = "Dominant topic", color = "Topic") +
+    theme_minimal() + theme(legend.position = "bottom")
+
+  # Color by cell score
+  p1 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = cell_score)) +
+    geom_point(size = 0.8, alpha = 0.7) +
+    scale_color_viridis_c(option = "C") +
+    labs(title = "Cell score", color = "Score") +
+    theme_minimal() + theme(legend.position = "bottom")
+
+  # Color by z-score
+  p2 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = z_score)) +
+    geom_point(size = 0.8, alpha = 0.7) +
+    scale_color_gradient2(low = "blue", mid = "grey90", high = "red", midpoint = 0) +
+    labs(title = "Z-score", color = "Z") +
+    theme_minimal() + theme(legend.position = "bottom")
 
   # Combine plots
-  print(p3 + p1 + p2 + plot_layout(ncol = 3))
+  p3 + p1 + p2 + plot_layout(ncol = 3)
 }
 ```
 
@@ -761,35 +743,6 @@ scads_res <- scads(
 )
 ```
 
-## Examine final results
-
-```{r eval=FALSE}
-# Save results
-saveRDS(scads_res, file = file.path(output_dir, "scads_res.rds"))
-
-# Cell scores
-cat("Cell score summary:\n")
-summary(scads_res$cs_res$cs)
-```
-
-The result is a list with two elements:
-
-- **`out1`**: The fitted fastTopics model, including:
-  - `fastTopics_fit`: The raw topic model object
-  - `Fmat`: Factor loadings matrix (peaks x topics)
-  - `Lmat`: Topic proportions matrix (cells x topics)
-  - `Pmat`: Binary peak assignments (peaks x topics)
-  - `de_res`: Full differential expression results (z-scores, log-fold changes)
-  - `baseline`: The GC-content baseline used for DE testing
-
-- **`cs_res`**: The per-cell disease scores, including:
-  - `cs`: Cell score vector
-  - `z_cell`: Z-scores per cell
-  - `p_cell`: P-values per cell
-  - `ldsc_res_table`: S-LDSC results per topic
-  - `ash_res`: ASH-stabilized enrichment estimates
-  - `cs_dat`: Intermediate `M_i` and `N_i` values
-
 ## Output files
 
 After running the pipeline, `output_dir` contains:
@@ -810,10 +763,27 @@ output_dir/
 │   └── SIM_munged_sumstats.parquet #   Munged GWAS sumstats
 ├── k2_output/                      # Topic 2 (same structure)
 │   └── ...
-├── ...
 └── k5_output/                      # Topic 5
     └── ...
 ```
+
+The result list returned by `scads()` has two elements:
+
+- **`out1`**: The fitted fastTopics model, including:
+  - `fastTopics_fit`: The raw topic model object
+  - `Fmat`: Factor loadings matrix (peaks x topics)
+  - `Lmat`: Topic proportions matrix (cells x topics)
+  - `Pmat`: Binary peak assignments (peaks x topics)
+  - `de_res`: Full differential expression results (z-scores, log-fold changes)
+  - `baseline`: The GC-content baseline used for DE testing
+
+- **`cs_res`**: The per-cell disease scores, including:
+  - `cs`: Cell score vector
+  - `z_cell`: Z-scores per cell
+  - `p_cell`: P-values per cell
+  - `ldsc_res_table`: S-LDSC results per topic
+  - `ash_res`: ASH-stabilized enrichment estimates
+  - `cs_dat`: Intermediate `M_i` and `N_i` values
 
 ## Troubleshooting
 
@@ -826,25 +796,3 @@ output_dir/
 | `could not find function "width"` | Make sure `GenomicRanges` is loaded (scads handles this internally) |
 | Paths with spaces break S-LDSC | scads v0.2.0+ handles this via `shQuote()`. If using older versions, use symlinks. |
 | S-LDSC takes too long | Use `chrs = 10` for testing. For production, run on a cluster with `mc.cores`. |
-
-### Checking intermediate results
-
-You can load and inspect intermediate files at any point:
-
-```{r eval=FALSE}
-# Check fastTopics results
-out1 <- readRDS(file.path(output_dir, "run_fastTopics_res.rds"))
-cat("Topics:", ncol(out1$Lmat), "\n")
-cat("Peaks per topic:", colSums(out1$Pmat), "\n")
-
-# Check S-LDSC results for a specific topic
-res <- read.table(
-  file.path(output_dir, "k1_output/results/SIM.results"),
-  header = TRUE, sep = "\t", check.names = FALSE
-)
-cat("Topic k1 enrichment:", res$Enrichment[1], "\n")
-
-# Check cell scores
-cs_res <- readRDS(file.path(output_dir, "cs_res.rds"))
-cat("Score range:", range(cs_res$cs), "\n")
-```
