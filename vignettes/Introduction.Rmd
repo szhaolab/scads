@@ -29,14 +29,14 @@ steps:
 |------|-------------|----------------|-------------|
 | 1. **fastTopics** | Fits a topic model on the count matrix, identifies topic-specific peaks via differential expression, and computes a GC-content baseline correction. | ~1 min (500 cells, 13K peaks, 5 topics) | ~650 MB |
 | 2. **Topic annotations** | Converts significant peaks per topic into BED files for S-LDSC. | < 10 sec | Negligible |
-| 3. **S-LDSC** | Runs stratified LD score regression for each topic using the baseline LD v2.2 model. This is the most time-consuming step. | ~11 min per topic per chromosome (runs in parallel) | ~300 MB per topic (Python) |
+| 3. **S-LDSC** | Runs stratified LD score regression for each topic using the baseline LD v2.2 model. This is the most time-consuming step. | ~10 min per topic per chromosome (sequential) | ~300 MB per topic (Python) |
 | 4. **Cell scores** | Combines S-LDSC enrichment estimates with cell-level topic loadings to produce a per-cell disease score. | < 10 sec | ~650 MB |
 
 > **Note on runtime:** The times above were measured on a MacBook Pro (M3 Max,
 > 36 GB RAM) using the demo dataset (500 cells, 12,971 peaks on chr10, 5
-> topics). A full-genome analysis (22 chromosomes) will take longer for Step 3
-> (~55 min with 5 topics running in parallel). Larger datasets (more cells or
-> peaks) will increase Step 1 runtime.
+> topics). A full-genome analysis (22 chromosomes) will take proportionally
+> longer for Step 3. Larger datasets (more cells or peaks) will increase
+> Step 1 runtime.
 
 ## Prerequisites
 
@@ -120,36 +120,6 @@ library(data.table)
 library(ggplot2)
 ```
 
-```{r load-demo-results, include=FALSE}
-# Load pre-computed results shipped with the package so that
-# all summary and visualization chunks produce real output.
-demo_res_file <- system.file("extdata", "demo_results.rds", package = "scads")
-# Fallback: when knitting from source tree before installation
-if (!nzchar(demo_res_file)) {
-  demo_res_file <- file.path(dirname(getwd()), "inst", "extdata", "demo_results.rds")
-}
-if (file.exists(demo_res_file)) {
-  demo_res <- readRDS(demo_res_file)
-  out1 <- list(
-    fastTopics_fit = demo_res$fastTopics_fit,
-    Fmat = demo_res$Fmat,
-    Lmat = demo_res$Lmat,
-    Pmat = demo_res$Pmat,
-    de_res = list(z = demo_res$de_z)
-  )
-  cs_res <- list(
-    cs = demo_res$cs,
-    z_cell = demo_res$z_cell,
-    p_cell = demo_res$p_cell,
-    ldsc_res_table = demo_res$ldsc_res_table,
-    ash_res = list(PosteriorMean = demo_res$ash_PosteriorMean)
-  )
-  n_topics <- ncol(out1$Fmat)
-  has_demo <- TRUE
-} else {
-  has_demo <- FALSE
-}
-```
 
 ## Load example data
 
@@ -197,11 +167,11 @@ Set the paths to match your local environment. You need to specify:
 - **`ldscore_dir`**: where the S-LDSC reference data was downloaded.
 - **`output_dir`**: where scads will write its results.
 
-```{r eval=FALSE}
+```{r}
 # -- User-specific paths (edit these) -----------------------------------------
 polyfun_d    <- path.expand("~/polyfun/")
 ldsc_d       <- path.expand("~/ldsc/")
-ldscore_dir  <- path.expand("~/LDSCORE/")
+ldscore_dir  <- path.expand("~/Desktop/Project_scads/LDSCORE/zenodo/")
 output_dir   <- path.expand("~/scads_output/")
 
 # -- Reference data paths (derived from ldscore_dir) --------------------------
@@ -214,7 +184,8 @@ weights_pref  <- file.path(ldscore_dir, "1000G_Phase3_weights_hm3_no_MHC", "weig
 
 Verify that the key files exist before proceeding:
 
-```{r eval=FALSE}
+```{r}
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 stopifnot(
   "polyfun ldsc.py not found"    = file.exists(file.path(polyfun_d, "ldsc.py")),
   "ldsc make_annot.py not found" = file.exists(file.path(ldsc_d, "make_annot.py")),
@@ -229,7 +200,7 @@ cat("All paths verified.\n")
 
 ## Set analysis parameters
 
-```{r eval=FALSE}
+```{r}
 count_matrix <- demo_count_matrix
 n_topics     <- 5       # number of topics to fit
 n_sims       <- 1000    # Monte Carlo samples for DE analysis
@@ -238,7 +209,7 @@ bl_method    <- "gc"    # GC-content baseline correction (recommended)
 bl_ct        <- NULL    # cell type for "estimate" baseline (not used here)
 bl_peaks     <- NULL    # cell type peaks for "estimate" baseline (not used here)
 sumstats_d   <- dirname(data_file)
-gwas_n       <- 764667  # GWAS sample size
+gwas_n       <- 45087   # GWAS sample size
 trait         <- "SIM"
 cont_topics  <- FALSE   # use binary (not continuous) topic annotations
 ```
@@ -265,7 +236,7 @@ wrapper calls these same functions internally and supports
 **checkpointing** via `save_intermediates = TRUE` and `resume_from_step`.
 
 > **Note:** This tutorial runs on **chromosome 10 only** (`chrs = 10`) to keep
-> runtime short (~12 min total). For a real analysis, use `chrs = 1:22`.
+> runtime short (~50 min total). For a real analysis, use `chrs = 1:22`.
 
 ### Step 1: Fit topic model with fastTopics
 
@@ -280,32 +251,38 @@ wrapper calls these same functions internally and supports
 **Runtime:** ~1 min for the demo dataset (500 cells, 12,971 peaks, 5 topics).
 **Memory:** ~650 MB peak.
 
-```{r eval=FALSE}
-set.seed(1234)
+```{r}
+out1_cache <- file.path(output_dir, "run_fastTopics_res.rds")
+if (file.exists(out1_cache)) {
+  cat("Loading cached Step 1 results from", out1_cache, "\n")
+  out1 <- readRDS(out1_cache)
+} else {
+  set.seed(1234)
 
-# Transpose: scads expects peaks-by-cells, but fastTopics needs cells-by-peaks
-count_matrix_t <- Matrix::t(count_matrix)
-cat("Input dimensions (cells x peaks):", dim(count_matrix_t), "\n")
+  # Transpose: scads expects peaks-by-cells, but fastTopics needs cells-by-peaks
+  count_matrix_t <- Matrix::t(count_matrix)
+  cat("Input dimensions (cells x peaks):", dim(count_matrix_t), "\n")
 
-# Run fastTopics
-t1_start <- Sys.time()
-out1 <- run_fastTopics(
-  count_matrix  = count_matrix_t,
-  nTopics       = n_topics,
-  n_s           = n_sims,
-  n_c           = n_cores,
-  baseline_method = bl_method,
-  bl_celltype_cells = bl_ct,
-  bl_celltype_peak_file = bl_peaks,
-  fdr_cutoff    = 0.05,
-  outdir        = output_dir,
-  genome        = "hg19"
-)
-t1_end <- Sys.time()
-cat("\nStep 1 runtime:", round(difftime(t1_end, t1_start, units = "secs")), "seconds\n")
+  # Run fastTopics
+  t1_start <- Sys.time()
+  out1 <- run_fastTopics(
+    count_matrix  = count_matrix_t,
+    nTopics       = n_topics,
+    n_s           = n_sims,
+    n_c           = n_cores,
+    baseline_method = bl_method,
+    bl_celltype_cells = bl_ct,
+    bl_celltype_peak_file = bl_peaks,
+    fdr_cutoff    = 0.05,
+    outdir        = output_dir,
+    genome        = "hg19"
+  )
+  t1_end <- Sys.time()
+  cat("\nStep 1 runtime:", round(difftime(t1_end, t1_start, units = "secs")), "seconds\n")
 
-# Save intermediate results
-saveRDS(out1, file.path(output_dir, "run_fastTopics_res.rds"))
+  # Save intermediate results
+  saveRDS(out1, out1_cache)
+}
 ```
 
 **Examine Step 1 results:**
@@ -336,14 +313,20 @@ topic, which S-LDSC uses as a custom annotation.
 **Runtime:** < 10 seconds.
 **Memory:** Negligible.
 
-```{r eval=FALSE}
-t2_start <- Sys.time()
-beddir_list <- get_annot_beds(topics_res = out1, output_dir = output_dir)
-t2_end <- Sys.time()
-cat("Step 2 runtime:", round(difftime(t2_end, t2_start, units = "secs"), 1), "seconds\n")
+```{r}
+beddir_cache <- file.path(output_dir, "beddir_list.rds")
+if (file.exists(beddir_cache)) {
+  cat("Loading cached Step 2 results from", beddir_cache, "\n")
+  beddir_list <- readRDS(beddir_cache)
+} else {
+  t2_start <- Sys.time()
+  beddir_list <- get_annot_beds(topics_res = out1, output_dir = output_dir)
+  t2_end <- Sys.time()
+  cat("Step 2 runtime:", round(difftime(t2_end, t2_start, units = "secs"), 1), "seconds\n")
 
-# Save for checkpointing
-saveRDS(beddir_list, file.path(output_dir, "beddir_list.rds"))
+  # Save for checkpointing
+  saveRDS(beddir_list, beddir_cache)
+}
 ```
 
 ### Step 3: Run S-LDSC per topic
@@ -365,56 +348,51 @@ For each topic annotation, this step runs the full S-LDSC pipeline:
 The key output is the **enrichment estimate** per topic: how much heritability
 is concentrated in the topic's peaks relative to their size.
 
-**Runtime:** ~11 min per topic per chromosome. With 5 topics on chr10 running
-sequentially, expect ~55 min. Topics run in parallel when cores are available.
+**Runtime:** ~10 min per topic per chromosome. With 5 topics on chr10 running
+sequentially, expect ~50 min total.
 **Memory:** ~300 MB per topic (Python processes).
 
-```{r eval=FALSE}
-t3_start <- Sys.time()
-
-for (i in seq_along(beddir_list)) {
-  cat(sprintf("\n--- Running S-LDSC for topic %d of %d ---\n", i, length(beddir_list)))
-  topic_start <- Sys.time()
-
-  run_sldsc(
-    chrs          = 10,                    # chr10 only for this tutorial
-    polyfun_path  = polyfun_d,
-    ldsc_path     = ldsc_d,
-    sumstats_path = sumstats_d,
-    n             = gwas_n,
-    trait         = trait,
-    onekg_path    = onekg_pref,
-    bed_dir       = beddir_list[[i]],
-    baseline_dir  = baseline_pref,
-    frqfile_pref  = frq_pref,
-    hm3_snps      = hm3_file,
-    weights_pref  = weights_pref,
-    out_dir       = beddir_list[[i]]
-  )
-
-  topic_end <- Sys.time()
-  cat(sprintf("Topic %d completed in %.1f minutes\n", i,
-              as.numeric(difftime(topic_end, topic_start, units = "mins"))))
-}
-
-t3_end <- Sys.time()
-cat("\nStep 3 total runtime:", round(difftime(t3_end, t3_start, units = "mins"), 1), "minutes\n")
-```
-
-**Examine Step 3 results:**
-
 ```{r}
-cat("--- S-LDSC enrichment results per topic ---\n\n")
-ldsc_tab <- cs_res$ldsc_res_table
-print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2",
-                    "Enrichment", "Enrichment_std_error")])
+# Check which topics already have S-LDSC results
+t3_start <- Sys.time()
+all_done <- all(vapply(seq_along(beddir_list), function(i) {
+  file.exists(file.path(beddir_list[[i]], "results", paste0(trait, ".results")))
+}, logical(1)))
+
+if (all_done) {
+  cat("All S-LDSC results found — skipping Step 3.\n")
+} else {
+  for (i in seq_along(beddir_list)) {
+    res_file <- file.path(beddir_list[[i]], "results", paste0(trait, ".results"))
+    if (file.exists(res_file)) {
+      cat(sprintf("--- Topic %d already done, skipping ---\n", i))
+      next
+    }
+    cat(sprintf("\n--- Running S-LDSC for topic %d of %d ---\n", i, length(beddir_list)))
+
+    run_sldsc(
+      chrs          = 10,                    # chr10 only for this tutorial
+      polyfun_path  = polyfun_d,
+      ldsc_path     = ldsc_d,
+      sumstats_path = sumstats_d,
+      n             = gwas_n,
+      trait         = trait,
+      onekg_path    = onekg_pref,
+      bed_dir       = beddir_list[[i]],
+      baseline_dir  = baseline_pref,
+      frqfile_pref  = frq_pref,
+      hm3_snps      = hm3_file,
+      weights_pref  = weights_pref,
+      out_dir       = beddir_list[[i]]
+    )
+  }
+}
+t3_end <- Sys.time()
+cat("\nStep 3 total runtime:", round(difftime(t3_end, t3_start, units = "secs"), 1), "seconds\n")
 ```
 
-The enrichment value indicates how much GWAS heritability is concentrated in
-each topic's peaks. An enrichment > 1 means the topic's peaks contain more
-heritability than expected given their size. Topics with enrichment < 0 or very
-small annotation size (`Prop._SNPs < 0.005`) are set to 1 (no enrichment) in
-the cell score calculation.
+The enrichment results per topic are displayed after Step 4 (which reads and
+processes the S-LDSC output files).
 
 ### Step 4: Calculate cell scores
 
@@ -434,19 +412,25 @@ produce a per-cell disease relevance score:
 **Runtime:** < 10 seconds.
 **Memory:** ~650 MB (due to correlation matrix computation).
 
-```{r eval=FALSE}
-t4_start <- Sys.time()
-cs_res <- get_cs(
-  topic_res    = out1,
-  ldsc_res_dir = output_dir,
-  trait        = trait,
-  nTopics      = n_topics
-)
-t4_end <- Sys.time()
-cat("Step 4 runtime:", round(difftime(t4_end, t4_start, units = "secs"), 1), "seconds\n")
+```{r}
+cs_cache <- file.path(output_dir, "cs_res.rds")
+if (file.exists(cs_cache)) {
+  cat("Loading cached Step 4 results from", cs_cache, "\n")
+  cs_res <- readRDS(cs_cache)
+} else {
+  t4_start <- Sys.time()
+  cs_res <- get_cs(
+    topic_res    = out1,
+    ldsc_res_dir = output_dir,
+    trait        = trait,
+    nTopics      = n_topics
+  )
+  t4_end <- Sys.time()
+  cat("Step 4 runtime:", round(difftime(t4_end, t4_start, units = "secs"), 1), "seconds\n")
 
-# Save results
-saveRDS(cs_res, file.path(output_dir, "cs_res.rds"))
+  # Save results
+  saveRDS(cs_res, cs_cache)
+}
 ```
 
 **Examine Step 4 results:**
@@ -476,9 +460,9 @@ print(cs_res$ash_res$PosteriorMean)
 - **`ash_res`**: Enrichment estimates after adaptive shrinkage (more stable).
 - **`cs_dat`**: Intermediate values (`M_i`, `N_i`) used in score computation.
 
-For this demo dataset with simulated GWAS data, all cell scores are expected to
-be approximately 1 (no enrichment signal), since the summary statistics are
-simulated and do not contain a real disease signal.
+Higher cell scores indicate cells whose chromatin accessibility profiles overlap
+more strongly with disease-associated regions. Cells dominated by topics with
+high enrichment will receive higher scores.
 
 ---
 
@@ -513,28 +497,6 @@ ggplot(fmat_df, aes(x = log10F)) +
   labs(title = "Distribution of log10(F) per topic",
        x = "log10(F)", y = "Count") +
   theme_minimal()
-```
-
-#### Binarized Fmat heatmap
-
-We can also check how many peaks exceed the genome-wide baseline rate
-`f0 = 1 / (3e9 / 500)`. This gives a rough sense of topic specificity before
-the formal DE test.
-
-```{r fig.width=6, fig.height=5}
-f0_threshold <- 1 / (3e9 / 500)
-Fmat_bin <- (Fmat > f0_threshold) + 0
-
-cat("Peaks above f0 threshold per topic:\n")
-print(colSums(Fmat_bin))
-
-# Heatmap of binarized Fmat (subsample rows for visibility)
-set.seed(42)
-idx <- sample(nrow(Fmat_bin), min(500, nrow(Fmat_bin)))
-heatmap(as.matrix(Fmat_bin[idx, ]),
-        Rowv = NA, col = c("grey90", "firebrick"),
-        scale = "none", margins = c(5, 2),
-        main = "Binarized F > f0 (500 random peaks)")
 ```
 
 #### Structure plot
@@ -582,9 +544,11 @@ print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
                     "Enrichment_std_error", "ASH_Enrichment")])
 ```
 
-> **Interpreting enrichment:** For this demo with simulated GWAS data, all
-> enrichment values are negative (no true signal). In a real analysis, topics
-> with enrichment significantly > 1 indicate disease-relevant chromatin programs.
+> **Interpreting enrichment:** Enrichment > 1 means heritability is
+> concentrated in a topic's peaks more than expected by chance. Topics with
+> enrichment significantly > 1 (confidence interval not crossing 1) indicate
+> disease-relevant chromatin programs. After adaptive shrinkage (ASH), the
+> estimates are stabilized and used to weight cell scores in Step 4.
 
 ### Cell score distribution
 
@@ -670,10 +634,10 @@ if (!requireNamespace("uwot", quietly = TRUE)) {
 }
 ```
 
-> **Note:** With the demo simulated GWAS data, cell scores are uniform (~1) so
-> the score UMAP will show no variation. With real GWAS data (e.g., IBD, as in
-> the PBMC analysis), disease-relevant cell types will show elevated scores and
-> cluster on the UMAP.
+> **Note:** Cells dominated by topics with high enrichment will appear as
+> "hot spots" on the score UMAP. The z-score UMAP highlights cells whose
+> scores are statistically significant after accounting for estimation
+> uncertainty and topic correlation.
 
 ---
 
