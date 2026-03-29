@@ -2,7 +2,7 @@ Package: scads
 Title: Single-Cell ATAC-seq Disease Scoring via Topic Modeling and S-LDSC
 Version: 0.2.0
 Authors@R: c(
-    person("Li", "Yu", role = c("aut", "cre"), email = "li.yu@dartmouth.edu"),
+    person("Liyang", "Yu", role = c("aut", "cre"), email = "liyang.yu@dartmouth.edu"),
     person("Siming", "Zhao", role = "aut"))
 Description: Computes per-cell disease relevance scores from single-cell
     ATAC-seq data and GWAS summary statistics. The pipeline fits a topic
