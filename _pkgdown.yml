@@ -2,9 +2,10 @@ template:
   bootstrap: 3
 
 articles:
-  - title: Introduction
+  - title: Tutorials
     contents:
-    - Introduction
+    - QuickStart
+    - StepByStep
 
 navbar:
   components:
