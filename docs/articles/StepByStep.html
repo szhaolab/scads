@@ -60,7 +60,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Step-by-Step Tutorial</h1>
             
-            <h4 data-toc-skip class="date">2026-03-29</h4>
+            <h4 data-toc-skip class="date">2026-03-30</h4>
       
 
       <div class="hidden name"><code>StepByStep.Rmd</code></div>
@@ -126,91 +126,12 @@ to produce a per-cell disease score.</td>
 </tbody>
 </table>
 <blockquote>
-<p><strong>Note on runtime:</strong> The times above were measured on a
-MacBook Pro (M3 Max, 36 GB RAM) using the demo dataset (500 cells,
-12,971 peaks on chr10, 5 topics). A full-genome analysis (22
-chromosomes) will take proportionally longer for Step 3. Larger datasets
-(more cells or peaks) will increase Step 1 runtime.</p>
+<p><strong>Prerequisites:</strong> Make sure you have completed all
+setup steps (polyFUN, LDSC, conda environment, S-LDSC reference data)
+described in the <a href="QuickStart.html">Getting Started</a> guide
+before proceeding.</p>
 </blockquote>
-</div>
-<div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
-</h2>
-<p>Before running this tutorial, make sure you have completed all
-installation steps described in the <a href="https://github.com/szhaolab/scads#installation" class="external-link">README</a>:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>polyFUN</strong> and <strong>LDSC</strong> are cloned and
-the <code>polyfun</code> conda environment is set up (Python 3.11, with
-<code>bitarray&lt;3</code> and <code>bedtools</code> installed).</li>
-<li>
-<strong>scads</strong> R package is installed with all
-dependencies.</li>
-<li>
-<strong>S-LDSC reference data</strong> has been downloaded (see
-below).</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="download-s-ldsc-reference-data">Download S-LDSC reference data<a class="anchor" aria-label="anchor" href="#download-s-ldsc-reference-data"></a>
-</h2>
-<p><code>scads</code> requires reference files from the S-LDSC baseline
-LD model. Download and extract them into a local directory (e.g.,
-<code>~/LDSCORE/</code>). All files are available from <a href="https://zenodo.org/records/10515792" class="external-link">Zenodo</a>.</p>
-<blockquote>
-<p><strong>Disk usage:</strong> The compressed downloads total ~1 GB.
-After extraction, the reference data requires ~4 GB of disk space.</p>
-</blockquote>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># Create a directory for the reference data</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/LDSCORE</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># Download reference files from Zenodo (~1 GB total)</span></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="bu">cd</span> ~/LDSCORE</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_plinkfiles.tgz <span class="dt">\</span></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_plinkfiles.tgz?download=1"</span>            <span class="co"># 275 MB</span></span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_baselineLD_v2.2_ldscores.tgz <span class="dt">\</span></span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_baselineLD_v2.2_ldscores.tgz?download=1"</span>  <span class="co"># 645 MB</span></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_frq.tgz <span class="dt">\</span></span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_frq.tgz?download=1"</span>                   <span class="co"># 82 MB</span></span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_weights_hm3_no_MHC.tgz <span class="dt">\</span></span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_weights_hm3_no_MHC.tgz?download=1"</span>    <span class="co"># 12 MB</span></span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> hm3_no_MHC.list.txt <span class="dt">\</span></span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"</span>                    <span class="co"># 12 MB</span></span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co"># Extract archives</span></span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_plinkfiles.tgz</span>
-<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_frq.tgz</span>
-<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_weights_hm3_no_MHC.tgz</span>
-<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a><span class="co"># The baseline LD archive extracts files directly (not into a subdirectory),</span></span>
-<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="co"># so create one first:</span></span>
-<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> 1000G_Phase3_baselineLD_v2.2_ldscores</span>
-<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_baselineLD_v2.2_ldscores.tgz <span class="at">-C</span> 1000G_Phase3_baselineLD_v2.2_ldscores</span>
-<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a></span>
-<span id="cb1-27"><a href="#cb1-27" tabindex="-1"></a><span class="co"># (Optional) Remove the .tgz files to free ~1 GB of disk space</span></span>
-<span id="cb1-28"><a href="#cb1-28" tabindex="-1"></a><span class="co"># rm -f *.tgz</span></span></code></pre></div>
-<p>After extraction, you should have the following directory
-structure:</p>
-<pre><code>~/LDSCORE/
-├── 1000G_EUR_Phase3_plink/          # 1000G.EUR.QC.{1..22}.{bed,bim,fam}
-├── 1000G_Phase3_baselineLD_v2.2_ldscores/  # baselineLD.{1..22}.{annot.gz,l2.ldscore.gz,...}
-├── 1000G_Phase3_frq/                # 1000G.EUR.QC.{1..22}.frq
-├── 1000G_Phase3_weights_hm3_no_MHC/ # weights.hm3_noMHC.{1..22}.l2.ldscore.gz
-└── hm3_no_MHC.list.txt</code></pre>
-</div>
-<div class="section level2">
-<h2 id="start-an-r-session">Start an R session<a class="anchor" aria-label="anchor" href="#start-an-r-session"></a>
-</h2>
-<p>Activate the <code>polyfun</code> conda environment
-<strong>before</strong> starting R. This ensures that
-<code>python3</code> (called internally by <code>scads</code>) resolves
-to the environment with the required Python packages (including
-<code>ldsc</code>, <code>polyfun</code>, <code>bedtools</code>,
-<code>bitarray&lt;3</code>).</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">conda</span> activate polyfun</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">R</span></span></code></pre></div>
-<p>Load the scads package:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scads</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
@@ -228,7 +149,7 @@ scATAC-seq data.</li>
 <strong><code>SIM_sumstats_chr10.txt.gz</code></strong>: Simulated
 GWAS summary statistics for chromosome 10.</li>
 </ul>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load demo peak-by-cell count matrix</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"demo_count_matrix"</span><span class="op">)</span></span>
 <span></span>
@@ -253,7 +174,7 @@ GWAS summary statistics for chromosome 10.</li>
 <code>chr:start-end</code> format) and columns are cells. Most entries
 are zero, which is typical for scATAC-seq data.</p>
 <p>Load the example GWAS summary statistics:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SIM_sumstats_chr10.txt.gz"</span>, package <span class="op">=</span> <span class="st">"scads"</span><span class="op">)</span></span>
 <span><span class="va">sumstats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="va">data_file</span>, header <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Summary statistics dimensions:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">sumstats</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
@@ -299,7 +220,7 @@ reference data was downloaded.</li>
 <strong><code>output_dir</code></strong>: where scads will write its
 results.</li>
 </ul>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># -- User-specific paths (edit these) -----------------------------------------</span></span>
 <span><span class="va">polyfun_d</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/path.expand.html" class="external-link">path.expand</a></span><span class="op">(</span><span class="st">"~/polyfun/"</span><span class="op">)</span></span>
 <span><span class="va">ldsc_d</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/path.expand.html" class="external-link">path.expand</a></span><span class="op">(</span><span class="st">"~/ldsc/"</span><span class="op">)</span></span>
@@ -313,7 +234,7 @@ results.</li>
 <span><span class="va">hm3_file</span>      <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"hm3_no_MHC.list.txt"</span><span class="op">)</span></span>
 <span><span class="va">weights_pref</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"1000G_Phase3_weights_hm3_no_MHC"</span>, <span class="st">"weights.hm3_noMHC."</span><span class="op">)</span></span></code></pre></div>
 <p>Verify that the key files exist before proceeding:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">output_dir</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
 <span>  <span class="st">"polyfun ldsc.py not found"</span>    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">polyfun_d</span>, <span class="st">"ldsc.py"</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -328,25 +249,54 @@ results.</li>
 <span><span class="co">#&gt; All paths verified.</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="set-analysis-parameters">Set analysis parameters<a class="anchor" aria-label="anchor" href="#set-analysis-parameters"></a>
+<h2 id="running-the-pipeline-step-by-step">Running the pipeline step by step<a class="anchor" aria-label="anchor" href="#running-the-pipeline-step-by-step"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<p>While <code><a href="../reference/scads.html">scads()</a></code> can run the entire pipeline in one call,
+this tutorial walks through each step individually to show intermediate
+results. The <code><a href="../reference/scads.html">scads()</a></code> wrapper calls these same functions
+internally and supports <strong>checkpointing</strong> via
+<code>save_intermediates = TRUE</code> and
+<code>resume_from_step</code>.</p>
+<blockquote>
+<p><strong>Note:</strong> This tutorial runs on <strong>chromosome 10
+only</strong> (<code>chrs = 10</code>) to keep runtime short (~50 min
+total). For a real analysis, use <code>chrs = 1:22</code>.</p>
+</blockquote>
+<div class="section level3">
+<h3 id="step-1-fit-topic-model-with-fasttopics">Step 1: Fit topic model with fastTopics<a class="anchor" aria-label="anchor" href="#step-1-fit-topic-model-with-fasttopics"></a>
+</h3>
+<p><strong>What this step does:</strong></p>
+<ol style="list-style-type: decimal">
+<li>Transposes the count matrix (peaks x cells -&gt; cells x peaks) for
+fastTopics.</li>
+<li>Fits a Poisson NMF topic model with <code>k</code> topics using
+<code><a href="https://stephenslab.github.io/fastTopics/reference/fit_topic_model.html" class="external-link">fastTopics::fit_topic_model()</a></code>.</li>
+<li>Computes a GC-content baseline correction for each topic (if
+<code>baseline_method = "gc"</code>).</li>
+<li>Runs differential expression analysis to identify topic-specific
+peaks.</li>
+<li>Applies FDR correction and binarizes peak assignments.</li>
+</ol>
+<p><strong>Runtime:</strong> ~1 min for the demo dataset (500 cells,
+12,971 peaks, 5 topics). <strong>Memory:</strong> ~650 MB peak.</p>
+<p><strong>Key parameters:</strong></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">count_matrix</span> <span class="op">&lt;-</span> <span class="va">demo_count_matrix</span></span>
 <span><span class="va">n_topics</span>     <span class="op">&lt;-</span> <span class="fl">5</span>       <span class="co"># number of topics to fit</span></span>
 <span><span class="va">n_sims</span>       <span class="op">&lt;-</span> <span class="fl">1000</span>    <span class="co"># Monte Carlo samples for DE analysis</span></span>
-<span><span class="va">n_cores</span>      <span class="op">&lt;-</span> <span class="fl">8</span>       <span class="co"># adjust to the number of cores available</span></span>
+<span><span class="va">n_cores</span>      <span class="op">&lt;-</span> <span class="fl">8</span>       <span class="co"># cores for fastTopics (Step 1 only)</span></span>
 <span><span class="va">bl_method</span>    <span class="op">&lt;-</span> <span class="st">"gc"</span>    <span class="co"># GC-content baseline correction (recommended)</span></span>
 <span><span class="va">bl_ct</span>        <span class="op">&lt;-</span> <span class="cn">NULL</span>    <span class="co"># cell type for "estimate" baseline (not used here)</span></span>
-<span><span class="va">bl_peaks</span>     <span class="op">&lt;-</span> <span class="cn">NULL</span>    <span class="co"># cell type peaks for "estimate" baseline (not used here)</span></span>
-<span><span class="va">sumstats_d</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="va">data_file</span><span class="op">)</span></span>
-<span><span class="va">gwas_n</span>       <span class="op">&lt;-</span> <span class="fl">45087</span>   <span class="co"># GWAS sample size</span></span>
-<span><span class="va">trait</span>         <span class="op">&lt;-</span> <span class="st">"SIM"</span></span>
-<span><span class="va">cont_topics</span>  <span class="op">&lt;-</span> <span class="cn">FALSE</span>   <span class="co"># use binary (not continuous) topic annotations</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="baseline-method-options">Baseline method options<a class="anchor" aria-label="anchor" href="#baseline-method-options"></a>
-</h3>
-<p>The <code>baseline_method</code> parameter controls how the null
-hypothesis is set for differential expression testing in Step 1:</p>
+<span><span class="va">bl_peaks</span>     <span class="op">&lt;-</span> <span class="cn">NULL</span>    <span class="co"># cell type peaks for "estimate" baseline (not used here)</span></span></code></pre></div>
+<p><strong><code>n_s</code> (number of simulations):</strong> Controls
+the number of Monte Carlo samples for differential expression testing.
+In practice, <code>n_s = 1000</code> is sufficient to obtain reasonable
+results and is the default used in this tutorial. In the paper, we used
+<code>n_s = 5000</code> for the final analyses. Increasing
+<code>n_s</code> improves the precision of the DE p-values but increases
+Step 1 runtime proportionally.</p>
+<p><strong><code>baseline_method</code>:</strong> Controls how the null
+hypothesis is set for differential expression testing:</p>
 <table class="table">
 <colgroup>
 <col width="38%">
@@ -381,75 +331,31 @@ peaks. Requires <code>bl_celltype</code> and
 </tr>
 </tbody>
 </table>
-<hr>
-</div>
-</div>
-<div class="section level2">
-<h2 id="running-the-pipeline-step-by-step">Running the pipeline step by step<a class="anchor" aria-label="anchor" href="#running-the-pipeline-step-by-step"></a>
-</h2>
-<p>While <code><a href="../reference/scads.html">scads()</a></code> can run the entire pipeline in one call,
-this tutorial walks through each step individually to show intermediate
-results. The <code><a href="../reference/scads.html">scads()</a></code> wrapper calls these same functions
-internally and supports <strong>checkpointing</strong> via
-<code>save_intermediates = TRUE</code> and
-<code>resume_from_step</code>.</p>
-<blockquote>
-<p><strong>Note:</strong> This tutorial runs on <strong>chromosome 10
-only</strong> (<code>chrs = 10</code>) to keep runtime short (~50 min
-total). For a real analysis, use <code>chrs = 1:22</code>.</p>
-</blockquote>
-<div class="section level3">
-<h3 id="step-1-fit-topic-model-with-fasttopics">Step 1: Fit topic model with fastTopics<a class="anchor" aria-label="anchor" href="#step-1-fit-topic-model-with-fasttopics"></a>
-</h3>
-<p><strong>What this step does:</strong></p>
-<ol style="list-style-type: decimal">
-<li>Transposes the count matrix (peaks x cells -&gt; cells x peaks) for
-fastTopics.</li>
-<li>Fits a Poisson NMF topic model with <code>k</code> topics using
-<code><a href="https://stephenslab.github.io/fastTopics/reference/fit_topic_model.html" class="external-link">fastTopics::fit_topic_model()</a></code>.</li>
-<li>Computes a GC-content baseline correction for each topic (if
-<code>baseline_method = "gc"</code>).</li>
-<li>Runs differential expression analysis to identify topic-specific
-peaks.</li>
-<li>Applies FDR correction and binarizes peak assignments.</li>
-</ol>
-<p><strong>Runtime:</strong> ~1 min for the demo dataset (500 cells,
-12,971 peaks, 5 topics). <strong>Memory:</strong> ~650 MB peak.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">out1_cache</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"run_fastTopics_res.rds"</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">out1_cache</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Loading cached Step 1 results from"</span>, <span class="va">out1_cache</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="va">out1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="va">out1_cache</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Transpose: scads expects peaks-by-cells, but fastTopics needs cells-by-peaks</span></span>
-<span>  <span class="va">count_matrix_t</span> <span class="op">&lt;-</span> <span class="fu">Matrix</span><span class="fu">::</span><span class="fu">t</span><span class="op">(</span><span class="va">count_matrix</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Input dimensions (cells x peaks):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">count_matrix_t</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co"># Transpose: scads expects peaks-by-cells, but fastTopics needs cells-by-peaks</span></span>
+<span><span class="va">count_matrix_t</span> <span class="op">&lt;-</span> <span class="fu">Matrix</span><span class="fu">::</span><span class="fu">t</span><span class="op">(</span><span class="va">count_matrix</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Input dimensions (cells x peaks):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">count_matrix_t</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Run fastTopics</span></span>
-<span>  <span class="va">t1_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="va">out1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_fastTopics.html">run_fastTopics</a></span><span class="op">(</span></span>
-<span>    count_matrix  <span class="op">=</span> <span class="va">count_matrix_t</span>,</span>
-<span>    nTopics       <span class="op">=</span> <span class="va">n_topics</span>,</span>
-<span>    n_s           <span class="op">=</span> <span class="va">n_sims</span>,</span>
-<span>    n_c           <span class="op">=</span> <span class="va">n_cores</span>,</span>
-<span>    baseline_method <span class="op">=</span> <span class="va">bl_method</span>,</span>
-<span>    bl_celltype_cells <span class="op">=</span> <span class="va">bl_ct</span>,</span>
-<span>    bl_celltype_peak_file <span class="op">=</span> <span class="va">bl_peaks</span>,</span>
-<span>    fdr_cutoff    <span class="op">=</span> <span class="fl">0.05</span>,</span>
-<span>    outdir        <span class="op">=</span> <span class="va">output_dir</span>,</span>
-<span>    genome        <span class="op">=</span> <span class="st">"hg19"</span></span>
-<span>  <span class="op">)</span></span>
-<span>  <span class="va">t1_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nStep 1 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t1_end</span>, <span class="va">t1_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Save intermediate results</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">out1</span>, <span class="va">out1_cache</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; Loading cached Step 1 results from /Users/siming/scads_output//run_fastTopics_res.rds</span></span></code></pre></div>
+<span><span class="co"># Run fastTopics</span></span>
+<span><span class="va">t1_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">out1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_fastTopics.html">run_fastTopics</a></span><span class="op">(</span></span>
+<span>  count_matrix  <span class="op">=</span> <span class="va">count_matrix_t</span>,</span>
+<span>  nTopics       <span class="op">=</span> <span class="va">n_topics</span>,</span>
+<span>  n_s           <span class="op">=</span> <span class="va">n_sims</span>,</span>
+<span>  n_c           <span class="op">=</span> <span class="va">n_cores</span>,</span>
+<span>  baseline_method <span class="op">=</span> <span class="va">bl_method</span>,</span>
+<span>  bl_celltype_cells <span class="op">=</span> <span class="va">bl_ct</span>,</span>
+<span>  bl_celltype_peak_file <span class="op">=</span> <span class="va">bl_peaks</span>,</span>
+<span>  fdr_cutoff    <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  outdir        <span class="op">=</span> <span class="va">output_dir</span>,</span>
+<span>  genome        <span class="op">=</span> <span class="st">"hg19"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">t1_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nStep 1 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t1_end</span>, <span class="va">t1_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Examine Step 1 results:</strong></p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Topic model dimensions</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Factor matrix F (peaks x topics):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">out1</span><span class="op">$</span><span class="va">Fmat</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Factor matrix F (peaks x topics): 12971 5</span></span>
@@ -479,21 +385,11 @@ of peaks assigned to that topic, which S-LDSC uses as a custom
 annotation.</p>
 <p><strong>Runtime:</strong> &lt; 10 seconds. <strong>Memory:</strong>
 Negligible.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">beddir_cache</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"beddir_list.rds"</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">beddir_cache</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Loading cached Step 2 results from"</span>, <span class="va">beddir_cache</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="va">beddir_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="va">beddir_cache</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">t2_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="va">beddir_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_annot_beds.html">get_annot_beds</a></span><span class="op">(</span>topics_res <span class="op">=</span> <span class="va">out1</span>, output_dir <span class="op">=</span> <span class="va">output_dir</span><span class="op">)</span></span>
-<span>  <span class="va">t2_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Step 2 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t2_end</span>, <span class="va">t2_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Save for checkpointing</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">beddir_list</span>, <span class="va">beddir_cache</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; Loading cached Step 2 results from /Users/siming/scads_output//beddir_list.rds</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">t2_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">beddir_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_annot_beds.html">get_annot_beds</a></span><span class="op">(</span>topics_res <span class="op">=</span> <span class="va">out1</span>, output_dir <span class="op">=</span> <span class="va">output_dir</span><span class="op">)</span></span>
+<span><span class="va">t2_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Step 2 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t2_end</span>, <span class="va">t2_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="step-3-run-s-ldsc-per-topic">Step 3: Run S-LDSC per topic<a class="anchor" aria-label="anchor" href="#step-3-run-s-ldsc-per-topic"></a>
@@ -524,46 +420,50 @@ their size.</p>
 <p><strong>Runtime:</strong> ~10 min per topic per chromosome. With 5
 topics on chr10 running sequentially, expect ~50 min total.
 <strong>Memory:</strong> ~300 MB per topic (Python processes).</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Check which topics already have S-LDSC results</span></span>
-<span><span class="va">t3_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">all_done</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span>, <span class="st">"results"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">trait</span>, <span class="st">".results"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="va">all_done</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"All S-LDSC results found — skipping Step 3.\n"</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">res_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span>, <span class="st">"results"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">trait</span>, <span class="st">".results"</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">res_file</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"--- Topic %d already done, skipping ---\n"</span>, <span class="va">i</span><span class="op">)</span><span class="op">)</span></span>
-<span>      <span class="kw">next</span></span>
-<span>    <span class="op">}</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"\n--- Running S-LDSC for topic %d of %d ---\n"</span>, <span class="va">i</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="fu"><a href="../reference/run_sldsc.html">run_sldsc</a></span><span class="op">(</span></span>
-<span>      chrs          <span class="op">=</span> <span class="fl">10</span>,                    <span class="co"># chr10 only for this tutorial</span></span>
-<span>      polyfun_path  <span class="op">=</span> <span class="va">polyfun_d</span>,</span>
-<span>      ldsc_path     <span class="op">=</span> <span class="va">ldsc_d</span>,</span>
-<span>      sumstats_path <span class="op">=</span> <span class="va">sumstats_d</span>,</span>
-<span>      n             <span class="op">=</span> <span class="va">gwas_n</span>,</span>
-<span>      trait         <span class="op">=</span> <span class="va">trait</span>,</span>
-<span>      onekg_path    <span class="op">=</span> <span class="va">onekg_pref</span>,</span>
-<span>      bed_dir       <span class="op">=</span> <span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span>,</span>
-<span>      baseline_dir  <span class="op">=</span> <span class="va">baseline_pref</span>,</span>
-<span>      frqfile_pref  <span class="op">=</span> <span class="va">frq_pref</span>,</span>
-<span>      hm3_snps      <span class="op">=</span> <span class="va">hm3_file</span>,</span>
-<span>      weights_pref  <span class="op">=</span> <span class="va">weights_pref</span>,</span>
-<span>      out_dir       <span class="op">=</span> <span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span></span>
-<span>    <span class="op">)</span></span>
+<p><strong>Key parameters:</strong></p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sumstats_d</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="va">data_file</span><span class="op">)</span></span>
+<span><span class="va">gwas_n</span>       <span class="op">&lt;-</span> <span class="fl">45087</span>   <span class="co"># GWAS sample size</span></span>
+<span><span class="va">trait</span>         <span class="op">&lt;-</span> <span class="st">"SIM"</span></span>
+<span><span class="va">cont_topics</span>  <span class="op">&lt;-</span> <span class="cn">FALSE</span>   <span class="co"># use binary (not continuous) topic annotations</span></span></code></pre></div>
+<p><strong><code>n_cores_ldsc</code>:</strong> When using the
+<code><a href="../reference/scads.html">scads()</a></code> wrapper, the <code>n_cores_ldsc</code> parameter
+controls how many topics run S-LDSC in parallel. By default
+(<code>NULL</code>), it uses
+<code>min(detectCores(), nTopics, 5)</code>. Set
+<code>n_cores_ldsc = 1</code> to run topics sequentially, which avoids
+CPU contention and is generally faster on machines with limited cores.
+This is separate from <code>n_c</code>, which controls parallelism for
+the fastTopics step only. In this tutorial, topics are run sequentially
+in a for-loop.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">t3_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">res_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span>, <span class="st">"results"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">trait</span>, <span class="st">".results"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">res_file</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"--- Topic %d already done, skipping ---\n"</span>, <span class="va">i</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="kw">next</span></span>
 <span>  <span class="op">}</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"\n--- Running S-LDSC for topic %d of %d ---\n"</span>, <span class="va">i</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">beddir_list</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="fu"><a href="../reference/run_sldsc.html">run_sldsc</a></span><span class="op">(</span></span>
+<span>    chrs          <span class="op">=</span> <span class="fl">10</span>,                    <span class="co"># chr10 only for this tutorial</span></span>
+<span>    polyfun_path  <span class="op">=</span> <span class="va">polyfun_d</span>,</span>
+<span>    ldsc_path     <span class="op">=</span> <span class="va">ldsc_d</span>,</span>
+<span>    sumstats_path <span class="op">=</span> <span class="va">sumstats_d</span>,</span>
+<span>    n             <span class="op">=</span> <span class="va">gwas_n</span>,</span>
+<span>    trait         <span class="op">=</span> <span class="va">trait</span>,</span>
+<span>    onekg_path    <span class="op">=</span> <span class="va">onekg_pref</span>,</span>
+<span>    bed_dir       <span class="op">=</span> <span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    baseline_dir  <span class="op">=</span> <span class="va">baseline_pref</span>,</span>
+<span>    frqfile_pref  <span class="op">=</span> <span class="va">frq_pref</span>,</span>
+<span>    hm3_snps      <span class="op">=</span> <span class="va">hm3_file</span>,</span>
+<span>    weights_pref  <span class="op">=</span> <span class="va">weights_pref</span>,</span>
+<span>    out_dir       <span class="op">=</span> <span class="va">beddir_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; All S-LDSC results found — skipping Step 3.</span></span>
 <span><span class="va">t3_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nStep 3 total runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t3_end</span>, <span class="va">t3_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Step 3 total runtime: 0 seconds</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nStep 3 total runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t3_end</span>, <span class="va">t3_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span></code></pre></div>
 <p>The enrichment results per topic are displayed after Step 4 (which
 reads and processes the S-LDSC output files).</p>
 </div>
@@ -586,28 +486,18 @@ topic annotations.</li>
 </ol>
 <p><strong>Runtime:</strong> &lt; 10 seconds. <strong>Memory:</strong>
 ~650 MB (due to correlation matrix computation).</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cs_cache</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"cs_res.rds"</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">cs_cache</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Loading cached Step 4 results from"</span>, <span class="va">cs_cache</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="va">cs_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="va">cs_cache</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">t4_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="va">cs_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_cs.html">get_cs</a></span><span class="op">(</span></span>
-<span>    topic_res    <span class="op">=</span> <span class="va">out1</span>,</span>
-<span>    ldsc_res_dir <span class="op">=</span> <span class="va">output_dir</span>,</span>
-<span>    trait        <span class="op">=</span> <span class="va">trait</span>,</span>
-<span>    nTopics      <span class="op">=</span> <span class="va">n_topics</span></span>
-<span>  <span class="op">)</span></span>
-<span>  <span class="va">t4_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Step 4 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t4_end</span>, <span class="va">t4_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Save results</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">cs_res</span>, <span class="va">cs_cache</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; Loading cached Step 4 results from /Users/siming/scads_output//cs_res.rds</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">t4_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">cs_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_cs.html">get_cs</a></span><span class="op">(</span></span>
+<span>  topic_res    <span class="op">=</span> <span class="va">out1</span>,</span>
+<span>  ldsc_res_dir <span class="op">=</span> <span class="va">output_dir</span>,</span>
+<span>  trait        <span class="op">=</span> <span class="va">trait</span>,</span>
+<span>  nTopics      <span class="op">=</span> <span class="va">n_topics</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">t4_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Step 4 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t4_end</span>, <span class="va">t4_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Examine Step 4 results:</strong></p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Cell score summary:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Cell score summary:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span><span class="op">)</span></span>
@@ -677,7 +567,7 @@ stage.</p>
 the Poisson rate parameters for each peak in each topic. Examining the
 distribution of log10(F) per topic reveals whether the model separates
 foreground (high F) from background (low F) peaks.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">Fmat</span> <span class="op">&lt;-</span> <span class="va">out1</span><span class="op">$</span><span class="va">Fmat</span></span>
 <span></span>
 <span><span class="co"># Histogram of log10(Fmat) per topic</span></span>
@@ -694,7 +584,7 @@ foreground (high F) from background (low F) peaks.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Distribution of log10(F) per topic"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"log10(F)"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-15-1.png" alt="" width="768"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-21-1.png" alt="" width="768"></p>
 </div>
 <div class="section level4">
 <h4 id="structure-plot">Structure plot<a class="anchor" aria-label="anchor" href="#structure-plot"></a>
@@ -703,36 +593,36 @@ foreground (high F) from background (low F) peaks.</p>
 distributed across topics. Each vertical bar represents a cell, colored
 by its topic proportions (from the <code>Lmat</code> loading matrix).
 Cells dominated by a single topic form clusters.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">fastTopics</span><span class="fu">::</span><span class="fu"><a href="https://stephenslab.github.io/fastTopics/reference/structure_plot.html" class="external-link">structure_plot</a></span><span class="op">(</span><span class="va">out1</span><span class="op">$</span><span class="va">fastTopics_fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Running tsne on 500 x 5 matrix.</span></span>
 <span><span class="co">#&gt; Read the 500 x 5 data matrix successfully!</span></span>
 <span><span class="co">#&gt; Using no_dims = 1, perplexity = 100.000000, and theta = 0.100000</span></span>
 <span><span class="co">#&gt; Computing input similarities...</span></span>
 <span><span class="co">#&gt; Building tree...</span></span>
-<span><span class="co">#&gt; Done in 0.06 seconds (sparsity = 0.769136)!</span></span>
+<span><span class="co">#&gt; Done in 0.07 seconds (sparsity = 0.769136)!</span></span>
 <span><span class="co">#&gt; Learning embedding...</span></span>
-<span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 150: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 200: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 250: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 300: error is 0.446991 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 350: error is 0.440582 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 400: error is 0.440534 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 450: error is 0.440535 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 150: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 200: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 250: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 300: error is 0.446991 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 350: error is 0.440582 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 400: error is 0.440534 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 450: error is 0.440535 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 750: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 900: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 1000: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Fitting performed in 0.66 seconds.</span></span>
+<span><span class="co">#&gt; Fitting performed in 0.72 seconds.</span></span>
 <span><span class="co">#&gt; Warning: `aes_string()` was deprecated in ggplot2 3.0.0.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use tidy evaluation idioms with `aes()`.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See also `vignette("ggplot2-in-packages")` for more information.</span></span>
@@ -742,19 +632,26 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; <span style="color: #555555;">This warning is displayed once per session.</span></span></span>
 <span><span class="co">#&gt; <span style="color: #555555;">Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span></span>
 <span><span class="co">#&gt; <span style="color: #555555;">generated.</span></span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-16-1.png" alt="" width="768"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-22-1.png" alt="" width="768"></p>
 </div>
 </div>
 <div class="section level3">
 <h3 id="s-ldsc-enrichment-summary">S-LDSC enrichment summary<a class="anchor" aria-label="anchor" href="#s-ldsc-enrichment-summary"></a>
 </h3>
+<blockquote>
+<p><strong>Note:</strong> This tutorial uses chromosome 10 only, so the
+standard errors on enrichment estimates are much larger than in a real
+analysis using all 22 chromosomes. With more chromosomes, S-LDSC has
+more SNPs to estimate heritability partitioning, resulting in tighter
+confidence intervals.</p>
+</blockquote>
 <div class="section level4">
 <h4 id="enrichment-bar-plot">Enrichment bar plot<a class="anchor" aria-label="anchor" href="#enrichment-bar-plot"></a>
 </h4>
 <p>Visualizing enrichment estimates with error bars helps identify which
 topics carry disease signal. Topics with positive enrichment (and small
 standard error) are the informative ones.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ldsc_tab</span> <span class="op">&lt;-</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">ldsc_res_table</span></span>
 <span></span>
 <span><span class="co"># Add ASH-shrunk estimates</span></span>
@@ -771,12 +668,12 @@ standard error) are the informative ones.</p>
 <span>       subtitle <span class="op">=</span> <span class="st">"Dashed line = no enrichment (1.0). Error bars = 95% CI."</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Topic"</span>, y <span class="op">=</span> <span class="st">"Enrichment"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-17-1.png" alt="" width="576"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-23-1.png" alt="" width="576"></p>
 </div>
 <div class="section level4">
 <h4 id="s-ldsc-results-table">S-LDSC results table<a class="anchor" aria-label="anchor" href="#s-ldsc-results-table"></a>
 </h4>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Full results table</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ldsc_tab</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Category"</span>, <span class="st">"Prop._SNPs"</span>, <span class="st">"Prop._h2"</span>, <span class="st">"Enrichment"</span>,</span>
 <span>                    <span class="st">"Enrichment_std_error"</span>, <span class="st">"ASH_Enrichment"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
@@ -802,7 +699,7 @@ weight cell scores in Step 4.</p>
 <div class="section level4">
 <h4 id="histogram-of-cell-scores">Histogram of cell scores<a class="anchor" aria-label="anchor" href="#histogram-of-cell-scores"></a>
 </h4>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cs_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>cs <span class="op">=</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">cs_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">cs</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -810,7 +707,7 @@ weight cell scores in Step 4.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Distribution of cell scores"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Cell score"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-19-1.png" alt="" width="576"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-25-1.png" alt="" width="576"></p>
 </div>
 <div class="section level4">
 <h4 id="z-score-distribution">Z-score distribution<a class="anchor" aria-label="anchor" href="#z-score-distribution"></a>
@@ -818,7 +715,7 @@ weight cell scores in Step 4.</p>
 <p>The z-scores account for variance in enrichment estimates and
 correlation between topic annotations. Under the null (no disease
 signal), z-scores should be approximately standard normal.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">z_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">z_cell</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">z_df</span> <span class="op">&lt;-</span> <span class="va">z_df</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">z_df</span><span class="op">$</span><span class="va">z</span><span class="op">)</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span></span>
@@ -829,7 +726,7 @@ signal), z-scores should be approximately standard normal.</p>
 <span>       subtitle <span class="op">=</span> <span class="st">"Dashed lines = +/-1.96 (p = 0.05 threshold)"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Z-score"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-20-1.png" alt="" width="576"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-26-1.png" alt="" width="576"></p>
 </div>
 </div>
 <div class="section level3">
@@ -838,7 +735,7 @@ signal), z-scores should be approximately standard normal.</p>
 <p>UMAP provides a 2D embedding of cells based on the topic loading
 matrix (<code>Lmat</code>). Coloring cells by their disease score
 reveals whether disease-relevant cells cluster together.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"uwot"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Install 'uwot' for UMAP: install.packages('uwot')"</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
@@ -881,7 +778,7 @@ reveals whether disease-relevant cells cluster together.</p>
 <span>  <span class="co"># Combine plots</span></span>
 <span>  <span class="va">p3</span> <span class="op">+</span> <span class="va">p1</span> <span class="op">+</span> <span class="va">p2</span> <span class="op">+</span> <span class="fu"><a href="https://patchwork.data-imaginist.com/reference/plot_layout.html" class="external-link">plot_layout</a></span><span class="op">(</span>ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-21-1.png" alt="" width="960"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-27-1.png" alt="" width="960"></p>
 <blockquote>
 <p><strong>Note:</strong> Cells dominated by topics with high enrichment
 will appear as “hot spots” on the score UMAP. The z-score UMAP

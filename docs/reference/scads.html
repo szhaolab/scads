@@ -67,6 +67,7 @@
 <span>  <span class="va">hm3_snps</span>,</span>
 <span>  <span class="va">weights_pref</span>,</span>
 <span>  continuous_topic_annot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  n_cores_ldsc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  chrs <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">22</span>,</span>
 <span>  genome <span class="op">=</span> <span class="st">"hg19"</span>,</span>
 <span>  save_intermediates <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -157,6 +158,12 @@
 (via <code>get_continuous_annot_beds()</code>) and run <code>run_sldsc_cont()</code>.
 If <code>FALSE</code>, use the <em>binary</em> annotation approach (<code><a href="get_annot_beds.html">get_annot_beds()</a></code> and <code><a href="run_sldsc.html">run_sldsc()</a></code>).
 Default is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-n-cores-ldsc">n_cores_ldsc<a class="anchor" aria-label="anchor" href="#arg-n-cores-ldsc"></a></dt>
+<dd><p>Number of cores for parallel S-LDSC runs across topics.
+By default (<code>NULL</code>), uses <code>min(detectCores(), nTopics, 5)</code>.
+Set to <code>1</code> to run topics sequentially.</p></dd>
 
 
 <dt id="arg-chrs">chrs<a class="anchor" aria-label="anchor" href="#arg-chrs"></a></dt>

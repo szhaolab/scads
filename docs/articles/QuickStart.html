@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quick Start • scads</title>
+<title>Getting Started • scads</title>
 <!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script><!-- bootstrap-toc --><link rel="stylesheet" href="../bootstrap-toc.css">
 <script src="../bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
-<script src="../pkgdown.js"></script><meta property="og:title" content="Quick Start">
+<script src="../pkgdown.js"></script><meta property="og:title" content="Getting Started">
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
@@ -58,9 +58,9 @@
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
-      <h1 data-toc-skip>Quick Start</h1>
+      <h1 data-toc-skip>Getting Started</h1>
             
-            <h4 data-toc-skip class="date">2026-03-29</h4>
+            <h4 data-toc-skip class="date">2026-03-30</h4>
       
 
       <div class="hidden name"><code>QuickStart.Rmd</code></div>
@@ -72,36 +72,193 @@
 <div class="section level2">
 <h2 id="what-is-scads">What is scads?<a class="anchor" aria-label="anchor" href="#what-is-scads"></a>
 </h2>
-<p><code>scads</code> computes per-cell disease relevance scores from
-scATAC-seq data and GWAS summary statistics. Give it a peak-by-cell
+<p><code>scads</code> (<strong>S</strong>ingle-<strong>C</strong>ell
+<strong>A</strong>TAC-seq <strong>D</strong>isease
+<strong>S</strong>coring) computes per-cell disease relevance scores
+from scATAC-seq data and GWAS summary statistics. Give it a peak-by-cell
 count matrix and GWAS sumstats, and it returns a score for every cell
 indicating how disease-relevant that cell’s chromatin profile is.</p>
+<div class="section level3">
+<h3 id="runtime-and-resource-requirements">Runtime and resource requirements<a class="anchor" aria-label="anchor" href="#runtime-and-resource-requirements"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="12%">
+<col width="27%">
+<col width="31%">
+<col width="27%">
+</colgroup>
+<thead><tr class="header">
+<th>Step</th>
+<th>What it does</th>
+<th>Runtime (demo)</th>
+<th>Peak memory</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>1. fastTopics</td>
+<td>Topic model fitting + DE testing</td>
+<td>~1 min</td>
+<td>~650 MB</td>
+</tr>
+<tr class="even">
+<td>2. Annotations</td>
+<td>Convert peaks to BED files</td>
+<td>&lt; 10 sec</td>
+<td>Negligible</td>
+</tr>
+<tr class="odd">
+<td>3. S-LDSC</td>
+<td>Stratified LD score regression per topic</td>
+<td>~10 min/topic</td>
+<td>~300 MB/topic</td>
+</tr>
+<tr class="even">
+<td>4. Cell scores</td>
+<td>Combine enrichments with topic loadings</td>
+<td>&lt; 10 sec</td>
+<td>~650 MB</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <div class="section level2">
-<h2 id="load-example-data">Load example data<a class="anchor" aria-label="anchor" href="#load-example-data"></a>
+<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
 </h2>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<p>Before running this tutorial, make sure you have:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>polyFUN</strong> and <strong>LDSC</strong> cloned and the
+<code>polyfun</code> conda environment set up (Python 3.11, with
+<code>bitarray&lt;3</code> and <code>bedtools</code> installed). See <a href="https://github.com/omerwe/polyfun" class="external-link">polyFUN</a> and <a href="https://github.com/bulik/ldsc" class="external-link">LDSC</a> for installation
+instructions.</li>
+<li>
+<strong>scads</strong> R package installed with all
+dependencies.</li>
+<li>
+<strong>S-LDSC reference data</strong> downloaded (see below).</li>
+</ol>
+</div>
+<div class="section level2">
+<h2 id="download-s-ldsc-reference-data">Download S-LDSC reference data<a class="anchor" aria-label="anchor" href="#download-s-ldsc-reference-data"></a>
+</h2>
+<p><code>scads</code> requires reference files from the S-LDSC baseline
+LD model. Download and extract them into a local directory (e.g.,
+<code>~/LDSCORE/</code>). All files are available from <a href="https://zenodo.org/records/10515792" class="external-link">Zenodo</a>.</p>
+<blockquote>
+<p><strong>Disk usage:</strong> The compressed downloads total ~1 GB.
+After extraction, the reference data requires ~4 GB of disk space.</p>
+</blockquote>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/LDSCORE <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> ~/LDSCORE</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># Download reference files from Zenodo (~1 GB total)</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_plinkfiles.tgz <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_plinkfiles.tgz?download=1"</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_baselineLD_v2.2_ldscores.tgz <span class="dt">\</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_baselineLD_v2.2_ldscores.tgz?download=1"</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_frq.tgz <span class="dt">\</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_frq.tgz?download=1"</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> 1000G_Phase3_weights_hm3_no_MHC.tgz <span class="dt">\</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/1000G_Phase3_weights_hm3_no_MHC.tgz?download=1"</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fSL</span> <span class="at">-o</span> hm3_no_MHC.list.txt <span class="dt">\</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="st">"https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co"># Extract archives</span></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_plinkfiles.tgz</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_frq.tgz</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_weights_hm3_no_MHC.tgz</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> 1000G_Phase3_baselineLD_v2.2_ldscores</span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> 1000G_Phase3_baselineLD_v2.2_ldscores.tgz <span class="at">-C</span> 1000G_Phase3_baselineLD_v2.2_ldscores</span></code></pre></div>
+<p>After extraction, you should have:</p>
+<pre><code>~/LDSCORE/
+├── 1000G_EUR_Phase3_plink/          # 1000G.EUR.QC.{1..22}.{bed,bim,fam}
+├── 1000G_Phase3_baselineLD_v2.2_ldscores/  # baselineLD.{1..22}.{annot.gz,l2.ldscore.gz,...}
+├── 1000G_Phase3_frq/                # 1000G.EUR.QC.{1..22}.frq
+├── 1000G_Phase3_weights_hm3_no_MHC/ # weights.hm3_noMHC.{1..22}.l2.ldscore.gz
+└── hm3_no_MHC.list.txt</code></pre>
+</div>
+<div class="section level2">
+<h2 id="start-an-r-session">Start an R session<a class="anchor" aria-label="anchor" href="#start-an-r-session"></a>
+</h2>
+<p>Activate the <code>polyfun</code> conda environment
+<strong>before</strong> starting R:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">conda</span> activate polyfun</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">R</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="load-packages-and-data">Load packages and data<a class="anchor" aria-label="anchor" href="#load-packages-and-data"></a>
+</h2>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scads</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
 <p><code>scads</code> ships with a demo dataset: 500 cells, 12,971 peaks
-on chromosome 10, and simulated GWAS summary statistics.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"demo_count_matrix"</span><span class="op">)</span></span>
+on chromosome 10, and GWAS summary statistics.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Peak-by-cell count matrix</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"demo_count_matrix"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Count matrix:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">demo_count_matrix</span><span class="op">)</span>, <span class="st">"peaks x"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">demo_count_matrix</span><span class="op">)</span>, <span class="st">"cells\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Count matrix: 12971 peaks x 500 cells</span></span></code></pre></div>
+<span><span class="co">#&gt; Count matrix: 12971 peaks x 500 cells</span></span>
+<span><span class="va">demo_count_matrix</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span>
+<span><span class="co">#&gt; 5 x 5 sparse Matrix of class "dgCMatrix"</span></span>
+<span><span class="co">#&gt;                                    </span></span>
+<span><span class="co">#&gt; chr10:8380739-8381239     . . . . .</span></span>
+<span><span class="co">#&gt; chr10:131742591-131743091 . . . . 1</span></span>
+<span><span class="co">#&gt; chr10:74486605-74487105   . . 1 . .</span></span>
+<span><span class="co">#&gt; chr10:42737563-42738063   . . . . .</span></span>
+<span><span class="co">#&gt; chr10:88092916-88093416   . . . . .</span></span>
+<span></span>
+<span><span class="co"># GWAS summary statistics</span></span>
+<span><span class="va">data_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SIM_sumstats_chr10.txt.gz"</span>, package <span class="op">=</span> <span class="st">"scads"</span><span class="op">)</span></span>
+<span><span class="va">sumstats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="va">data_file</span>, header <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nSummary statistics:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">sumstats</span><span class="op">)</span>, <span class="st">"SNPs\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Summary statistics: 292171 SNPs</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">sumstats</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      chr   pos        beta         se     a0     a1         snp      pval</span></span>
+<span><span class="co">#&gt;    &lt;int&gt; &lt;int&gt;       &lt;num&gt;      &lt;num&gt; &lt;char&gt; &lt;char&gt;      &lt;char&gt;     &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:    10 88766  0.05890450 0.02166930      T      C  rs55896525 0.0065637</span></span>
+<span><span class="co">#&gt; 2:    10 90127  0.00707272 0.01724490      T      C rs185642176 0.6817090</span></span>
+<span><span class="co">#&gt; 3:    10 90164  0.00943048 0.01800330      G      C rs141504207 0.6004070</span></span>
+<span><span class="co">#&gt; 4:    10 94426 -0.00194658 0.00975979      T      C  rs10904045 0.8419120</span></span>
+<span><span class="co">#&gt; 5:    10 95074 -0.00011268 0.00960219      A      G   rs6560828 0.9906370</span></span>
+<span><span class="co">#&gt; 6:    10 95662 -0.01198410 0.01025610      C      G  rs35849539 0.2426170</span></span>
+<span><span class="co">#&gt;         zscore</span></span>
+<span><span class="co">#&gt;          &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  2.71833885</span></span>
+<span><span class="co">#&gt; 2:  0.41013401</span></span>
+<span><span class="co">#&gt; 3:  0.52381952</span></span>
+<span><span class="co">#&gt; 4: -0.19944896</span></span>
+<span><span class="co">#&gt; 5: -0.01173482</span></span>
+<span><span class="co">#&gt; 6: -1.16848510</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="configure-paths">Configure paths<a class="anchor" aria-label="anchor" href="#configure-paths"></a>
+</h2>
+<p>Edit these paths to match your local environment:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">polyfun_d</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/path.expand.html" class="external-link">path.expand</a></span><span class="op">(</span><span class="st">"~/polyfun/"</span><span class="op">)</span></span>
+<span><span class="va">ldsc_d</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/path.expand.html" class="external-link">path.expand</a></span><span class="op">(</span><span class="st">"~/ldsc/"</span><span class="op">)</span></span>
+<span><span class="va">ldscore_dir</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/path.expand.html" class="external-link">path.expand</a></span><span class="op">(</span><span class="st">"~/Desktop/Project_scads/LDSCORE/zenodo/"</span><span class="op">)</span></span>
+<span><span class="va">output_dir</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/path.expand.html" class="external-link">path.expand</a></span><span class="op">(</span><span class="st">"~/scads_output/"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">onekg_pref</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"1000G_EUR_Phase3_plink"</span>, <span class="st">"1000G.EUR.QC."</span><span class="op">)</span></span>
+<span><span class="va">baseline_pref</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"1000G_Phase3_baselineLD_v2.2_ldscores"</span>, <span class="st">"baselineLD."</span><span class="op">)</span></span>
+<span><span class="va">frq_pref</span>      <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"1000G_Phase3_frq"</span>, <span class="st">"1000G.EUR.QC."</span><span class="op">)</span></span>
+<span><span class="va">hm3_file</span>      <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"hm3_no_MHC.list.txt"</span><span class="op">)</span></span>
+<span><span class="va">weights_pref</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">ldscore_dir</span>, <span class="st">"1000G_Phase3_weights_hm3_no_MHC"</span>, <span class="st">"weights.hm3_noMHC."</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="run-the-full-pipeline">Run the full pipeline<a class="anchor" aria-label="anchor" href="#run-the-full-pipeline"></a>
 </h2>
 <p>The <code><a href="../reference/scads.html">scads()</a></code> function runs the entire pipeline in one
-call. Before running, you need to set up paths to <a href="https://github.com/omerwe/polyfun" class="external-link">polyFUN</a>, <a href="https://github.com/bulik/ldsc" class="external-link">LDSC</a>, and the S-LDSC reference
-data (see the <a href="StepByStep.html">Step-by-Step Tutorial</a> for
-details on downloading reference data).</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">data_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SIM_sumstats_chr10.txt.gz"</span>, package <span class="op">=</span> <span class="st">"scads"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span>
+call:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span>
+<span><span class="va">t_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">scads_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/scads.html">scads</a></span><span class="op">(</span></span>
 <span>  <span class="va">demo_count_matrix</span>,</span>
 <span>  nTopics             <span class="op">=</span> <span class="fl">5</span>,</span>
@@ -111,98 +268,60 @@ details on downloading reference data).</p>
 <span>  sumstats_dir        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="va">data_file</span><span class="op">)</span>,</span>
 <span>  gwas_nsamps         <span class="op">=</span> <span class="fl">45087</span>,</span>
 <span>  gwas_trait          <span class="op">=</span> <span class="st">"SIM"</span>,</span>
-<span>  outdir              <span class="op">=</span> <span class="st">"~/scads_output/"</span>,</span>
-<span>  polyfun_code_dir    <span class="op">=</span> <span class="st">"~/polyfun/"</span>,</span>
-<span>  ldsc_code_dir       <span class="op">=</span> <span class="st">"~/ldsc/"</span>,</span>
-<span>  onekg_path          <span class="op">=</span> <span class="st">"~/LDSCORE/1000G_EUR_Phase3_plink/1000G.EUR.QC."</span>,</span>
-<span>  baseline_dir        <span class="op">=</span> <span class="st">"~/LDSCORE/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD."</span>,</span>
-<span>  frqfile_pref        <span class="op">=</span> <span class="st">"~/LDSCORE/1000G_Phase3_frq/1000G.EUR.QC."</span>,</span>
-<span>  hm3_snps            <span class="op">=</span> <span class="st">"~/LDSCORE/hm3_no_MHC.list.txt"</span>,</span>
-<span>  weights_pref        <span class="op">=</span> <span class="st">"~/LDSCORE/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC."</span>,</span>
+<span>  outdir              <span class="op">=</span> <span class="va">output_dir</span>,</span>
+<span>  polyfun_code_dir    <span class="op">=</span> <span class="va">polyfun_d</span>,</span>
+<span>  ldsc_code_dir       <span class="op">=</span> <span class="va">ldsc_d</span>,</span>
+<span>  onekg_path          <span class="op">=</span> <span class="va">onekg_pref</span>,</span>
+<span>  baseline_dir        <span class="op">=</span> <span class="va">baseline_pref</span>,</span>
+<span>  frqfile_pref        <span class="op">=</span> <span class="va">frq_pref</span>,</span>
+<span>  hm3_snps            <span class="op">=</span> <span class="va">hm3_file</span>,</span>
+<span>  weights_pref        <span class="op">=</span> <span class="va">weights_pref</span>,</span>
 <span>  chrs                <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  n_cores_ldsc        <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  genome              <span class="op">=</span> <span class="st">"hg19"</span>,</span>
 <span>  save_intermediates  <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  verbose             <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The pipeline takes ~50 minutes on a MacBook Pro (M3 Max) for this
-demo (chr10 only, 5 topics). For the rest of this vignette, we load
-pre-computed results so you can explore the output immediately.</p>
+<span><span class="op">)</span></span>
+<span><span class="va">t_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Total runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t_end</span>, <span class="va">t_start</span>, units <span class="op">=</span> <span class="st">"mins"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"minutes\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="explore-results">Explore results<a class="anchor" aria-label="anchor" href="#explore-results"></a>
+<h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Load pre-computed demo results</span></span>
-<span><span class="va">demo_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"demo_results.rds"</span>, package <span class="op">=</span> <span class="st">"scads"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="s-ldsc-enrichment-per-topic">S-LDSC enrichment per topic<a class="anchor" aria-label="anchor" href="#s-ldsc-enrichment-per-topic"></a>
-</h3>
-<p>Each topic represents a set of co-accessible peaks. S-LDSC tests
-whether GWAS heritability is enriched in each topic’s peaks. Enrichment
-&gt; 1 means the topic’s peaks harbour more heritability than expected
-by chance.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ldsc_tab</span> <span class="op">&lt;-</span> <span class="va">demo_res</span><span class="op">$</span><span class="va">ldsc_res_table</span></span>
-<span><span class="va">ldsc_tab</span><span class="op">$</span><span class="va">ASH_Enrichment</span> <span class="op">&lt;-</span> <span class="va">demo_res</span><span class="op">$</span><span class="va">ash_PosteriorMean</span></span>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Extract results</span></span>
+<span><span class="va">out1</span>   <span class="op">&lt;-</span> <span class="va">scads_res</span><span class="op">$</span><span class="va">out1</span></span>
+<span><span class="va">cs_res</span> <span class="op">&lt;-</span> <span class="va">scads_res</span><span class="op">$</span><span class="va">cs_res</span></span>
 <span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">ldsc_tab</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Category</span>, y <span class="op">=</span> <span class="va">Enrichment</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_col</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="st">"steelblue"</span>, width <span class="op">=</span> <span class="fl">0.6</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_linerange.html" class="external-link">geom_errorbar</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>ymin <span class="op">=</span> <span class="va">Enrichment</span> <span class="op">-</span> <span class="fl">1.96</span> <span class="op">*</span> <span class="va">Enrichment_std_error</span>,</span>
-<span>                     ymax <span class="op">=</span> <span class="va">Enrichment</span> <span class="op">+</span> <span class="fl">1.96</span> <span class="op">*</span> <span class="va">Enrichment_std_error</span><span class="op">)</span>,</span>
-<span>                width <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">1</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"S-LDSC enrichment per topic"</span>,</span>
-<span>       subtitle <span class="op">=</span> <span class="st">"Dashed line = no enrichment (1.0). Error bars = 95% CI."</span>,</span>
-<span>       x <span class="op">=</span> <span class="st">"Topic"</span>, y <span class="op">=</span> <span class="st">"Enrichment"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="QuickStart_files/figure-html/unnamed-chunk-5-1.png" alt="" width="576"></p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ldsc_tab</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Category"</span>, <span class="st">"Prop._SNPs"</span>, <span class="st">"Prop._h2"</span>, <span class="st">"Enrichment"</span>,</span>
-<span>                    <span class="st">"Enrichment_std_error"</span>, <span class="st">"ASH_Enrichment"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   Category Prop._SNPs Prop._h2 Enrichment Enrichment_std_error ASH_Enrichment</span></span>
-<span><span class="co">#&gt; 1       k1   0.014473  0.12158     8.4002               4.8179       1.804256</span></span>
-<span><span class="co">#&gt; 2       k2   0.030417  0.20225     6.6492               2.8804       2.697942</span></span>
-<span><span class="co">#&gt; 3       k3   0.024685  0.26406    10.6970               3.7634       7.089065</span></span>
-<span><span class="co">#&gt; 4       k4   0.019800  0.19575     9.8865               3.8306       5.443484</span></span>
-<span><span class="co">#&gt; 5       k5   0.022393  0.13373     5.9718               3.3137       1.291199</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="cell-scores">Cell scores<a class="anchor" aria-label="anchor" href="#cell-scores"></a>
-</h3>
-<p>The final output is a per-cell disease score that combines topic
-enrichments with each cell’s topic loadings.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Cell score summary:\n"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Cell score summary:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Cell score summary:</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">demo_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
 <span><span class="co">#&gt;   1.291   2.472   3.544   3.780   5.172   7.089</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nSignificant cells (p &lt; 0.05):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">demo_res</span><span class="op">$</span><span class="va">p_cell</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span>, <span class="st">"of"</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">demo_res</span><span class="op">$</span><span class="va">p_cell</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nSignificant cells (p &lt; 0.05):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">p_cell</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span>, <span class="st">"of"</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">p_cell</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Significant cells (p &lt; 0.05): 413 of 500</span></span></code></pre></div>
-</div>
 <div class="section level3">
-<h3 id="umap-visualization">UMAP visualization<a class="anchor" aria-label="anchor" href="#umap-visualization"></a>
+<h3 id="umap-visualization-of-cell-scores">UMAP visualization of cell scores<a class="anchor" aria-label="anchor" href="#umap-visualization-of-cell-scores"></a>
 </h3>
 <p>UMAP embeds cells in 2D based on their topic loadings. Coloring by
 cell score reveals which cell populations are most disease-relevant.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"uwot"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Install 'uwot' for UMAP: install.packages('uwot')"</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://patchwork.data-imaginist.com" class="external-link">patchwork</a></span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span>  <span class="va">umap_coords</span> <span class="op">&lt;-</span> <span class="fu">uwot</span><span class="fu">::</span><span class="fu"><a href="https://jlmelville.github.io/uwot/reference/umap.html" class="external-link">umap</a></span><span class="op">(</span><span class="va">demo_res</span><span class="op">$</span><span class="va">Lmat</span>, n_neighbors <span class="op">=</span> <span class="fl">350</span>, min_dist <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
+<span>  <span class="va">umap_coords</span> <span class="op">&lt;-</span> <span class="fu">uwot</span><span class="fu">::</span><span class="fu"><a href="https://jlmelville.github.io/uwot/reference/umap.html" class="external-link">umap</a></span><span class="op">(</span><span class="va">out1</span><span class="op">$</span><span class="va">Lmat</span>, n_neighbors <span class="op">=</span> <span class="fl">350</span>, min_dist <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">umap_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>    UMAP1 <span class="op">=</span> <span class="va">umap_coords</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
 <span>    UMAP2 <span class="op">=</span> <span class="va">umap_coords</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span>,</span>
-<span>    cell_score <span class="op">=</span> <span class="va">demo_res</span><span class="op">$</span><span class="va">cs</span>,</span>
-<span>    z_score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">demo_res</span><span class="op">$</span><span class="va">z_cell</span><span class="op">)</span>,</span>
-<span>    topic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"k"</span>, <span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">demo_res</span><span class="op">$</span><span class="va">Lmat</span>, <span class="fl">1</span>, <span class="va">which.max</span><span class="op">)</span><span class="op">)</span></span>
+<span>    cell_score <span class="op">=</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span>,</span>
+<span>    z_score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">z_cell</span><span class="op">)</span>,</span>
+<span>    topic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"k"</span>, <span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">out1</span><span class="op">$</span><span class="va">Lmat</span>, <span class="fl">1</span>, <span class="va">which.max</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">p1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">umap_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">UMAP1</span>, y <span class="op">=</span> <span class="va">UMAP2</span>, color <span class="op">=</span> <span class="va">topic</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -224,7 +343,7 @@ cell score reveals which cell populations are most disease-relevant.</p>
 <span></span>
 <span>  <span class="va">p1</span> <span class="op">+</span> <span class="va">p2</span> <span class="op">+</span> <span class="va">p3</span> <span class="op">+</span> <span class="fu"><a href="https://patchwork.data-imaginist.com/reference/plot_layout.html" class="external-link">plot_layout</a></span><span class="op">(</span>ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><img src="QuickStart_files/figure-html/unnamed-chunk-8-1.png" alt="" width="960"></p>
+<p><img src="QuickStart_files/figure-html/unnamed-chunk-10-1.png" alt="" width="960"></p>
 <p>Cells dominated by topics with high enrichment (e.g., k3, k4) show
 elevated scores, while cells in low-enrichment topics score near the
 baseline.</p>
