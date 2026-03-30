@@ -31,7 +31,7 @@ chromatin profile is.
 |------|-------------|---------------|-------------|
 | 1. fastTopics | Topic model fitting + DE testing | ~1 min | ~650 MB |
 | 2. Annotations | Convert peaks to BED files | < 10 sec | Negligible |
-| 3. S-LDSC | Stratified LD score regression per topic | ~10 min/topic | ~300 MB/topic |
+| 3. S-LDSC | Stratified LD score regression per topic | ~8 min/topic (chr10 demo); ~1–2 hours/topic (all 22 chr) | ~300 MB/topic |
 | 4. Cell scores | Combine enrichments with topic loadings | < 10 sec | ~650 MB |
 
 

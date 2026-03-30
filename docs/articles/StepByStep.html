@@ -112,7 +112,7 @@ correction.</td>
 </td>
 <td>Runs stratified LD score regression for each topic using the
 baseline LD v2.2 model. This is the most time-consuming step.</td>
-<td>~10 min per topic per chromosome (sequential)</td>
+<td>~8 min/topic (chr10 demo); ~1–2 hours/topic (all 22 chr)</td>
 <td>~300 MB per topic (Python)</td>
 </tr>
 <tr class="even">
@@ -417,9 +417,10 @@ LD v2.2 model (via <code>ldsc.py --h2</code>).</li>
 <p>The key output is the <strong>enrichment estimate</strong> per topic:
 how much heritability is concentrated in the topic’s peaks relative to
 their size.</p>
-<p><strong>Runtime:</strong> ~10 min per topic per chromosome. With 5
-topics on chr10 running sequentially, expect ~50 min total.
-<strong>Memory:</strong> ~300 MB per topic (Python processes).</p>
+<p><strong>Runtime:</strong> ~1–2 hours per topic for all 22
+chromosomes. With 5 topics on chr10 only (as in this demo), expect ~50
+min total running sequentially. <strong>Memory:</strong> ~300 MB per
+topic (Python processes).</p>
 <p><strong>Key parameters:</strong></p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sumstats_d</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="va">data_file</span><span class="op">)</span></span>
@@ -600,7 +601,7 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Using no_dims = 1, perplexity = 100.000000, and theta = 0.100000</span></span>
 <span><span class="co">#&gt; Computing input similarities...</span></span>
 <span><span class="co">#&gt; Building tree...</span></span>
-<span><span class="co">#&gt; Done in 0.07 seconds (sparsity = 0.769136)!</span></span>
+<span><span class="co">#&gt; Done in 0.08 seconds (sparsity = 0.769136)!</span></span>
 <span><span class="co">#&gt; Learning embedding...</span></span>
 <span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
@@ -614,15 +615,15 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 750: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 900: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 750: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 900: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 1000: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Fitting performed in 0.72 seconds.</span></span>
+<span><span class="co">#&gt; Fitting performed in 0.82 seconds.</span></span>
 <span><span class="co">#&gt; Warning: `aes_string()` was deprecated in ggplot2 3.0.0.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use tidy evaluation idioms with `aes()`.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See also `vignette("ggplot2-in-packages")` for more information.</span></span>

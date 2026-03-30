@@ -29,7 +29,7 @@ steps:
 |------|-------------|----------------|-------------|
 | 1. **fastTopics** | Fits a topic model on the count matrix, identifies topic-specific peaks via differential expression, and computes a GC-content baseline correction. | ~1 min (500 cells, 13K peaks, 5 topics) | ~650 MB |
 | 2. **Topic annotations** | Converts significant peaks per topic into BED files for S-LDSC. | < 10 sec | Negligible |
-| 3. **S-LDSC** | Runs stratified LD score regression for each topic using the baseline LD v2.2 model. This is the most time-consuming step. | ~10 min per topic per chromosome (sequential) | ~300 MB per topic (Python) |
+| 3. **S-LDSC** | Runs stratified LD score regression for each topic using the baseline LD v2.2 model. This is the most time-consuming step. | ~8 min/topic (chr10 demo); ~1–2 hours/topic (all 22 chr) | ~300 MB per topic (Python) |
 | 4. **Cell scores** | Combines S-LDSC enrichment estimates with cell-level topic loadings to produce a per-cell disease score. | < 10 sec | ~650 MB |
 
 
@@ -271,8 +271,8 @@ For each topic annotation, this step runs the full S-LDSC pipeline:
 The key output is the **enrichment estimate** per topic: how much heritability
 is concentrated in the topic's peaks relative to their size.
 
-**Runtime:** ~10 min per topic per chromosome. With 5 topics on chr10 running
-sequentially, expect ~50 min total.
+**Runtime:** ~1–2 hours per topic for all 22 chromosomes. With 5 topics on
+chr10 only (as in this demo), expect ~50 min total running sequentially.
 **Memory:** ~300 MB per topic (Python processes).
 
 **Key parameters:**
