@@ -1,9 +1,9 @@
 ---
-title: "Quick Start"
+title: "Getting Started"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Quick Start}
+  %\VignetteIndexEntry{Getting Started}
   %\VignetteEngine{knitr::knitr}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,12 +19,86 @@ knitr::opts_chunk$set(
 
 ## What is scads?
 
-`scads` computes per-cell disease relevance scores from scATAC-seq data and
-GWAS summary statistics. Give it a peak-by-cell count matrix and GWAS sumstats,
-and it returns a score for every cell indicating how disease-relevant that
-cell's chromatin profile is.
+`scads` (**S**ingle-**C**ell **A**TAC-seq **D**isease **S**coring) computes
+per-cell disease relevance scores from scATAC-seq data and GWAS summary
+statistics. Give it a peak-by-cell count matrix and GWAS sumstats, and it
+returns a score for every cell indicating how disease-relevant that cell's
+chromatin profile is.
 
-## Load example data
+### Runtime and resource requirements
+
+| Step | What it does | Runtime (demo) | Peak memory |
+|------|-------------|---------------|-------------|
+| 1. fastTopics | Topic model fitting + DE testing | ~1 min | ~650 MB |
+| 2. Annotations | Convert peaks to BED files | < 10 sec | Negligible |
+| 3. S-LDSC | Stratified LD score regression per topic | ~10 min/topic | ~300 MB/topic |
+| 4. Cell scores | Combine enrichments with topic loadings | < 10 sec | ~650 MB |
+
+
+## Prerequisites
+
+Before running this tutorial, make sure you have:
+
+1. **polyFUN** and **LDSC** cloned and the `polyfun` conda environment set up
+   (Python 3.11, with `bitarray<3` and `bedtools` installed).
+   See [polyFUN](https://github.com/omerwe/polyfun) and
+   [LDSC](https://github.com/bulik/ldsc) for installation instructions.
+2. **scads** R package installed with all dependencies.
+3. **S-LDSC reference data** downloaded (see below).
+
+## Download S-LDSC reference data
+
+`scads` requires reference files from the S-LDSC baseline LD model. Download
+and extract them into a local directory (e.g., `~/LDSCORE/`). All files are
+available from [Zenodo](https://zenodo.org/records/10515792).
+
+> **Disk usage:** The compressed downloads total ~1 GB. After extraction, the
+> reference data requires ~4 GB of disk space.
+
+```{bash eval=FALSE}
+mkdir -p ~/LDSCORE && cd ~/LDSCORE
+
+# Download reference files from Zenodo (~1 GB total)
+curl -fSL -o 1000G_Phase3_plinkfiles.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_plinkfiles.tgz?download=1"
+curl -fSL -o 1000G_Phase3_baselineLD_v2.2_ldscores.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_baselineLD_v2.2_ldscores.tgz?download=1"
+curl -fSL -o 1000G_Phase3_frq.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_frq.tgz?download=1"
+curl -fSL -o 1000G_Phase3_weights_hm3_no_MHC.tgz \
+  "https://zenodo.org/records/10515792/files/1000G_Phase3_weights_hm3_no_MHC.tgz?download=1"
+curl -fSL -o hm3_no_MHC.list.txt \
+  "https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"
+
+# Extract archives
+tar -xzf 1000G_Phase3_plinkfiles.tgz
+tar -xzf 1000G_Phase3_frq.tgz
+tar -xzf 1000G_Phase3_weights_hm3_no_MHC.tgz
+mkdir -p 1000G_Phase3_baselineLD_v2.2_ldscores
+tar -xzf 1000G_Phase3_baselineLD_v2.2_ldscores.tgz -C 1000G_Phase3_baselineLD_v2.2_ldscores
+```
+
+After extraction, you should have:
+
+```
+~/LDSCORE/
+├── 1000G_EUR_Phase3_plink/          # 1000G.EUR.QC.{1..22}.{bed,bim,fam}
+├── 1000G_Phase3_baselineLD_v2.2_ldscores/  # baselineLD.{1..22}.{annot.gz,l2.ldscore.gz,...}
+├── 1000G_Phase3_frq/                # 1000G.EUR.QC.{1..22}.frq
+├── 1000G_Phase3_weights_hm3_no_MHC/ # weights.hm3_noMHC.{1..22}.l2.ldscore.gz
+└── hm3_no_MHC.list.txt
+```
+
+## Start an R session
+
+Activate the `polyfun` conda environment **before** starting R:
+
+```{bash eval=FALSE}
+conda activate polyfun
+R
+```
+
+## Load packages and data
 
 ```{r setup}
 library(scads)
@@ -32,26 +106,55 @@ library(ggplot2)
 ```
 
 `scads` ships with a demo dataset: 500 cells, 12,971 peaks on chromosome 10,
-and simulated GWAS summary statistics.
+and GWAS summary statistics.
 
 ```{r}
+library(data.table)
+
+# Peak-by-cell count matrix
 data("demo_count_matrix")
 cat("Count matrix:", nrow(demo_count_matrix), "peaks x",
     ncol(demo_count_matrix), "cells\n")
+demo_count_matrix[1:5, 1:5]
+
+# GWAS summary statistics
+data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
+sumstats <- fread(data_file, header = TRUE)
+cat("\nSummary statistics:", nrow(sumstats), "SNPs\n")
+head(sumstats)
+```
+
+## Configure paths
+
+Edit these paths to match your local environment:
+
+```{r}
+polyfun_d    <- path.expand("~/polyfun/")
+ldsc_d       <- path.expand("~/ldsc/")
+ldscore_dir  <- path.expand("~/Desktop/Project_scads/LDSCORE/zenodo/")
+output_dir   <- path.expand("~/scads_output/")
+
+onekg_pref    <- file.path(ldscore_dir, "1000G_EUR_Phase3_plink", "1000G.EUR.QC.")
+baseline_pref <- file.path(ldscore_dir, "1000G_Phase3_baselineLD_v2.2_ldscores", "baselineLD.")
+frq_pref      <- file.path(ldscore_dir, "1000G_Phase3_frq", "1000G.EUR.QC.")
+hm3_file      <- file.path(ldscore_dir, "hm3_no_MHC.list.txt")
+weights_pref  <- file.path(ldscore_dir, "1000G_Phase3_weights_hm3_no_MHC", "weights.hm3_noMHC.")
 ```
 
 ## Run the full pipeline
 
-The `scads()` function runs the entire pipeline in one call. Before running,
-you need to set up paths to [polyFUN](https://github.com/omerwe/polyfun),
-[LDSC](https://github.com/bulik/ldsc), and the S-LDSC reference data
-(see the [Step-by-Step Tutorial](StepByStep.html) for details on downloading
-reference data).
+The `scads()` function runs the entire pipeline in one call:
 
-```{r eval=FALSE}
-data_file <- system.file("extdata", "SIM_sumstats_chr10.txt.gz", package = "scads")
+```{r include=FALSE}
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+scads_cache <- file.path(output_dir, "scads_res.rds")
+run_scads <- !file.exists(scads_cache)
+if (!run_scads) scads_res <- readRDS(scads_cache)
+```
 
+```{r eval=run_scads}
 set.seed(1234)
+t_start <- Sys.time()
 scads_res <- scads(
   demo_count_matrix,
   nTopics             = 5,
@@ -61,73 +164,42 @@ scads_res <- scads(
   sumstats_dir        = dirname(data_file),
   gwas_nsamps         = 45087,
   gwas_trait          = "SIM",
-  outdir              = "~/scads_output/",
-  polyfun_code_dir    = "~/polyfun/",
-  ldsc_code_dir       = "~/ldsc/",
-  onekg_path          = "~/LDSCORE/1000G_EUR_Phase3_plink/1000G.EUR.QC.",
-  baseline_dir        = "~/LDSCORE/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.",
-  frqfile_pref        = "~/LDSCORE/1000G_Phase3_frq/1000G.EUR.QC.",
-  hm3_snps            = "~/LDSCORE/hm3_no_MHC.list.txt",
-  weights_pref        = "~/LDSCORE/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.",
+  outdir              = output_dir,
+  polyfun_code_dir    = polyfun_d,
+  ldsc_code_dir       = ldsc_d,
+  onekg_path          = onekg_pref,
+  baseline_dir        = baseline_pref,
+  frqfile_pref        = frq_pref,
+  hm3_snps            = hm3_file,
+  weights_pref        = weights_pref,
   chrs                = 10,
+  n_cores_ldsc        = 1,
   genome              = "hg19",
   save_intermediates  = TRUE,
   verbose             = TRUE
 )
+t_end <- Sys.time()
+cat("Total runtime:", round(difftime(t_end, t_start, units = "mins"), 1), "minutes\n")
 ```
 
-The pipeline takes ~50 minutes on a MacBook Pro (M3 Max) for this demo
-(chr10 only, 5 topics). For the rest of this vignette, we load pre-computed
-results so you can explore the output immediately.
+```{r include=FALSE}
+if (run_scads) saveRDS(scads_res, scads_cache)
+```
 
-## Explore results
+## Results
 
 ```{r}
-# Load pre-computed demo results
-demo_res <- readRDS(system.file("extdata", "demo_results.rds", package = "scads"))
-```
+# Extract results
+out1   <- scads_res$out1
+cs_res <- scads_res$cs_res
 
-### S-LDSC enrichment per topic
-
-Each topic represents a set of co-accessible peaks. S-LDSC tests whether
-GWAS heritability is enriched in each topic's peaks. Enrichment > 1 means
-the topic's peaks harbour more heritability than expected by chance.
-
-```{r fig.width=6, fig.height=4}
-ldsc_tab <- demo_res$ldsc_res_table
-ldsc_tab$ASH_Enrichment <- demo_res$ash_PosteriorMean
-
-ggplot(ldsc_tab, aes(x = Category, y = Enrichment)) +
-  geom_col(fill = "steelblue", width = 0.6) +
-  geom_errorbar(aes(ymin = Enrichment - 1.96 * Enrichment_std_error,
-                     ymax = Enrichment + 1.96 * Enrichment_std_error),
-                width = 0.2) +
-  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
-  labs(title = "S-LDSC enrichment per topic",
-       subtitle = "Dashed line = no enrichment (1.0). Error bars = 95% CI.",
-       x = "Topic", y = "Enrichment") +
-  theme_minimal()
-```
-
-```{r}
-print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
-                    "Enrichment_std_error", "ASH_Enrichment")])
-```
-
-### Cell scores
-
-The final output is a per-cell disease score that combines topic enrichments
-with each cell's topic loadings.
-
-```{r}
 cat("Cell score summary:\n")
-print(summary(demo_res$cs))
-
-cat("\nSignificant cells (p < 0.05):", sum(demo_res$p_cell < 0.05), "of",
-    length(demo_res$p_cell), "\n")
+print(summary(cs_res$cs))
+cat("\nSignificant cells (p < 0.05):", sum(cs_res$p_cell < 0.05), "of",
+    length(cs_res$p_cell), "\n")
 ```
 
-### UMAP visualization
+### UMAP visualization of cell scores
 
 UMAP embeds cells in 2D based on their topic loadings. Coloring by cell score
 reveals which cell populations are most disease-relevant.
@@ -139,14 +211,14 @@ if (!requireNamespace("uwot", quietly = TRUE)) {
   library(patchwork)
 
   set.seed(42)
-  umap_coords <- uwot::umap(demo_res$Lmat, n_neighbors = 350, min_dist = 0.8)
+  umap_coords <- uwot::umap(out1$Lmat, n_neighbors = 350, min_dist = 0.8)
 
   umap_df <- data.frame(
     UMAP1 = umap_coords[, 1],
     UMAP2 = umap_coords[, 2],
-    cell_score = demo_res$cs,
-    z_score = as.numeric(demo_res$z_cell),
-    topic = paste0("k", apply(demo_res$Lmat, 1, which.max))
+    cell_score = cs_res$cs,
+    z_score = as.numeric(cs_res$z_cell),
+    topic = paste0("k", apply(out1$Lmat, 1, which.max))
   )
 
   p1 <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = topic)) +

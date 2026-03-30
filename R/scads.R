@@ -22,6 +22,9 @@
 #'   (via \code{get_continuous_annot_beds()}) and run \code{run_sldsc_cont()}. 
 #'   If \code{FALSE}, use the \emph{binary} annotation approach (\code{get_annot_beds()} and \code{run_sldsc()}). 
 #'   Default is \code{FALSE}.
+#' @param n_cores_ldsc Number of cores for parallel S-LDSC runs across topics.
+#'   By default (\code{NULL}), uses \code{min(detectCores(), nTopics, 5)}.
+#'   Set to \code{1} to run topics sequentially.
 #' @param chrs Number of chromosomes for running S-LDSC (Default is chr1-22)
 #' @param genome Genome build (Default is hg19)
 #' @param ... Additional arguments passed to internal functions.
@@ -66,6 +69,7 @@ scads <- function(count_matrix,
                   hm3_snps,
                   weights_pref,
                   continuous_topic_annot = FALSE,
+                  n_cores_ldsc = NULL,
                   chrs = 1:22,
                   genome = "hg19",
                   save_intermediates = TRUE,
@@ -129,9 +133,13 @@ scads <- function(count_matrix,
   if (start_step <= 3) {
     scads_log("Step 3: Running S-LDSC", verbose = verbose)
 
-    num_cores <- parallel::detectCores(logical = FALSE)
     num_tasks <- length(beddir_list)
-    mc_cores_to_use <- min(num_cores, num_tasks, 5)
+    if (!is.null(n_cores_ldsc)) {
+      mc_cores_to_use <- n_cores_ldsc
+    } else {
+      num_cores <- parallel::detectCores(logical = FALSE)
+      mc_cores_to_use <- min(num_cores, num_tasks, 5)
+    }
     scads_log("Using ", mc_cores_to_use, " cores for ", num_tasks, " topics", verbose = verbose)
 
     parallel::mclapply(seq_along(beddir_list), function(i) {

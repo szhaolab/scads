@@ -24,6 +24,7 @@ scads(
   hm3_snps,
   weights_pref,
   continuous_topic_annot = FALSE,
+  n_cores_ldsc = NULL,
   chrs = 1:22,
   genome = "hg19",
   save_intermediates = TRUE,
@@ -73,6 +74,10 @@ scads(
 (via \code{get_continuous_annot_beds()}) and run \code{run_sldsc_cont()}.
 If \code{FALSE}, use the \emph{binary} annotation approach (\code{get_annot_beds()} and \code{run_sldsc()}).
 Default is \code{FALSE}.}
+
+\item{n_cores_ldsc}{Number of cores for parallel S-LDSC runs across topics.
+By default (\code{NULL}), uses \code{min(detectCores(), nTopics, 5)}.
+Set to \code{1} to run topics sequentially.}
 
 \item{chrs}{Number of chromosomes for running S-LDSC (Default is chr1-22)}
 

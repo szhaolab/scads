@@ -32,87 +32,10 @@ steps:
 | 3. **S-LDSC** | Runs stratified LD score regression for each topic using the baseline LD v2.2 model. This is the most time-consuming step. | ~10 min per topic per chromosome (sequential) | ~300 MB per topic (Python) |
 | 4. **Cell scores** | Combines S-LDSC enrichment estimates with cell-level topic loadings to produce a per-cell disease score. | < 10 sec | ~650 MB |
 
-> **Note on runtime:** The times above were measured on a MacBook Pro (M3 Max,
-> 36 GB RAM) using the demo dataset (500 cells, 12,971 peaks on chr10, 5
-> topics). A full-genome analysis (22 chromosomes) will take proportionally
-> longer for Step 3. Larger datasets (more cells or peaks) will increase
-> Step 1 runtime.
 
-## Prerequisites
-
-Before running this tutorial, make sure you have completed all installation
-steps described in the
-[README](https://github.com/szhaolab/scads#installation):
-
-1. **polyFUN** and **LDSC** are cloned and the `polyfun` conda environment is
-   set up (Python 3.11, with `bitarray<3` and `bedtools` installed).
-2. **scads** R package is installed with all dependencies.
-3. **S-LDSC reference data** has been downloaded (see below).
-
-## Download S-LDSC reference data
-
-`scads` requires reference files from the S-LDSC baseline LD model. Download
-and extract them into a local directory (e.g., `~/LDSCORE/`). All files are
-available from [Zenodo](https://zenodo.org/records/10515792).
-
-> **Disk usage:** The compressed downloads total ~1 GB. After extraction, the
-> reference data requires ~4 GB of disk space.
-
-```{bash eval=FALSE}
-# Create a directory for the reference data
-mkdir -p ~/LDSCORE
-
-# Download reference files from Zenodo (~1 GB total)
-cd ~/LDSCORE
-curl -fSL -o 1000G_Phase3_plinkfiles.tgz \
-  "https://zenodo.org/records/10515792/files/1000G_Phase3_plinkfiles.tgz?download=1"            # 275 MB
-curl -fSL -o 1000G_Phase3_baselineLD_v2.2_ldscores.tgz \
-  "https://zenodo.org/records/10515792/files/1000G_Phase3_baselineLD_v2.2_ldscores.tgz?download=1"  # 645 MB
-curl -fSL -o 1000G_Phase3_frq.tgz \
-  "https://zenodo.org/records/10515792/files/1000G_Phase3_frq.tgz?download=1"                   # 82 MB
-curl -fSL -o 1000G_Phase3_weights_hm3_no_MHC.tgz \
-  "https://zenodo.org/records/10515792/files/1000G_Phase3_weights_hm3_no_MHC.tgz?download=1"    # 12 MB
-curl -fSL -o hm3_no_MHC.list.txt \
-  "https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"                    # 12 MB
-
-# Extract archives
-tar -xzf 1000G_Phase3_plinkfiles.tgz
-tar -xzf 1000G_Phase3_frq.tgz
-tar -xzf 1000G_Phase3_weights_hm3_no_MHC.tgz
-
-# The baseline LD archive extracts files directly (not into a subdirectory),
-# so create one first:
-mkdir -p 1000G_Phase3_baselineLD_v2.2_ldscores
-tar -xzf 1000G_Phase3_baselineLD_v2.2_ldscores.tgz -C 1000G_Phase3_baselineLD_v2.2_ldscores
-
-# (Optional) Remove the .tgz files to free ~1 GB of disk space
-# rm -f *.tgz
-```
-
-After extraction, you should have the following directory structure:
-
-```
-~/LDSCORE/
-├── 1000G_EUR_Phase3_plink/          # 1000G.EUR.QC.{1..22}.{bed,bim,fam}
-├── 1000G_Phase3_baselineLD_v2.2_ldscores/  # baselineLD.{1..22}.{annot.gz,l2.ldscore.gz,...}
-├── 1000G_Phase3_frq/                # 1000G.EUR.QC.{1..22}.frq
-├── 1000G_Phase3_weights_hm3_no_MHC/ # weights.hm3_noMHC.{1..22}.l2.ldscore.gz
-└── hm3_no_MHC.list.txt
-```
-
-## Start an R session
-
-Activate the `polyfun` conda environment **before** starting R. This ensures
-that `python3` (called internally by `scads`) resolves to the environment with
-the required Python packages (including `ldsc`, `polyfun`, `bedtools`,
-`bitarray<3`).
-
-```{bash eval=FALSE}
-conda activate polyfun
-R
-```
-
-Load the scads package:
+> **Prerequisites:** Make sure you have completed all setup steps
+> (polyFUN, LDSC, conda environment, S-LDSC reference data) described in the
+> [Getting Started](QuickStart.html) guide before proceeding.
 
 ```{r setup}
 library(scads)
@@ -198,36 +121,6 @@ stopifnot(
 cat("All paths verified.\n")
 ```
 
-## Set analysis parameters
-
-```{r}
-count_matrix <- demo_count_matrix
-n_topics     <- 5       # number of topics to fit
-n_sims       <- 1000    # Monte Carlo samples for DE analysis
-n_cores      <- 8       # adjust to the number of cores available
-bl_method    <- "gc"    # GC-content baseline correction (recommended)
-bl_ct        <- NULL    # cell type for "estimate" baseline (not used here)
-bl_peaks     <- NULL    # cell type peaks for "estimate" baseline (not used here)
-sumstats_d   <- dirname(data_file)
-gwas_n       <- 45087   # GWAS sample size
-trait         <- "SIM"
-cont_topics  <- FALSE   # use binary (not continuous) topic annotations
-```
-
-### Baseline method options
-
-The `baseline_method` parameter controls how the null hypothesis is set for
-differential expression testing in Step 1:
-
-| Method | Description |
-|--------|-------------|
-| `"gc"` | **(Recommended)** Fits a GC-content-dependent baseline using an EM algorithm with a Poisson mixture model. Accounts for GC bias in chromatin accessibility. |
-| `"constant"` | Uses a fixed small constant (`1e-7`) as baseline. Simple but does not account for GC bias. |
-| `"average"` | Computes a genome-wide average accessibility rate. |
-| `"estimate"` | Estimates background from a reference cell type's non-overlapping peaks. Requires `bl_celltype` and `bl_celltype_peak_file`. |
-
----
-
 ## Running the pipeline step by step
 
 While `scads()` can run the entire pipeline in one call, this tutorial walks
@@ -251,38 +144,67 @@ wrapper calls these same functions internally and supports
 **Runtime:** ~1 min for the demo dataset (500 cells, 12,971 peaks, 5 topics).
 **Memory:** ~650 MB peak.
 
+**Key parameters:**
+
 ```{r}
+count_matrix <- demo_count_matrix
+n_topics     <- 5       # number of topics to fit
+n_sims       <- 1000    # Monte Carlo samples for DE analysis
+n_cores      <- 8       # cores for fastTopics (Step 1 only)
+bl_method    <- "gc"    # GC-content baseline correction (recommended)
+bl_ct        <- NULL    # cell type for "estimate" baseline (not used here)
+bl_peaks     <- NULL    # cell type peaks for "estimate" baseline (not used here)
+```
+
+**`n_s` (number of simulations):** Controls the number of Monte Carlo samples
+for differential expression testing. In practice, `n_s = 1000` is sufficient
+to obtain reasonable results and is the default used in this tutorial. In the
+paper, we used `n_s = 5000` for the final analyses. Increasing `n_s` improves
+the precision of the DE p-values but increases Step 1 runtime proportionally.
+
+**`baseline_method`:** Controls how the null hypothesis is set for
+differential expression testing:
+
+| Method | Description |
+|--------|-------------|
+| `"gc"` | **(Recommended)** Fits a GC-content-dependent baseline using an EM algorithm with a Poisson mixture model. Accounts for GC bias in chromatin accessibility. |
+| `"constant"` | Uses a fixed small constant (`1e-7`) as baseline. Simple but does not account for GC bias. |
+| `"average"` | Computes a genome-wide average accessibility rate. |
+| `"estimate"` | Estimates background from a reference cell type's non-overlapping peaks. Requires `bl_celltype` and `bl_celltype_peak_file`. |
+
+```{r include=FALSE}
 out1_cache <- file.path(output_dir, "run_fastTopics_res.rds")
-if (file.exists(out1_cache)) {
-  cat("Loading cached Step 1 results from", out1_cache, "\n")
-  out1 <- readRDS(out1_cache)
-} else {
-  set.seed(1234)
+run_step1 <- !file.exists(out1_cache)
+if (!run_step1) out1 <- readRDS(out1_cache)
+```
 
-  # Transpose: scads expects peaks-by-cells, but fastTopics needs cells-by-peaks
-  count_matrix_t <- Matrix::t(count_matrix)
-  cat("Input dimensions (cells x peaks):", dim(count_matrix_t), "\n")
+```{r eval=run_step1}
+set.seed(1234)
 
-  # Run fastTopics
-  t1_start <- Sys.time()
-  out1 <- run_fastTopics(
-    count_matrix  = count_matrix_t,
-    nTopics       = n_topics,
-    n_s           = n_sims,
-    n_c           = n_cores,
-    baseline_method = bl_method,
-    bl_celltype_cells = bl_ct,
-    bl_celltype_peak_file = bl_peaks,
-    fdr_cutoff    = 0.05,
-    outdir        = output_dir,
-    genome        = "hg19"
-  )
-  t1_end <- Sys.time()
-  cat("\nStep 1 runtime:", round(difftime(t1_end, t1_start, units = "secs")), "seconds\n")
+# Transpose: scads expects peaks-by-cells, but fastTopics needs cells-by-peaks
+count_matrix_t <- Matrix::t(count_matrix)
+cat("Input dimensions (cells x peaks):", dim(count_matrix_t), "\n")
 
-  # Save intermediate results
-  saveRDS(out1, out1_cache)
-}
+# Run fastTopics
+t1_start <- Sys.time()
+out1 <- run_fastTopics(
+  count_matrix  = count_matrix_t,
+  nTopics       = n_topics,
+  n_s           = n_sims,
+  n_c           = n_cores,
+  baseline_method = bl_method,
+  bl_celltype_cells = bl_ct,
+  bl_celltype_peak_file = bl_peaks,
+  fdr_cutoff    = 0.05,
+  outdir        = output_dir,
+  genome        = "hg19"
+)
+t1_end <- Sys.time()
+cat("\nStep 1 runtime:", round(difftime(t1_end, t1_start, units = "secs")), "seconds\n")
+```
+
+```{r include=FALSE}
+if (run_step1) saveRDS(out1, out1_cache)
 ```
 
 **Examine Step 1 results:**
@@ -313,20 +235,21 @@ topic, which S-LDSC uses as a custom annotation.
 **Runtime:** < 10 seconds.
 **Memory:** Negligible.
 
-```{r}
+```{r include=FALSE}
 beddir_cache <- file.path(output_dir, "beddir_list.rds")
-if (file.exists(beddir_cache)) {
-  cat("Loading cached Step 2 results from", beddir_cache, "\n")
-  beddir_list <- readRDS(beddir_cache)
-} else {
-  t2_start <- Sys.time()
-  beddir_list <- get_annot_beds(topics_res = out1, output_dir = output_dir)
-  t2_end <- Sys.time()
-  cat("Step 2 runtime:", round(difftime(t2_end, t2_start, units = "secs"), 1), "seconds\n")
+run_step2 <- !file.exists(beddir_cache)
+if (!run_step2) beddir_list <- readRDS(beddir_cache)
+```
 
-  # Save for checkpointing
-  saveRDS(beddir_list, beddir_cache)
-}
+```{r eval=run_step2}
+t2_start <- Sys.time()
+beddir_list <- get_annot_beds(topics_res = out1, output_dir = output_dir)
+t2_end <- Sys.time()
+cat("Step 2 runtime:", round(difftime(t2_end, t2_start, units = "secs"), 1), "seconds\n")
+```
+
+```{r include=FALSE}
+if (run_step2) saveRDS(beddir_list, beddir_cache)
 ```
 
 ### Step 3: Run S-LDSC per topic
@@ -352,40 +275,54 @@ is concentrated in the topic's peaks relative to their size.
 sequentially, expect ~50 min total.
 **Memory:** ~300 MB per topic (Python processes).
 
+**Key parameters:**
+
 ```{r}
-# Check which topics already have S-LDSC results
-t3_start <- Sys.time()
-all_done <- all(vapply(seq_along(beddir_list), function(i) {
+sumstats_d   <- dirname(data_file)
+gwas_n       <- 45087   # GWAS sample size
+trait         <- "SIM"
+cont_topics  <- FALSE   # use binary (not continuous) topic annotations
+```
+
+**`n_cores_ldsc`:** When using the `scads()` wrapper, the `n_cores_ldsc`
+parameter controls how many topics run S-LDSC in parallel. By default
+(`NULL`), it uses `min(detectCores(), nTopics, 5)`. Set `n_cores_ldsc = 1`
+to run topics sequentially, which avoids CPU contention and is generally
+faster on machines with limited cores. This is separate from `n_c`, which
+controls parallelism for the fastTopics step only. In this tutorial, topics
+are run sequentially in a for-loop.
+
+```{r include=FALSE}
+run_step3 <- !all(vapply(seq_along(beddir_list), function(i) {
   file.exists(file.path(beddir_list[[i]], "results", paste0(trait, ".results")))
 }, logical(1)))
+```
 
-if (all_done) {
-  cat("All S-LDSC results found — skipping Step 3.\n")
-} else {
-  for (i in seq_along(beddir_list)) {
-    res_file <- file.path(beddir_list[[i]], "results", paste0(trait, ".results"))
-    if (file.exists(res_file)) {
-      cat(sprintf("--- Topic %d already done, skipping ---\n", i))
-      next
-    }
-    cat(sprintf("\n--- Running S-LDSC for topic %d of %d ---\n", i, length(beddir_list)))
-
-    run_sldsc(
-      chrs          = 10,                    # chr10 only for this tutorial
-      polyfun_path  = polyfun_d,
-      ldsc_path     = ldsc_d,
-      sumstats_path = sumstats_d,
-      n             = gwas_n,
-      trait         = trait,
-      onekg_path    = onekg_pref,
-      bed_dir       = beddir_list[[i]],
-      baseline_dir  = baseline_pref,
-      frqfile_pref  = frq_pref,
-      hm3_snps      = hm3_file,
-      weights_pref  = weights_pref,
-      out_dir       = beddir_list[[i]]
-    )
+```{r eval=run_step3}
+t3_start <- Sys.time()
+for (i in seq_along(beddir_list)) {
+  res_file <- file.path(beddir_list[[i]], "results", paste0(trait, ".results"))
+  if (file.exists(res_file)) {
+    cat(sprintf("--- Topic %d already done, skipping ---\n", i))
+    next
   }
+  cat(sprintf("\n--- Running S-LDSC for topic %d of %d ---\n", i, length(beddir_list)))
+
+  run_sldsc(
+    chrs          = 10,                    # chr10 only for this tutorial
+    polyfun_path  = polyfun_d,
+    ldsc_path     = ldsc_d,
+    sumstats_path = sumstats_d,
+    n             = gwas_n,
+    trait         = trait,
+    onekg_path    = onekg_pref,
+    bed_dir       = beddir_list[[i]],
+    baseline_dir  = baseline_pref,
+    frqfile_pref  = frq_pref,
+    hm3_snps      = hm3_file,
+    weights_pref  = weights_pref,
+    out_dir       = beddir_list[[i]]
+  )
 }
 t3_end <- Sys.time()
 cat("\nStep 3 total runtime:", round(difftime(t3_end, t3_start, units = "secs"), 1), "seconds\n")
@@ -412,25 +349,26 @@ produce a per-cell disease relevance score:
 **Runtime:** < 10 seconds.
 **Memory:** ~650 MB (due to correlation matrix computation).
 
-```{r}
+```{r include=FALSE}
 cs_cache <- file.path(output_dir, "cs_res.rds")
-if (file.exists(cs_cache)) {
-  cat("Loading cached Step 4 results from", cs_cache, "\n")
-  cs_res <- readRDS(cs_cache)
-} else {
-  t4_start <- Sys.time()
-  cs_res <- get_cs(
-    topic_res    = out1,
-    ldsc_res_dir = output_dir,
-    trait        = trait,
-    nTopics      = n_topics
-  )
-  t4_end <- Sys.time()
-  cat("Step 4 runtime:", round(difftime(t4_end, t4_start, units = "secs"), 1), "seconds\n")
+run_step4 <- !file.exists(cs_cache)
+if (!run_step4) cs_res <- readRDS(cs_cache)
+```
 
-  # Save results
-  saveRDS(cs_res, cs_cache)
-}
+```{r eval=run_step4}
+t4_start <- Sys.time()
+cs_res <- get_cs(
+  topic_res    = out1,
+  ldsc_res_dir = output_dir,
+  trait        = trait,
+  nTopics      = n_topics
+)
+t4_end <- Sys.time()
+cat("Step 4 runtime:", round(difftime(t4_end, t4_start, units = "secs"), 1), "seconds\n")
+```
+
+```{r include=FALSE}
+if (run_step4) saveRDS(cs_res, cs_cache)
 ```
 
 **Examine Step 4 results:**
@@ -510,6 +448,11 @@ fastTopics::structure_plot(out1$fastTopics_fit)
 ```
 
 ### S-LDSC enrichment summary
+
+> **Note:** This tutorial uses chromosome 10 only, so the standard errors on
+> enrichment estimates are much larger than in a real analysis using all 22
+> chromosomes. With more chromosomes, S-LDSC has more SNPs to estimate
+> heritability partitioning, resulting in tighter confidence intervals.
 
 #### Enrichment bar plot
 
