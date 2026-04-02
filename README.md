@@ -112,7 +112,7 @@ remotes::install_local("path/to/scads")
 
 ### Step 6: Download S-LDSC reference data
 
-`scads` requires reference files from the S-LDSC baseline LD v2.2 model (hg19). Download and extract them into a local directory (e.g., `~/LDSCORE/`).
+`scads` requires reference files from the S-LDSC baseline LD v2.2 model (hg19), which can be found [here](https://zenodo.org/records/10515792). Download and extract them into a local directory (e.g., `~/LDSCORE/`). Note: If you want to use hg38 build, please download the corresponding files in `GRCh38.tgz`. 
 
 > **Disk usage:** The compressed downloads total ~1 GB. After extraction, the reference data requires ~4 GB.
 
