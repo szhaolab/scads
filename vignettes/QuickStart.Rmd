@@ -50,7 +50,7 @@ Before running this tutorial, make sure you have:
 
 `scads` requires reference files from the S-LDSC baseline LD model. Download
 and extract them into a local directory (e.g., `~/LDSCORE/`). All files are
-available from [Zenodo](https://zenodo.org/records/10515792).
+available from [Zenodo](https://zenodo.org/records/10515792). Note: files are in hg19 genome build.
 
 > **Disk usage:** The compressed downloads total ~1 GB. After extraction, the
 > reference data requires ~4 GB of disk space.

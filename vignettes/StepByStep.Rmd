@@ -138,7 +138,7 @@ wrapper calls these same functions internally and supports
 1. Transposes the count matrix (peaks x cells -> cells x peaks) for fastTopics.
 2. Fits a Poisson NMF topic model with `k` topics using `fastTopics::fit_topic_model()`.
 3. Computes a GC-content baseline correction for each topic (if `baseline_method = "gc"`).
-4. Runs differential expression analysis to identify topic-specific peaks.
+4. Runs differential accessibility analysis to identify topic-specific peaks.
 5. Applies FDR correction and binarizes peak assignments.
 
 **Runtime:** ~1 min for the demo dataset (500 cells, 12,971 peaks, 5 topics).
@@ -157,13 +157,13 @@ bl_peaks     <- NULL    # cell type peaks for "estimate" baseline (not used here
 ```
 
 **`n_s` (number of simulations):** Controls the number of Monte Carlo samples
-for differential expression testing. In practice, `n_s = 1000` is sufficient
+for differential accessibility testing. In practice, `n_s = 1000` is sufficient
 to obtain reasonable results and is the default used in this tutorial. In the
 paper, we used `n_s = 5000` for the final analyses. Increasing `n_s` improves
 the precision of the DE p-values but increases Step 1 runtime proportionally.
 
 **`baseline_method`:** Controls how the null hypothesis is set for
-differential expression testing:
+differential accessibility testing:
 
 | Method | Description |
 |--------|-------------|
