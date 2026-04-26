@@ -11,6 +11,8 @@ The goal of `scads` is to provide a statistical framework for integrating GWAS a
 
 ## Installation
 
+> **Typical install time:** ~40 minutes on a normal desktop computer (tested on macOS Apple Silicon with a ~20 MB/s connection). The dominant cost is Step 4 (Bioconductor dependencies, ~33 min) due to C++ packages compiling from source. Reference data download time (Step 6) will vary with internet speed.
+
 ### Step 1: Install Miniconda (if not already installed)
 
 Skip this step if you already have conda available.
