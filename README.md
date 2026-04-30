@@ -175,6 +175,10 @@ See the [tutorial](https://szhaolab.github.io/scads/articles/Introduction.html) 
 
 # Reference
 
+ scads: See [preprint](https://www.biorxiv.org/content/10.64898/2026.04.27.721080v1)
+
+ > Liyang Yu, Luke T Deary, Qiaoxue Liu, Qirui Zhang, Siming Zhao. Connecting polygenic disease risk to cell states and regulatory programs through single-cell chromatin accessibility. *bioRxiv* 2026.04.27.721080; doi: https://doi.org/10.64898/2026.04.27.721080
+
  LDSC/polyFUN: See [software](https://github.com/omerwe/polyfun) and [paper](https://www.nature.com/articles/s41588-020-00735-5)
  
  fastTopics: See [method](https://github.com/stephenslab/fastTopics) and [paper](https://doi.org/10.1186/s13059-023-03067-9)
