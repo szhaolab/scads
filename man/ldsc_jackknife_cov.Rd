@@ -4,7 +4,13 @@
 \alias{ldsc_jackknife_cov}
 \title{Covariance of S-LDSC Enrichment Estimates from Block-Jackknife Delete Values}
 \usage{
-ldsc_jackknife_cov(ldsc_res_dir, trait, nTopics, M_annot = NULL)
+ldsc_jackknife_cov(
+  ldsc_res_dir,
+  trait,
+  nTopics,
+  M_annot = NULL,
+  allow_unvalidated = FALSE
+)
 }
 \arguments{
 \item{ldsc_res_dir}{Directory containing \verb{k*_output/results/<trait>.results}
@@ -16,8 +22,8 @@ and the matching \code{.part_delete} files.}
 
 \item{M_annot}{Optional numeric vector of per-category SNP counts (length
 \code{n_annot}) used to convert delete-one coefficients to per-category h2. If
-\code{NULL} (default), these are read from the \code{.results} file's \code{Prop._SNPs}
-column scaled by the total SNP count.}
+\code{NULL} (default), the \code{Prop._SNPs} column of the \code{.results} file is used;
+the total SNP count cancels in the ratio, so proportions suffice.}
 }
 \value{
 A \verb{K x K} covariance matrix of the enrichment estimates, or \code{NULL} if
@@ -25,11 +31,27 @@ the delete-value files are not present (callers should then fall back to the
 annotation-correlation approximation).
 }
 \description{
+Covariance of S-LDSC Enrichment Estimates from Block-Jackknife Delete Values
+}
+\section{Status}{
+
+\strong{EXPERIMENTAL -- NOT VALIDATED. Do not use for published results.}
+The reconstruction of per-block enrichment from \code{.part_delete} does not
+currently reproduce LDSC's own reported values. On a test run the
+reconstructed enrichment standard errors were 1.26x, 1.41x and 1.78x the
+\code{Enrichment_std_error} reported by LDSC for topics k1-k3, and the mean of the
+delete values (0.2347) did not match the reported \code{Prop._h2} (0.3561).
+The likely cause is that LDSC reports overlap-corrected \code{Prop._h2}
+(\verb{_overlap_output} in regressions.py), which weights each category's
+heritability by its overlap with every other annotation, whereas this
+function uses the uncorrected ratio \code{cat_b / tot_b}. Until the diagonal of
+the returned matrix reproduces \code{Enrichment_std_error}, the result must not be
+passed to \code{\link[=get_cs]{get_cs()}}.
+
 Reconstructs the K x K sampling covariance of the per-topic enrichment
 estimates from the block-jackknife delete-one values that S-LDSC writes when
 run with \code{--print-delete-vals}.
-}
-\details{
+
 This replaces the annotation-correlation approximation
 \verb{Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')}, which captures only peak overlap.
 Enrichment estimates from separate S-LDSC runs are correlated for reasons the
@@ -49,3 +71,4 @@ the delete-value matrices all have the same number of rows, but cannot verify
 block identity beyond that. Confirm the K logs report the same retained-SNP
 count.
 }
+

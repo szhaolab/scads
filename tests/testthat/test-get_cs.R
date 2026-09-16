@@ -204,3 +204,9 @@ test_that("supplied Sigma overrides the annotation-correlation fallback", {
 
   unlink(ldsc_dir, recursive = TRUE)
 })
+
+
+test_that("ldsc_jackknife_cov refuses to run unless explicitly opted in", {
+  expect_error(ldsc_jackknife_cov("/nonexistent", "TRAIT", 3),
+               "EXPERIMENTAL")
+})

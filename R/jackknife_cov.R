@@ -1,5 +1,19 @@
 #' Covariance of S-LDSC Enrichment Estimates from Block-Jackknife Delete Values
 #'
+#' @section Status:
+#' **EXPERIMENTAL -- NOT VALIDATED. Do not use for published results.**
+#' The reconstruction of per-block enrichment from `.part_delete` does not
+#' currently reproduce LDSC's own reported values. On a test run the
+#' reconstructed enrichment standard errors were 1.26x, 1.41x and 1.78x the
+#' `Enrichment_std_error` reported by LDSC for topics k1-k3, and the mean of the
+#' delete values (0.2347) did not match the reported `Prop._h2` (0.3561).
+#' The likely cause is that LDSC reports overlap-corrected `Prop._h2`
+#' (`_overlap_output` in regressions.py), which weights each category's
+#' heritability by its overlap with every other annotation, whereas this
+#' function uses the uncorrected ratio `cat_b / tot_b`. Until the diagonal of
+#' the returned matrix reproduces `Enrichment_std_error`, the result must not be
+#' passed to [get_cs()].
+#'
 #' Reconstructs the K x K sampling covariance of the per-topic enrichment
 #' estimates from the block-jackknife delete-one values that S-LDSC writes when
 #' run with `--print-delete-vals`.
@@ -29,16 +43,25 @@
 #' @param nTopics Number of topics (K).
 #' @param M_annot Optional numeric vector of per-category SNP counts (length
 #'   `n_annot`) used to convert delete-one coefficients to per-category h2. If
-#'   `NULL` (default), these are read from the `.results` file's `Prop._SNPs`
-#'   column scaled by the total SNP count.
+#'   `NULL` (default), the `Prop._SNPs` column of the `.results` file is used;
+#'   the total SNP count cancels in the ratio, so proportions suffice.
 #' @return A `K x K` covariance matrix of the enrichment estimates, or `NULL` if
 #'   the delete-value files are not present (callers should then fall back to the
 #'   annotation-correlation approximation).
 #' @export
-ldsc_jackknife_cov <- function(ldsc_res_dir, trait, nTopics, M_annot = NULL) {
+ldsc_jackknife_cov <- function(ldsc_res_dir, trait, nTopics, M_annot = NULL,
+                               allow_unvalidated = FALSE) {
+
+  if (!isTRUE(allow_unvalidated)) {
+    stop("ldsc_jackknife_cov() is EXPERIMENTAL and does not yet reproduce ",
+         "LDSC's reported Enrichment_std_error (see ?ldsc_jackknife_cov, ",
+         "section Status). Pass allow_unvalidated = TRUE only for development.",
+         call. = FALSE)
+  }
 
   delete_list <- vector("list", nTopics)
   prop_snps   <- numeric(nTopics)
+  prop_snps_all <- vector("list", nTopics)
 
   for (k in seq_len(nTopics)) {
     base_dir <- file.path(ldsc_res_dir, paste0("k", k, "_output"), "results")
@@ -59,6 +82,7 @@ ldsc_jackknife_cov <- function(ldsc_res_dir, trait, nTopics, M_annot = NULL) {
 
     res <- read.table(res_f, header = TRUE, sep = "\t", check.names = FALSE)
     prop_snps[k] <- res$`Prop._SNPs`[1]
+    prop_snps_all[[k]] <- res$`Prop._SNPs`
 
     # n_blocks x n_annot matrix of delete-one per-category coefficients
     delete_list[[k]] <- as.matrix(utils::read.table(del_f))
@@ -80,7 +104,7 @@ ldsc_jackknife_cov <- function(ldsc_res_dir, trait, nTopics, M_annot = NULL) {
   E_blocks <- matrix(NA_real_, nrow = n_blocks, ncol = nTopics)
   for (k in seq_len(nTopics)) {
     dv <- delete_list[[k]]
-    M_k <- if (is.null(M_annot)) rep(1, ncol(dv)) else M_annot
+    M_k <- if (is.null(M_annot)) prop_snps_all[[k]] else M_annot
     if (length(M_k) != ncol(dv)) {
       warning("M_annot length (", length(M_k), ") does not match delete-value ",
               "columns (", ncol(dv), "); falling back.")
