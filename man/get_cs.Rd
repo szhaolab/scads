@@ -4,7 +4,15 @@
 \alias{get_cs}
 \title{Compute Single-Cell Level Scores (c_i)}
 \usage{
-get_cs(topic_res, ldsc_res_dir, trait, nTopics)
+get_cs(
+  topic_res,
+  ldsc_res_dir,
+  trait,
+  nTopics,
+  Sigma = NULL,
+  alternative = c("two.sided", "greater"),
+  min_prop_snps = 0.005
+)
 }
 \arguments{
 \item{topic_res}{Results from run_fastTopics_res, with Pmat (J×K) and Lmat (I×K)}
@@ -14,18 +22,54 @@ get_cs(topic_res, ldsc_res_dir, trait, nTopics)
 \item{trait}{Trait name used in LDSC results files.}
 
 \item{nTopics}{Number of topics (K).}
+
+\item{Sigma}{Optional K x K covariance matrix of the enrichment estimates, as
+returned by \code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}. When supplied it is used directly for
+the cell score variance. When \code{NULL} (default) the variance falls back to
+the annotation-correlation approximation
+\verb{Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')}, which captures only peak overlap
+and ignores the correlation induced by the shared GWAS, LD reference and
+baseline-LD covariates.}
+
+\item{alternative}{Either \code{"two.sided"} (default, preserving previous
+behaviour) or \code{"greater"} for a one-sided test of enrichment. Under
+\code{"two.sided"}, cells that are significantly \emph{depleted} (z < 0) also pass
+FDR; if the scores are presented as disease relevance, \code{"greater"} is
+usually the intended test.}
+
+\item{min_prop_snps}{Annotations covering less than this fraction of the
+genome are floored (see Details). Default 0.005.}
 }
 \value{
 A list with
 \itemize{
 \item cs: cell scores (vector of length I)
 \item z_cell: z-score accounting for variance
-\item p_cell: p-value for assessing score reliability
+\item p_cell: p-value for assessing score reliability, length I, \code{NA} where the
+variance is zero or non-finite
+\item var_cell: cell score variance used in the denominator of z
+\item Sigma_used: the K x K covariance actually used
 \item ldsc_res_table: the raw tau_display table from S-LDSC
 \item ash_res: results from running ASH on S-LDSC enrichment estimates
 \item cs_dat: intermediate estimates for calculating cell score
 }
 }
 \description{
-Compute Single-Cell Level Scores (c_i)
+The cell score is a weighted average of the per-topic enrichment estimates,
+\verb{cs_i = sum_k w_ik ehat_k} with \verb{w_ik = l_ik s_k / sum_k l_ik s_k}, so the
+weights sum to one and the score equals 1 when no topic is enriched. The
+z-score tests \code{cs_i = 1} (no enrichment in the cell's open regions relative to
+genome-wide).
+}
+\details{
+Two filtering rules are applied to the S-LDSC estimates before they enter the
+score. A topic whose annotation covers < \code{min_prop_snps} of the genome, or
+whose estimated enrichment is negative, is floored to \code{e_k = 1} with
+\code{w_k = 0}. Such topics contribute nothing to the numerator and nothing to the
+variance, but they remain in the weight denominator, so the effect is to
+dilute the score toward 1 rather than to renormalise over the retained topics.
+This is deliberate and conservative.
+}
+\seealso{
+\code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}
 }
