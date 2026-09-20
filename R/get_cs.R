@@ -18,13 +18,16 @@
 #' @param ldsc_res_dir Directory containing k*_output/results/Trait.results
 #' @param trait Trait name used in LDSC results files.
 #' @param nTopics Number of topics (K).
-#' @param Sigma Optional K x K covariance matrix of the enrichment estimates, as
-#'   returned by [ldsc_jackknife_cov()]. When supplied it is used directly for
-#'   the cell score variance. When `NULL` (default) the variance falls back to
-#'   the annotation-correlation approximation
-#'   `Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')`, which captures only peak overlap
-#'   and ignores the correlation induced by the shared GWAS, LD reference and
-#'   baseline-LD covariates.
+#' @param baseline_prefix,frq_prefix Prefixes of the baseline annotation and
+#'   PLINK frequency files, matching the `--ref-ld-chr` and `--frqfile-chr` of
+#'   the S-LDSC runs. When both are supplied the covariance of the enrichment
+#'   estimates is built with [ldsc_jackknife_cov()], which is the recommended
+#'   route.
+#' @param Sigma Optional K x K covariance matrix of the enrichment estimates,
+#'   supplied directly instead of being computed. If neither this nor the
+#'   reference prefixes are given, the variance falls back to the
+#'   annotation-correlation approximation
+#'   `Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')`.
 #' @param alternative Either `"two.sided"` (default, preserving previous
 #'   behaviour) or `"greater"` for a one-sided test of enrichment. Under
 #'   `"two.sided"`, cells that are significantly *depleted* (z < 0) also pass
@@ -46,11 +49,26 @@
 #' @seealso [ldsc_jackknife_cov()]
 #' @export
 get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
+                   baseline_prefix = NULL, frq_prefix = NULL,
                    Sigma = NULL,
                    alternative = c("two.sided", "greater"),
                    min_prop_snps = 0.005) {
 
   alternative <- match.arg(alternative)
+
+  # Covariance of the enrichment estimates. Preferred route is the block
+  # jackknife, built here from the same S-LDSC output when the reference
+  # prefixes are supplied.
+  if (is.null(Sigma) && !is.null(baseline_prefix) && !is.null(frq_prefix)) {
+    jk <- ldsc_jackknife_cov(ldsc_res_dir = ldsc_res_dir, trait = trait,
+                             nTopics = nTopics,
+                             baseline_prefix = baseline_prefix,
+                             frq_prefix = frq_prefix, verbose = FALSE)
+    if (!jk$pass)
+      warning("jackknife covariance failed its acceptance check; ",
+              "verify baseline_prefix and frq_prefix match this run's S-LDSC call")
+    Sigma <- jk$Sigma
+  }
 
   # --- Input validation ---
   if (is.null(topic_res$Pmat)) stop("topic_res must contain 'Pmat' (peaks x topics binary matrix)")

@@ -1,8 +1,8 @@
 ---
-title: "Testing cell types for heterogeneous disease relevance"
+title: "Cell and cell-type level scores and p-values"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Testing cell types for heterogeneous disease relevance}
+  %\VignetteIndexEntry{Cell and cell-type level scores and p-values}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -11,56 +11,60 @@ vignette: >
 knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>")
 ```
 
-SCADS gives every cell a disease-relevance score. Averaging those within a cell
-type answers "is this cell type relevant?", but discards a different question:
-do the cells *within* it differ from one another? `cell_type_heterogeneity()`
-tests that, returning one p-value per cell type.
+SCADS produces two kinds of inference. At the level of a single cell, a disease
+relevance score with a p-value. At the level of a cell type, a test of whether
+the cells within it differ from one another in disease relevance. This vignette
+gives both formulas and shows how to run them.
 
-## Why the score makes this tractable
+## The cell score
 
-The cell score is a weighted average of the per-topic heritability enrichments,
+Each cell's score is the enrichment of disease heritability in its open regions
+relative to genome-wide, reconstructed from the topic model:
 
-$$s_i = w_i' E, \qquad \sum_k w_{ik} = 1$$
+$$c_i = \frac{\sum_k\sum_j l_{ik} I_{kj} e_k v_j}{\sum_k\sum_j l_{ik} I_{kj} v_j}
+      = \sum_k w_{ik}\, e_k, \qquad \sum_k w_{ik} = 1$$
 
-with weights determined by the cell's topic loadings and the topic annotation
-sizes. For a cell type $g$, writing $S_g$ for the covariance of $w$ across its
-cells, the within-type variance of the score is a quadratic form,
+where $l_{ik}$ is the cell's loading on topic $k$, $I_{kj}$ marks region $j$ as
+open in topic $k$, and $e_k$ is that topic's heritability enrichment from S-LDSC.
+The weights $w_{ik} \propto l_{ik} s_k$ depend on the loadings and the topic
+annotation sizes $s_k$, and sum to one, so $c_i = 1$ when no topic is enriched.
 
-$$T_g = \hat E' S_g \hat E$$
+The score is a linear function of the enrichment estimates, so its variance is a
+quadratic form in their covariance $\Sigma$:
 
-The null of no heterogeneity is that every topic is equally enriched,
-$E = c\mathbf{1}$ for some unknown $c$ — **not** that nothing is enriched. If all
-topics share the same enrichment, every cell scores $c$ and the variance is zero
-whatever the loadings.
+$$\mathrm{Var}(\hat c_i) = \sum_k \sum_m w_{ik}\, w_{im}\, \Sigma_{km}$$
 
-Because the weights sum to one, $S_g\mathbf{1} = 0$ exactly, so $c$ cancels out
-of the null entirely and
+summed over all ordered pairs. The p-value tests $c_i = 1$:
 
-$$T_g \sim \sum_j \lambda_j \chi^2_1$$
+$$z_i = \frac{\hat c_i - 1}{\sqrt{\mathrm{Var}(\hat c_i)}}$$
 
-with $\lambda$ the eigenvalues of $\Sigma^{1/2} S_g \Sigma^{1/2}$. The p-value is
-exact by Imhof inversion — no permutation, no resampling.
+## The cell-type heterogeneity test
 
-That $c$ cancels is what makes the test usable: every topic annotation is open
-chromatin, which is genuinely enriched for heritability, so $c \gg 1$ in
-practice. A test that assumed $c = 1$ would reject in nearly every cell type,
-detecting only that the annotations are peaks.
+For a cell type $g$, let $S_g$ be the covariance of the weight vectors $w$ across
+its cells. The within-type variance of the score is
 
-## You need an accurate covariance
+$$T_g = \mathrm{Var}_g(c) = \hat E' S_g \hat E$$
 
-The test needs $\Sigma$, the covariance of the topic enrichment estimates. SCADS
-approximates this elsewhere as
-$se_k\,se_m \mathrm{Cor}(A_k, A_m)$, using the correlation between annotations in
-place of the correlation between their LD scores.
+The null is that all topics are equally enriched, $E = c\mathbf{1}$ for an
+unknown $c$ — not that nothing is enriched. If every topic shares the same
+enrichment then every cell scores $c$ and the within-type variance is zero
+regardless of the loadings.
 
-**That approximation is not adequate here.** It is fine for the cell score, whose
-weight vector has a large component along $\mathbf{1}$, but this statistic is
-built to be orthogonal to $\mathbf{1}$, which is exactly where the approximation
-errs. On null simulations it makes the test conservative at every threshold,
-whereas a block-jackknife $\Sigma$ is calibrated down to $p < 0.05$.
+Because the weights sum to one, $S_g\mathbf{1} = 0$ exactly, so writing
+$\hat E = c\mathbf{1} + \varepsilon$ with $\varepsilon \sim N(0,\Sigma)$ removes
+every term in $c$:
 
-Use `ldsc_jackknife_cov()`. It requires your S-LDSC runs to have been made with
-`--print-delete-vals`, and costs about three minutes for a 25-topic run.
+$$T_g = \varepsilon' S_g \varepsilon \sim \sum_j \lambda_j \chi^2_1, \qquad
+\lambda = \mathrm{eig}\!\left(\Sigma^{1/2} S_g \Sigma^{1/2}\right)$$
+
+The p-value is exact by Imhof inversion. No permutation is involved, and the
+unknown level $c$ never has to be estimated.
+
+## The covariance
+
+Both quantities need $\Sigma$, the covariance of the topic enrichment estimates.
+Obtain it with `ldsc_jackknife_cov()`, which reconstructs it from the
+block-jackknife delete values S-LDSC writes under `--print-delete-vals`:
 
 ```{r sigma, eval=FALSE}
 jk <- ldsc_jackknife_cov(
@@ -71,60 +75,82 @@ jk <- ldsc_jackknife_cov(
   frq_prefix      = ".../1000G_Phase3_frq/1000G.EUR.QC."
 )
 
-jk$pass        # TRUE if every topic reproduces S-LDSC's own Enrichment and SE
-head(jk$check) # the per-topic comparison
+jk$pass         # TRUE if every topic reproduces S-LDSC's Enrichment and SE
+head(jk$check)  # the per-topic comparison
 ```
 
 `baseline_prefix` and `frq_prefix` must match the `--ref-ld-chr` and
-`--frqfile-chr` of the runs you are reconstructing; different runs in the same
-project may use different references. The acceptance check exists to catch this:
-if the prefixes are wrong, `pass` is `FALSE` and the reconstructed values will not
-match the reported ones.
+`--frqfile-chr` of the runs being reconstructed. The acceptance check exists to
+catch a mismatch: if the prefixes are wrong, `pass` is `FALSE`. A 25-topic run
+takes a few minutes, and the result serves every trait sharing that topic model.
 
-## Running the test
+## Cell scores and p-values
 
-```{r test, eval=FALSE}
+Pass the reference prefixes to `get_cs()` and it builds $\Sigma$ for you:
+
+```{r cs, eval=FALSE}
+cs_res <- get_cs(
+  topic_res       = topic_res,
+  ldsc_res_dir    = "path/to/scads_run",
+  trait           = "IBD",
+  nTopics         = 25,
+  baseline_prefix = ".../baselineLD.",
+  frq_prefix      = ".../1000G.EUR.QC."
+)
+
+cs_res$cs        # per-cell score
+cs_res$p_cell    # per-cell p-value, length = number of cells
+cs_res$var_cell  # per-cell variance
+
+fdr <- p.adjust(cs_res$p_cell, "BH")
+```
+
+`p_cell` is `NA` where the variance is zero, so it always aligns with `cs`.
+`alternative = "greater"` gives a one-sided test of enrichment; the default is
+two-sided, which also flags significantly depleted cells.
+
+An already-computed covariance can be supplied instead with `Sigma = jk$Sigma`.
+
+## Cell-type heterogeneity
+
+```{r hetero, eval=FALSE}
 res <- cell_type_heterogeneity(
-  topic_res  = topic_res,        # from run_fastTopics(): needs Pmat and Lmat
+  topic_res  = topic_res,
   enrichment = jk$enrichment,
   Sigma      = jk$Sigma,
-  groups     = cell_type_labels  # one label per cell, in Lmat row order
+  groups     = cell_type_labels   # one label per cell, in Lmat row order
 )
 
 subset(res, fdr < 0.05)
 ```
 
-`groups` is whatever grouping you want tested — published cell-type labels,
-clusters, or any partition of the cells. Groups smaller than `min_cells`
-(default 20) are skipped, and `NA` labels are dropped.
+`groups` can be published cell-type labels, clusters, or any partition of the
+cells. Groups smaller than `min_cells` (default 20) are skipped and `NA` labels
+dropped. The result gives `cell_type`, `n`, the statistic, `p` and BH-adjusted
+`fdr`, sorted by p-value.
 
-The result has one row per cell type with the statistic, p-value and BH-adjusted
-FDR, sorted by significance.
+## Interpreting the results
 
-## Reading the output
-
-**Score spread does not predict significance.** $T_g$ and its null eigenvalues
+**Score spread does not predict heterogeneity.** $T_g$ and its null eigenvalues
 both scale linearly with $S_g$, so the p-value is invariant to the overall size
-of within-group variation. What matters is whether the *direction* in which cells
-vary aligns with the direction in which topic enrichments differ. A cell type with
-a wide score range can be non-significant and a narrow one significant, so a
-range-based summary and this test will disagree — by construction, not by error.
+of within-group variation. What matters is whether the direction in which cells
+vary aligns with the direction in which topic enrichments differ. A cell type
+with a wide score range can be non-significant, and a narrow one significant.
 
-**Test association first.** Heterogeneity within a cell type that carries no
-overall disease signal is heterogeneity in noise. Interpret these p-values only
-for cell types that are associated to begin with.
+**Test association before heterogeneity.** Heterogeneity within a cell type that
+carries no overall disease signal is heterogeneity in noise.
 
-**Power tracks the precision of the topic enrichments**, not the number of cells.
-The test sees only *differences* between topics, so a trait whose enrichments are
-large but imprecisely estimated can yield no detections at all while a trait with
-a smaller but tighter spread detects readily.
+**Power follows the precision of the topic enrichments**, not the number of
+cells. The test sees only differences between topics, so a trait with large but
+imprecisely estimated enrichments can give no detections while a trait with a
+smaller, tighter spread detects readily.
 
-**The loadings are treated as fixed.** Topic-model uncertainty is not propagated,
-the same limitation that applies to the cell score variance.
+**Loadings are treated as fixed.** Topic-model uncertainty is not propagated into
+either variance.
 
-## What the test does not do
+## Following up a significant cell type
 
-It does not identify *which* cells drive the heterogeneity, or describe its
-structure. Once a cell type is flagged, correlating the score against topic
-loadings within that cell type is the natural follow-up, and will point at the
-regulatory programs responsible.
+The test says that cells within a cell type differ; it does not say which cells,
+or along what axis. Correlating the cell score against the topic loadings within
+that cell type identifies the topics driving the gradient, and their annotations
+point at the regulatory programs responsible.

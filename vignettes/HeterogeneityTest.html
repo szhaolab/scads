@@ -12,7 +12,7 @@
 
 
 
-<title>Testing cell types for heterogeneous disease relevance</title>
+<title>Cell and cell-type level scores and p-values</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -337,62 +337,68 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Testing cell types for heterogeneous
-disease relevance</h1>
+<h1 class="title toc-ignore">Cell and cell-type level scores and
+p-values</h1>
 
 
 
-<p>SCADS gives every cell a disease-relevance score. Averaging those
-within a cell type answers “is this cell type relevant?”, but discards a
-different question: do the cells <em>within</em> it differ from one
-another? <code>cell_type_heterogeneity()</code> tests that, returning
-one p-value per cell type.</p>
-<div id="why-the-score-makes-this-tractable" class="section level2">
-<h2>Why the score makes this tractable</h2>
-<p>The cell score is a weighted average of the per-topic heritability
-enrichments,</p>
-<p><span class="math display">\[s_i = w_i&#39; E, \qquad \sum_k w_{ik} =
-1\]</span></p>
-<p>with weights determined by the cell’s topic loadings and the topic
-annotation sizes. For a cell type <span class="math inline">\(g\)</span>, writing <span class="math inline">\(S_g\)</span> for the covariance of <span class="math inline">\(w\)</span> across its cells, the within-type
-variance of the score is a quadratic form,</p>
-<p><span class="math display">\[T_g = \hat E&#39; S_g \hat
-E\]</span></p>
-<p>The null of no heterogeneity is that every topic is equally enriched,
-<span class="math inline">\(E = c\mathbf{1}\)</span> for some unknown
-<span class="math inline">\(c\)</span> — <strong>not</strong> that
-nothing is enriched. If all topics share the same enrichment, every cell
-scores <span class="math inline">\(c\)</span> and the variance is zero
-whatever the loadings.</p>
-<p>Because the weights sum to one, <span class="math inline">\(S_g\mathbf{1} = 0\)</span> exactly, so <span class="math inline">\(c\)</span> cancels out of the null entirely
-and</p>
-<p><span class="math display">\[T_g \sim \sum_j \lambda_j
-\chi^2_1\]</span></p>
-<p>with <span class="math inline">\(\lambda\)</span> the eigenvalues of
-<span class="math inline">\(\Sigma^{1/2} S_g \Sigma^{1/2}\)</span>. The
-p-value is exact by Imhof inversion — no permutation, no resampling.</p>
-<p>That <span class="math inline">\(c\)</span> cancels is what makes the
-test usable: every topic annotation is open chromatin, which is
-genuinely enriched for heritability, so <span class="math inline">\(c
-\gg 1\)</span> in practice. A test that assumed <span class="math inline">\(c = 1\)</span> would reject in nearly every cell
-type, detecting only that the annotations are peaks.</p>
+<p>SCADS produces two kinds of inference. At the level of a single cell,
+a disease relevance score with a p-value. At the level of a cell type, a
+test of whether the cells within it differ from one another in disease
+relevance. This vignette gives both formulas and shows how to run
+them.</p>
+<div id="the-cell-score" class="section level2">
+<h2>The cell score</h2>
+<p>Each cell’s score is the enrichment of disease heritability in its
+open regions relative to genome-wide, reconstructed from the topic
+model:</p>
+<p><span class="math display">\[c_i = \frac{\sum_k\sum_j l_{ik} I_{kj}
+e_k v_j}{\sum_k\sum_j l_{ik} I_{kj} v_j}
+      = \sum_k w_{ik}\, e_k, \qquad \sum_k w_{ik} = 1\]</span></p>
+<p>where <span class="math inline">\(l_{ik}\)</span> is the cell’s
+loading on topic <span class="math inline">\(k\)</span>, <span class="math inline">\(I_{kj}\)</span> marks region <span class="math inline">\(j\)</span> as open in topic <span class="math inline">\(k\)</span>, and <span class="math inline">\(e_k\)</span> is that topic’s heritability
+enrichment from S-LDSC. The weights <span class="math inline">\(w_{ik}
+\propto l_{ik} s_k\)</span> depend on the loadings and the topic
+annotation sizes <span class="math inline">\(s_k\)</span>, and sum to
+one, so <span class="math inline">\(c_i = 1\)</span> when no topic is
+enriched.</p>
+<p>The score is a linear function of the enrichment estimates, so its
+variance is a quadratic form in their covariance <span class="math inline">\(\Sigma\)</span>:</p>
+<p><span class="math display">\[\mathrm{Var}(\hat c_i) = \sum_k \sum_m
+w_{ik}\, w_{im}\, \Sigma_{km}\]</span></p>
+<p>summed over all ordered pairs. The p-value tests <span class="math inline">\(c_i = 1\)</span>:</p>
+<p><span class="math display">\[z_i = \frac{\hat c_i -
+1}{\sqrt{\mathrm{Var}(\hat c_i)}}\]</span></p>
 </div>
-<div id="you-need-an-accurate-covariance" class="section level2">
-<h2>You need an accurate covariance</h2>
-<p>The test needs <span class="math inline">\(\Sigma\)</span>, the
-covariance of the topic enrichment estimates. SCADS approximates this
-elsewhere as <span class="math inline">\(se_k\,se_m \mathrm{Cor}(A_k,
-A_m)\)</span>, using the correlation between annotations in place of the
-correlation between their LD scores.</p>
-<p><strong>That approximation is not adequate here.</strong> It is fine
-for the cell score, whose weight vector has a large component along
-<span class="math inline">\(\mathbf{1}\)</span>, but this statistic is
-built to be orthogonal to <span class="math inline">\(\mathbf{1}\)</span>, which is exactly where the
-approximation errs. On null simulations it makes the test conservative
-at every threshold, whereas a block-jackknife <span class="math inline">\(\Sigma\)</span> is calibrated down to <span class="math inline">\(p &lt; 0.05\)</span>.</p>
-<p>Use <code>ldsc_jackknife_cov()</code>. It requires your S-LDSC runs
-to have been made with <code>--print-delete-vals</code>, and costs about
-three minutes for a 25-topic run.</p>
+<div id="the-cell-type-heterogeneity-test" class="section level2">
+<h2>The cell-type heterogeneity test</h2>
+<p>For a cell type <span class="math inline">\(g\)</span>, let <span class="math inline">\(S_g\)</span> be the covariance of the weight
+vectors <span class="math inline">\(w\)</span> across its cells. The
+within-type variance of the score is</p>
+<p><span class="math display">\[T_g = \mathrm{Var}_g(c) = \hat E&#39;
+S_g \hat E\]</span></p>
+<p>The null is that all topics are equally enriched, <span class="math inline">\(E = c\mathbf{1}\)</span> for an unknown <span class="math inline">\(c\)</span> — not that nothing is enriched. If
+every topic shares the same enrichment then every cell scores <span class="math inline">\(c\)</span> and the within-type variance is zero
+regardless of the loadings.</p>
+<p>Because the weights sum to one, <span class="math inline">\(S_g\mathbf{1} = 0\)</span> exactly, so writing
+<span class="math inline">\(\hat E = c\mathbf{1} + \varepsilon\)</span>
+with <span class="math inline">\(\varepsilon \sim N(0,\Sigma)\)</span>
+removes every term in <span class="math inline">\(c\)</span>:</p>
+<p><span class="math display">\[T_g = \varepsilon&#39; S_g \varepsilon
+\sim \sum_j \lambda_j \chi^2_1, \qquad
+\lambda = \mathrm{eig}\!\left(\Sigma^{1/2} S_g
+\Sigma^{1/2}\right)\]</span></p>
+<p>The p-value is exact by Imhof inversion. No permutation is involved,
+and the unknown level <span class="math inline">\(c\)</span> never has
+to be estimated.</p>
+</div>
+<div id="the-covariance" class="section level2">
+<h2>The covariance</h2>
+<p>Both quantities need <span class="math inline">\(\Sigma\)</span>, the
+covariance of the topic enrichment estimates. Obtain it with
+<code>ldsc_jackknife_cov()</code>, which reconstructs it from the
+block-jackknife delete values S-LDSC writes under
+<code>--print-delete-vals</code>:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>jk <span class="ot">&lt;-</span> <span class="fu">ldsc_jackknife_cov</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">ldsc_res_dir    =</span> <span class="st">&quot;path/to/scads_run&quot;</span>,</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">trait           =</span> <span class="st">&quot;IBD&quot;</span>,</span>
@@ -401,61 +407,83 @@ three minutes for a 25-topic run.</p>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">frq_prefix      =</span> <span class="st">&quot;.../1000G_Phase3_frq/1000G.EUR.QC.&quot;</span></span>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span>
 <span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>jk<span class="sc">$</span>pass        <span class="co"># TRUE if every topic reproduces S-LDSC&#39;s own Enrichment and SE</span></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">head</span>(jk<span class="sc">$</span>check) <span class="co"># the per-topic comparison</span></span></code></pre></div>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>jk<span class="sc">$</span>pass         <span class="co"># TRUE if every topic reproduces S-LDSC&#39;s Enrichment and SE</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">head</span>(jk<span class="sc">$</span>check)  <span class="co"># the per-topic comparison</span></span></code></pre></div>
 <p><code>baseline_prefix</code> and <code>frq_prefix</code> must match
 the <code>--ref-ld-chr</code> and <code>--frqfile-chr</code> of the runs
-you are reconstructing; different runs in the same project may use
-different references. The acceptance check exists to catch this: if the
-prefixes are wrong, <code>pass</code> is <code>FALSE</code> and the
-reconstructed values will not match the reported ones.</p>
+being reconstructed. The acceptance check exists to catch a mismatch: if
+the prefixes are wrong, <code>pass</code> is <code>FALSE</code>. A
+25-topic run takes a few minutes, and the result serves every trait
+sharing that topic model.</p>
 </div>
-<div id="running-the-test" class="section level2">
-<h2>Running the test</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">cell_type_heterogeneity</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">topic_res  =</span> topic_res,        <span class="co"># from run_fastTopics(): needs Pmat and Lmat</span></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">enrichment =</span> jk<span class="sc">$</span>enrichment,</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">Sigma      =</span> jk<span class="sc">$</span>Sigma,</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">groups     =</span> cell_type_labels  <span class="co"># one label per cell, in Lmat row order</span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">subset</span>(res, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div>
-<p><code>groups</code> is whatever grouping you want tested — published
-cell-type labels, clusters, or any partition of the cells. Groups
-smaller than <code>min_cells</code> (default 20) are skipped, and
-<code>NA</code> labels are dropped.</p>
-<p>The result has one row per cell type with the statistic, p-value and
-BH-adjusted FDR, sorted by significance.</p>
+<div id="cell-scores-and-p-values" class="section level2">
+<h2>Cell scores and p-values</h2>
+<p>Pass the reference prefixes to <code>get_cs()</code> and it builds
+<span class="math inline">\(\Sigma\)</span> for you:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>cs_res <span class="ot">&lt;-</span> <span class="fu">get_cs</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">topic_res       =</span> topic_res,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">ldsc_res_dir    =</span> <span class="st">&quot;path/to/scads_run&quot;</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">trait           =</span> <span class="st">&quot;IBD&quot;</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">nTopics         =</span> <span class="dv">25</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">baseline_prefix =</span> <span class="st">&quot;.../baselineLD.&quot;</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">frq_prefix      =</span> <span class="st">&quot;.../1000G.EUR.QC.&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>cs_res<span class="sc">$</span>cs        <span class="co"># per-cell score</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>cs_res<span class="sc">$</span>p_cell    <span class="co"># per-cell p-value, length = number of cells</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>cs_res<span class="sc">$</span>var_cell  <span class="co"># per-cell variance</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>fdr <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cs_res<span class="sc">$</span>p_cell, <span class="st">&quot;BH&quot;</span>)</span></code></pre></div>
+<p><code>p_cell</code> is <code>NA</code> where the variance is zero, so
+it always aligns with <code>cs</code>.
+<code>alternative = &quot;greater&quot;</code> gives a one-sided test of
+enrichment; the default is two-sided, which also flags significantly
+depleted cells.</p>
+<p>An already-computed covariance can be supplied instead with
+<code>Sigma = jk$Sigma</code>.</p>
 </div>
-<div id="reading-the-output" class="section level2">
-<h2>Reading the output</h2>
-<p><strong>Score spread does not predict significance.</strong> <span class="math inline">\(T_g\)</span> and its null eigenvalues both scale
+<div id="cell-type-heterogeneity" class="section level2">
+<h2>Cell-type heterogeneity</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">cell_type_heterogeneity</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">topic_res  =</span> topic_res,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">enrichment =</span> jk<span class="sc">$</span>enrichment,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">Sigma      =</span> jk<span class="sc">$</span>Sigma,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">groups     =</span> cell_type_labels   <span class="co"># one label per cell, in Lmat row order</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">subset</span>(res, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div>
+<p><code>groups</code> can be published cell-type labels, clusters, or
+any partition of the cells. Groups smaller than <code>min_cells</code>
+(default 20) are skipped and <code>NA</code> labels dropped. The result
+gives <code>cell_type</code>, <code>n</code>, the statistic,
+<code>p</code> and BH-adjusted <code>fdr</code>, sorted by p-value.</p>
+</div>
+<div id="interpreting-the-results" class="section level2">
+<h2>Interpreting the results</h2>
+<p><strong>Score spread does not predict heterogeneity.</strong> <span class="math inline">\(T_g\)</span> and its null eigenvalues both scale
 linearly with <span class="math inline">\(S_g\)</span>, so the p-value
 is invariant to the overall size of within-group variation. What matters
-is whether the <em>direction</em> in which cells vary aligns with the
-direction in which topic enrichments differ. A cell type with a wide
-score range can be non-significant and a narrow one significant, so a
-range-based summary and this test will disagree — by construction, not
-by error.</p>
-<p><strong>Test association first.</strong> Heterogeneity within a cell
-type that carries no overall disease signal is heterogeneity in noise.
-Interpret these p-values only for cell types that are associated to
-begin with.</p>
-<p><strong>Power tracks the precision of the topic enrichments</strong>,
-not the number of cells. The test sees only <em>differences</em> between
-topics, so a trait whose enrichments are large but imprecisely estimated
-can yield no detections at all while a trait with a smaller but tighter
-spread detects readily.</p>
-<p><strong>The loadings are treated as fixed.</strong> Topic-model
-uncertainty is not propagated, the same limitation that applies to the
-cell score variance.</p>
+is whether the direction in which cells vary aligns with the direction
+in which topic enrichments differ. A cell type with a wide score range
+can be non-significant, and a narrow one significant.</p>
+<p><strong>Test association before heterogeneity.</strong> Heterogeneity
+within a cell type that carries no overall disease signal is
+heterogeneity in noise.</p>
+<p><strong>Power follows the precision of the topic
+enrichments</strong>, not the number of cells. The test sees only
+differences between topics, so a trait with large but imprecisely
+estimated enrichments can give no detections while a trait with a
+smaller, tighter spread detects readily.</p>
+<p><strong>Loadings are treated as fixed.</strong> Topic-model
+uncertainty is not propagated into either variance.</p>
 </div>
-<div id="what-the-test-does-not-do" class="section level2">
-<h2>What the test does not do</h2>
-<p>It does not identify <em>which</em> cells drive the heterogeneity, or
-describe its structure. Once a cell type is flagged, correlating the
-score against topic loadings within that cell type is the natural
-follow-up, and will point at the regulatory programs responsible.</p>
+<div id="following-up-a-significant-cell-type" class="section level2">
+<h2>Following up a significant cell type</h2>
+<p>The test says that cells within a cell type differ; it does not say
+which cells, or along what axis. Correlating the cell score against the
+topic loadings within that cell type identifies the topics driving the
+gradient, and their annotations point at the regulatory programs
+responsible.</p>
 </div>
 
 

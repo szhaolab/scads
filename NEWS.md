@@ -22,13 +22,13 @@
   `--ref-ld-chr` and `--frqfile-chr` of the runs being reconstructed. A 25-topic
   run takes about three minutes.
 
-## Notes
+* `get_cs()` gains `baseline_prefix` and `frq_prefix`. When both are supplied it
+  builds the covariance with `ldsc_jackknife_cov()`, which is now the recommended
+  route for the cell score variance. Supplying `Sigma` directly still works, and
+  omitting all three falls back to the annotation-correlation approximation as
+  before, so existing calls are unaffected.
 
-* The annotation-correlation approximation remains adequate for the cell score,
-  where the weight vector has a large component along the constant direction.
-  It is not adequate for `cell_type_heterogeneity()`, which is orthogonal to that
-  direction: on null simulations the approximation makes the test conservative at
-  every threshold, while the jackknife covariance is calibrated to p < 0.05.
+## Notes
 
 * `CompQuadForm` and `data.table` are new optional dependencies. Without
   `CompQuadForm` the quadratic-form p-value falls back to a Satterthwaite

@@ -9,6 +9,8 @@ get_cs(
   ldsc_res_dir,
   trait,
   nTopics,
+  baseline_prefix = NULL,
+  frq_prefix = NULL,
   Sigma = NULL,
   alternative = c("two.sided", "greater"),
   min_prop_snps = 0.005
@@ -23,13 +25,17 @@ get_cs(
 
 \item{nTopics}{Number of topics (K).}
 
-\item{Sigma}{Optional K x K covariance matrix of the enrichment estimates, as
-returned by \code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}. When supplied it is used directly for
-the cell score variance. When \code{NULL} (default) the variance falls back to
-the annotation-correlation approximation
-\verb{Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')}, which captures only peak overlap
-and ignores the correlation induced by the shared GWAS, LD reference and
-baseline-LD covariates.}
+\item{baseline_prefix, frq_prefix}{Prefixes of the baseline annotation and
+PLINK frequency files, matching the \code{--ref-ld-chr} and \code{--frqfile-chr} of
+the S-LDSC runs. When both are supplied the covariance of the enrichment
+estimates is built with \code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}, which is the recommended
+route.}
+
+\item{Sigma}{Optional K x K covariance matrix of the enrichment estimates,
+supplied directly instead of being computed. If neither this nor the
+reference prefixes are given, the variance falls back to the
+annotation-correlation approximation
+\verb{Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')}.}
 
 \item{alternative}{Either \code{"two.sided"} (default, preserving previous
 behaviour) or \code{"greater"} for a one-sided test of enrichment. Under
