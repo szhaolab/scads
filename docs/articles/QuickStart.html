@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
       </span>
     </div>
 
@@ -43,6 +43,9 @@
 </li>
 <li>
   <a href="../articles/index.html">Articles</a>
+</li>
+<li>
+  <a href="../news/index.html">Changelog</a>
 </li>
       </ul>
 <ul class="nav navbar-nav navbar-right"></ul>
@@ -60,7 +63,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Getting Started</h1>
             
-            <h4 data-toc-skip class="date">2026-03-30</h4>
+            <h4 data-toc-skip class="date">2026-09-20</h4>
       
 
       <div class="hidden name"><code>QuickStart.Rmd</code></div>
@@ -145,7 +148,8 @@ dependencies.</li>
 </h2>
 <p><code>scads</code> requires reference files from the S-LDSC baseline
 LD model. Download and extract them into a local directory (e.g.,
-<code>~/LDSCORE/</code>). All files are available from <a href="https://zenodo.org/records/10515792" class="external-link">Zenodo</a>.</p>
+<code>~/LDSCORE/</code>). All files are available from <a href="https://zenodo.org/records/10515792" class="external-link">Zenodo</a>. Note: files are
+in hg19 genome build.</p>
 <blockquote>
 <p><strong>Disk usage:</strong> The compressed downloads total ~1 GB.
 After extraction, the reference data requires ~4 GB of disk space.</p>
@@ -191,11 +195,13 @@ After extraction, the reference data requires ~4 GB of disk space.</p>
 </h2>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scads</span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'ggplot2' was built under R version 4.3.3</span></span></code></pre></div>
 <p><code>scads</code> ships with a demo dataset: 500 cells, 12,971 peaks
 on chromosome 10, and GWAS summary statistics.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'data.table' was built under R version 4.3.3</span></span>
 <span></span>
 <span><span class="co"># Peak-by-cell count matrix</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"demo_count_matrix"</span><span class="op">)</span></span>

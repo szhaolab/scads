@@ -6,6 +6,7 @@ articles:
     contents:
     - QuickStart
     - StepByStep
+    - HeterogeneityTest
 
 navbar:
   components:

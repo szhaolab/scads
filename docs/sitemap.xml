@@ -1,15 +1,18 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>/404.html</loc></url>
 <url><loc>/LICENSE-text.html</loc></url>
+<url><loc>/articles/HeterogeneityTest.html</loc></url>
 <url><loc>/articles/Introduction.html</loc></url>
 <url><loc>/articles/QuickStart.html</loc></url>
 <url><loc>/articles/StepByStep.html</loc></url>
 <url><loc>/articles/index.html</loc></url>
 <url><loc>/authors.html</loc></url>
 <url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
 <url><loc>/reference/adp_gcEffects.html</loc></url>
 <url><loc>/reference/build_sldsc_command.html</loc></url>
 <url><loc>/reference/calculate_lambda_local_scATAC.html</loc></url>
+<url><loc>/reference/cell_type_heterogeneity.html</loc></url>
 <url><loc>/reference/compute_lfc_stats2.html</loc></url>
 <url><loc>/reference/compute_topic_pvalues.html</loc></url>
 <url><loc>/reference/create_annotations.html</loc></url>
@@ -24,6 +27,7 @@
 <url><loc>/reference/get_cs2.html</loc></url>
 <url><loc>/reference/get_gc_baseline.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/ldsc_jackknife_cov.html</loc></url>
 <url><loc>/reference/parse_peak_ranges.html</loc></url>
 <url><loc>/reference/pred_baseline_mu0.html</loc></url>
 <url><loc>/reference/prep_gcEffects_input.html</loc></url>

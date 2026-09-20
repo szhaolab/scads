@@ -1,4 +1,4 @@
-# scads 0.4.0
+# scads 0.5.0
 
 ## New
 

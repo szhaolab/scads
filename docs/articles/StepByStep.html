@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
       </span>
     </div>
 
@@ -43,6 +43,9 @@
 </li>
 <li>
   <a href="../articles/index.html">Articles</a>
+</li>
+<li>
+  <a href="../news/index.html">Changelog</a>
 </li>
       </ul>
 <ul class="nav navbar-nav navbar-right"></ul>
@@ -60,7 +63,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Step-by-Step Tutorial</h1>
             
-            <h4 data-toc-skip class="date">2026-03-30</h4>
+            <h4 data-toc-skip class="date">2026-09-20</h4>
       
 
       <div class="hidden name"><code>StepByStep.Rmd</code></div>
@@ -134,7 +137,9 @@ before proceeding.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scads</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning: package 'data.table' was built under R version 4.3.3</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'ggplot2' was built under R version 4.3.3</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="load-example-data">Load example data<a class="anchor" aria-label="anchor" href="#load-example-data"></a>
@@ -273,7 +278,7 @@ fastTopics.</li>
 <code><a href="https://stephenslab.github.io/fastTopics/reference/fit_topic_model.html" class="external-link">fastTopics::fit_topic_model()</a></code>.</li>
 <li>Computes a GC-content baseline correction for each topic (if
 <code>baseline_method = "gc"</code>).</li>
-<li>Runs differential expression analysis to identify topic-specific
+<li>Runs differential accessibility analysis to identify topic-specific
 peaks.</li>
 <li>Applies FDR correction and binarizes peak assignments.</li>
 </ol>
@@ -289,14 +294,14 @@ peaks.</li>
 <span><span class="va">bl_ct</span>        <span class="op">&lt;-</span> <span class="cn">NULL</span>    <span class="co"># cell type for "estimate" baseline (not used here)</span></span>
 <span><span class="va">bl_peaks</span>     <span class="op">&lt;-</span> <span class="cn">NULL</span>    <span class="co"># cell type peaks for "estimate" baseline (not used here)</span></span></code></pre></div>
 <p><strong><code>n_s</code> (number of simulations):</strong> Controls
-the number of Monte Carlo samples for differential expression testing.
-In practice, <code>n_s = 1000</code> is sufficient to obtain reasonable
-results and is the default used in this tutorial. In the paper, we used
-<code>n_s = 5000</code> for the final analyses. Increasing
-<code>n_s</code> improves the precision of the DE p-values but increases
-Step 1 runtime proportionally.</p>
+the number of Monte Carlo samples for differential accessibility
+testing. In practice, <code>n_s = 1000</code> is sufficient to obtain
+reasonable results and is the default used in this tutorial. In the
+paper, we used <code>n_s = 5000</code> for the final analyses.
+Increasing <code>n_s</code> improves the precision of the DE p-values
+but increases Step 1 runtime proportionally.</p>
 <p><strong><code>baseline_method</code>:</strong> Controls how the null
-hypothesis is set for differential expression testing:</p>
+hypothesis is set for differential accessibility testing:</p>
 <table class="table">
 <colgroup>
 <col width="38%">
@@ -601,38 +606,29 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Using no_dims = 1, perplexity = 100.000000, and theta = 0.100000</span></span>
 <span><span class="co">#&gt; Computing input similarities...</span></span>
 <span><span class="co">#&gt; Building tree...</span></span>
-<span><span class="co">#&gt; Done in 0.08 seconds (sparsity = 0.769136)!</span></span>
+<span><span class="co">#&gt; Done in 0.07 seconds (sparsity = 0.769136)!</span></span>
 <span><span class="co">#&gt; Learning embedding...</span></span>
-<span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 150: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 200: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 150: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 200: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 250: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 300: error is 0.446991 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 350: error is 0.440582 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 400: error is 0.440534 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 450: error is 0.440535 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 750: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 900: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 1000: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Fitting performed in 0.82 seconds.</span></span>
-<span><span class="co">#&gt; Warning: `aes_string()` was deprecated in ggplot2 3.0.0.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use tidy evaluation idioms with `aes()`.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See also `vignette("ggplot2-in-packages")` for more information.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">fastTopics</span> package.</span></span>
-<span><span class="co">#&gt;   Please report the issue at</span></span>
-<span><span class="co">#&gt;   <span style="color: #0000BB; font-style: italic;">&lt;https://github.com/stephenslab/fastTopics/issues&gt;</span>.</span></span>
-<span><span class="co">#&gt; <span style="color: #555555;">This warning is displayed once per session.</span></span></span>
-<span><span class="co">#&gt; <span style="color: #555555;">Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span></span>
-<span><span class="co">#&gt; <span style="color: #555555;">generated.</span></span></span></code></pre></div>
+<span><span class="co">#&gt; Iteration 350: error is 0.440582 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 400: error is 0.440534 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 450: error is 0.440535 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 750: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 900: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 1000: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Fitting performed in 0.66 seconds.</span></span></code></pre></div>
 <p><img src="StepByStep_files/figure-html/unnamed-chunk-22-1.png" alt="" width="768"></p>
 </div>
 </div>
