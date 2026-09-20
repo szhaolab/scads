@@ -60,68 +60,36 @@ $$T_g = \varepsilon' S_g \varepsilon \sim \sum_j \lambda_j \chi^2_1, \qquad
 The p-value is exact by Imhof inversion. No permutation is involved, and the
 unknown level $c$ never has to be estimated.
 
-## The covariance
-
-Both quantities need $\Sigma$, the covariance of the topic enrichment estimates.
-Obtain it with `ldsc_jackknife_cov()`, which reconstructs it from the
-block-jackknife delete values S-LDSC writes under `--print-delete-vals`:
-
-```{r sigma, eval=FALSE}
-jk <- ldsc_jackknife_cov(
-  ldsc_res_dir    = "path/to/scads_run",
-  trait           = "IBD",
-  nTopics         = 25,
-  baseline_prefix = ".../1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.",
-  frq_prefix      = ".../1000G_Phase3_frq/1000G.EUR.QC."
-)
-
-jk$pass         # TRUE if every topic reproduces S-LDSC's Enrichment and SE
-head(jk$check)  # the per-topic comparison
-```
-
-`baseline_prefix` and `frq_prefix` must match the `--ref-ld-chr` and
-`--frqfile-chr` of the runs being reconstructed. The acceptance check exists to
-catch a mismatch: if the prefixes are wrong, `pass` is `FALSE`. A 25-topic run
-takes a few minutes, and the result serves every trait sharing that topic model.
-
 ## Cell scores and p-values
 
-Pass the reference prefixes to `get_cs()` and it builds $\Sigma$ for you:
+`scads()` computes these as part of the pipeline:
 
 ```{r cs, eval=FALSE}
-cs_res <- get_cs(
-  topic_res       = topic_res,
-  ldsc_res_dir    = "path/to/scads_run",
-  trait           = "IBD",
-  nTopics         = 25,
-  baseline_prefix = ".../baselineLD.",
-  frq_prefix      = ".../1000G.EUR.QC."
-)
+res <- scads(...)          # see vignette("StepByStep")
 
-cs_res$cs        # per-cell score
-cs_res$p_cell    # per-cell p-value, length = number of cells
-cs_res$var_cell  # per-cell variance
+res$cs_res$cs         # per-cell score
+res$cs_res$p_cell     # per-cell p-value, one per cell
+res$cs_res$var_cell   # per-cell variance
+res$cs_res$Sigma_used # covariance of the topic enrichments
 
-fdr <- p.adjust(cs_res$p_cell, "BH")
+fdr <- p.adjust(res$cs_res$p_cell, "BH")
 ```
 
 `p_cell` is `NA` where the variance is zero, so it always aligns with `cs`.
 `alternative = "greater"` gives a one-sided test of enrichment; the default is
 two-sided, which also flags significantly depleted cells.
 
-An already-computed covariance can be supplied instead with `Sigma = jk$Sigma`.
-
 ## Cell-type heterogeneity
 
 ```{r hetero, eval=FALSE}
-res <- cell_type_heterogeneity(
-  topic_res  = topic_res,
-  enrichment = jk$enrichment,
-  Sigma      = jk$Sigma,
+ht <- cell_type_heterogeneity(
+  topic_res  = res$out1,
+  enrichment = res$cs_res$ldsc_res_table$Enrichment,
+  Sigma      = res$cs_res$Sigma_used,
   groups     = cell_type_labels   # one label per cell, in Lmat row order
 )
 
-subset(res, fdr < 0.05)
+subset(ht, fdr < 0.05)
 ```
 
 `groups` can be published cell-type labels, clusters, or any partition of the

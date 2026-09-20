@@ -183,10 +183,12 @@ scads <- function(count_matrix,
 
   # 4) calc the cell score
   scads_log("Step 4: Calculating cell scores", verbose = verbose)
-  cs_res <- get_cs(topic_res  = out1,
-                   ldsc_res_dir = outdir,
-                   trait      = gwas_trait,
-                   nTopics    = nTopics)
+  cs_res <- get_cs(topic_res       = out1,
+                   ldsc_res_dir    = outdir,
+                   trait           = gwas_trait,
+                   nTopics         = nTopics,
+                   baseline_prefix = baseline_dir,
+                   frq_prefix      = frqfile_pref)
 
   if (save_intermediates) {
     saveRDS(cs_res, file.path(outdir, "cs_res.rds"))

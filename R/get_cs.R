@@ -20,14 +20,14 @@
 #' @param nTopics Number of topics (K).
 #' @param baseline_prefix,frq_prefix Prefixes of the baseline annotation and
 #'   PLINK frequency files, matching the `--ref-ld-chr` and `--frqfile-chr` of
-#'   the S-LDSC runs. When both are supplied the covariance of the enrichment
-#'   estimates is built with [ldsc_jackknife_cov()], which is the recommended
-#'   route.
+#'   the S-LDSC runs. These are used to build the covariance of the enrichment
+#'   estimates with [ldsc_jackknife_cov()], which is the default.
 #' @param Sigma Optional K x K covariance matrix of the enrichment estimates,
-#'   supplied directly instead of being computed. If neither this nor the
-#'   reference prefixes are given, the variance falls back to the
-#'   annotation-correlation approximation
-#'   `Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')`.
+#'   supplied directly instead of being computed.
+#' @param use_approximation Use the annotation-correlation approximation
+#'   `Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')` instead of the jackknife
+#'   covariance. Default `FALSE`; the jackknife is preferred, and one of
+#'   `Sigma`, the reference prefixes, or this flag must be given.
 #' @param alternative Either `"two.sided"` (default, preserving previous
 #'   behaviour) or `"greater"` for a one-sided test of enrichment. Under
 #'   `"two.sided"`, cells that are significantly *depleted* (z < 0) also pass
@@ -51,15 +51,29 @@
 get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
                    baseline_prefix = NULL, frq_prefix = NULL,
                    Sigma = NULL,
+                   use_approximation = FALSE,
                    alternative = c("two.sided", "greater"),
                    min_prop_snps = 0.005) {
 
   alternative <- match.arg(alternative)
 
-  # Covariance of the enrichment estimates. Preferred route is the block
-  # jackknife, built here from the same S-LDSC output when the reference
-  # prefixes are supplied.
-  if (is.null(Sigma) && !is.null(baseline_prefix) && !is.null(frq_prefix)) {
+
+  # --- Input validation ---
+  if (is.null(topic_res$Pmat)) stop("topic_res must contain 'Pmat' (peaks x topics binary matrix)")
+  if (is.null(topic_res$Lmat)) stop("topic_res must contain 'Lmat' (cells x topics loading matrix)")
+  if (!dir.exists(ldsc_res_dir)) stop("ldsc_res_dir does not exist: ", ldsc_res_dir)
+  if (!is.character(trait) || nchar(trait) == 0) stop("trait must be a non-empty string")
+
+  # Covariance of the enrichment estimates. The block jackknife is the default;
+  # the annotation-correlation approximation must be asked for explicitly.
+  if (is.null(Sigma) && !isTRUE(use_approximation)) {
+    if (is.null(baseline_prefix) || is.null(frq_prefix))
+      stop("get_cs() needs the covariance of the enrichment estimates.\n",
+           "  Supply baseline_prefix and frq_prefix (matching this run's ",
+           "--ref-ld-chr and --frqfile-chr) to build it with ",
+           "ldsc_jackknife_cov(),\n  or pass a precomputed Sigma, ",
+           "or set use_approximation = TRUE to use ",
+           "se_k se_m Cor(A_k, A_m) instead.", call. = FALSE)
     jk <- ldsc_jackknife_cov(ldsc_res_dir = ldsc_res_dir, trait = trait,
                              nTopics = nTopics,
                              baseline_prefix = baseline_prefix,
@@ -69,12 +83,6 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
               "verify baseline_prefix and frq_prefix match this run's S-LDSC call")
     Sigma <- jk$Sigma
   }
-
-  # --- Input validation ---
-  if (is.null(topic_res$Pmat)) stop("topic_res must contain 'Pmat' (peaks x topics binary matrix)")
-  if (is.null(topic_res$Lmat)) stop("topic_res must contain 'Lmat' (cells x topics loading matrix)")
-  if (!dir.exists(ldsc_res_dir)) stop("ldsc_res_dir does not exist: ", ldsc_res_dir)
-  if (!is.character(trait) || nchar(trait) == 0) stop("trait must be a non-empty string")
 
   # 1) unpack
   p_jk <- topic_res$Pmat   # J x K

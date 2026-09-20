@@ -22,11 +22,15 @@
   `--ref-ld-chr` and `--frqfile-chr` of the runs being reconstructed. A 25-topic
   run takes about three minutes.
 
-* `get_cs()` gains `baseline_prefix` and `frq_prefix`. When both are supplied it
-  builds the covariance with `ldsc_jackknife_cov()`, which is now the recommended
-  route for the cell score variance. Supplying `Sigma` directly still works, and
-  omitting all three falls back to the annotation-correlation approximation as
-  before, so existing calls are unaffected.
+* `get_cs()` now uses the jackknife covariance **by default**. It gains
+  `baseline_prefix` and `frq_prefix`, which `scads()` passes through from its own
+  arguments, so the covariance is built as part of the pipeline with no extra
+  steps. Supplying `Sigma` directly still works.
+
+  **Breaking:** calling `get_cs()` with none of `Sigma`, the reference prefixes,
+  or `use_approximation = TRUE` is now an error rather than a silent fallback to
+  the annotation-correlation approximation. Set `use_approximation = TRUE` to
+  keep the previous behaviour.
 
 ## Notes
 

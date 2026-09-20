@@ -392,66 +392,33 @@ removes every term in <span class="math inline">\(c\)</span>:</p>
 and the unknown level <span class="math inline">\(c\)</span> never has
 to be estimated.</p>
 </div>
-<div id="the-covariance" class="section level2">
-<h2>The covariance</h2>
-<p>Both quantities need <span class="math inline">\(\Sigma\)</span>, the
-covariance of the topic enrichment estimates. Obtain it with
-<code>ldsc_jackknife_cov()</code>, which reconstructs it from the
-block-jackknife delete values S-LDSC writes under
-<code>--print-delete-vals</code>:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>jk <span class="ot">&lt;-</span> <span class="fu">ldsc_jackknife_cov</span>(</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">ldsc_res_dir    =</span> <span class="st">&quot;path/to/scads_run&quot;</span>,</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">trait           =</span> <span class="st">&quot;IBD&quot;</span>,</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">nTopics         =</span> <span class="dv">25</span>,</span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">baseline_prefix =</span> <span class="st">&quot;.../1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.&quot;</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">frq_prefix      =</span> <span class="st">&quot;.../1000G_Phase3_frq/1000G.EUR.QC.&quot;</span></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>jk<span class="sc">$</span>pass         <span class="co"># TRUE if every topic reproduces S-LDSC&#39;s Enrichment and SE</span></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">head</span>(jk<span class="sc">$</span>check)  <span class="co"># the per-topic comparison</span></span></code></pre></div>
-<p><code>baseline_prefix</code> and <code>frq_prefix</code> must match
-the <code>--ref-ld-chr</code> and <code>--frqfile-chr</code> of the runs
-being reconstructed. The acceptance check exists to catch a mismatch: if
-the prefixes are wrong, <code>pass</code> is <code>FALSE</code>. A
-25-topic run takes a few minutes, and the result serves every trait
-sharing that topic model.</p>
-</div>
 <div id="cell-scores-and-p-values" class="section level2">
 <h2>Cell scores and p-values</h2>
-<p>Pass the reference prefixes to <code>get_cs()</code> and it builds
-<span class="math inline">\(\Sigma\)</span> for you:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>cs_res <span class="ot">&lt;-</span> <span class="fu">get_cs</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">topic_res       =</span> topic_res,</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">ldsc_res_dir    =</span> <span class="st">&quot;path/to/scads_run&quot;</span>,</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">trait           =</span> <span class="st">&quot;IBD&quot;</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">nTopics         =</span> <span class="dv">25</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">baseline_prefix =</span> <span class="st">&quot;.../baselineLD.&quot;</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">frq_prefix      =</span> <span class="st">&quot;.../1000G.EUR.QC.&quot;</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>cs_res<span class="sc">$</span>cs        <span class="co"># per-cell score</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>cs_res<span class="sc">$</span>p_cell    <span class="co"># per-cell p-value, length = number of cells</span></span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>cs_res<span class="sc">$</span>var_cell  <span class="co"># per-cell variance</span></span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>fdr <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cs_res<span class="sc">$</span>p_cell, <span class="st">&quot;BH&quot;</span>)</span></code></pre></div>
+<p><code>scads()</code> computes these as part of the pipeline:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">scads</span>(...)          <span class="co"># see vignette(&quot;StepByStep&quot;)</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>cs         <span class="co"># per-cell score</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>p_cell     <span class="co"># per-cell p-value, one per cell</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>var_cell   <span class="co"># per-cell variance</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>Sigma_used <span class="co"># covariance of the topic enrichments</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>fdr <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(res<span class="sc">$</span>cs_res<span class="sc">$</span>p_cell, <span class="st">&quot;BH&quot;</span>)</span></code></pre></div>
 <p><code>p_cell</code> is <code>NA</code> where the variance is zero, so
 it always aligns with <code>cs</code>.
 <code>alternative = &quot;greater&quot;</code> gives a one-sided test of
 enrichment; the default is two-sided, which also flags significantly
 depleted cells.</p>
-<p>An already-computed covariance can be supplied instead with
-<code>Sigma = jk$Sigma</code>.</p>
 </div>
 <div id="cell-type-heterogeneity" class="section level2">
 <h2>Cell-type heterogeneity</h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">cell_type_heterogeneity</span>(</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">topic_res  =</span> topic_res,</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">enrichment =</span> jk<span class="sc">$</span>enrichment,</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">Sigma      =</span> jk<span class="sc">$</span>Sigma,</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">groups     =</span> cell_type_labels   <span class="co"># one label per cell, in Lmat row order</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>)</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">subset</span>(res, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>ht <span class="ot">&lt;-</span> <span class="fu">cell_type_heterogeneity</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">topic_res  =</span> res<span class="sc">$</span>out1,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">enrichment =</span> res<span class="sc">$</span>cs_res<span class="sc">$</span>ldsc_res_table<span class="sc">$</span>Enrichment,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">Sigma      =</span> res<span class="sc">$</span>cs_res<span class="sc">$</span>Sigma_used,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">groups     =</span> cell_type_labels   <span class="co"># one label per cell, in Lmat row order</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">subset</span>(ht, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div>
 <p><code>groups</code> can be published cell-type labels, clusters, or
 any partition of the cells. Groups smaller than <code>min_cells</code>
 (default 20) are skipped and <code>NA</code> labels dropped. The result

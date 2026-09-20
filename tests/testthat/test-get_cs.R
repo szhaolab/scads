@@ -72,7 +72,8 @@ test_that("get_cs computes cell scores from mock LDSC results", {
   }
 
   # Run get_cs
-  result <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics)
+  result <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics,
+                   use_approximation = TRUE)
 
   expect_true(is.list(result))
   expect_named(result, c("cs", "z_cell", "p_cell", "var_cell", "Sigma_used",
@@ -142,9 +143,10 @@ test_that("p_cell keeps length I and honours `alternative`", {
       sep = "\t", row.names = FALSE, quote = FALSE)
   }
 
-  two <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics)
+  two <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics,
+                use_approximation = TRUE)
   one <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics,
-                alternative = "greater")
+                use_approximation = TRUE, alternative = "greater")
 
   # p_cell must align with cs / z_cell
   expect_equal(length(two$p_cell), nCells)
@@ -194,7 +196,8 @@ test_that("supplied Sigma overrides the annotation-correlation fallback", {
   }
 
   # inflate the covariance 4x -> SE doubles -> |z| halves
-  base  <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics)
+  base  <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics,
+                  use_approximation = TRUE)
   Sig   <- base$Sigma_used * 4
   wide  <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics, Sigma = Sig)
 
@@ -263,4 +266,44 @@ test_that("cell_type_heterogeneity: input validation and small groups", {
 test_that("ldsc_jackknife_cov signature no longer requires an opt-in flag", {
   expect_false("allow_unvalidated" %in% names(formals(ldsc_jackknife_cov)))
   expect_true(all(c("baseline_prefix","frq_prefix") %in% names(formals(ldsc_jackknife_cov))))
+})
+
+test_that("get_cs defaults to the jackknife and refuses to guess", {
+  expect_true("use_approximation" %in% names(formals(get_cs)))
+  expect_false(eval(formals(get_cs)$use_approximation))   # jackknife is default
+  # with neither Sigma, prefixes, nor the opt-out, it must stop rather than
+  # silently fall back to the approximation
+  expect_error(
+    get_cs(list(Pmat = matrix(1), Lmat = matrix(1)), tempdir(), "TRAIT", 3),
+    "needs the covariance")
+})
+
+test_that("get_cs(use_approximation = TRUE) still runs", {
+  skip_if_not_installed("ashr")
+  nTopics <- 3; nPeaks <- 100; nCells <- 40
+  pn <- paste0("chr1:", seq(1000, by = 501, length.out = nPeaks),
+               "-", seq(1500, by = 501, length.out = nPeaks))
+  Pmat <- matrix(0, nPeaks, nTopics)
+  Pmat[1:40, 1] <- 1; Pmat[41:70, 2] <- 1; Pmat[71:100, 3] <- 1
+  rownames(Pmat) <- pn; colnames(Pmat) <- paste0("k", 1:nTopics)
+  set.seed(1); Lmat <- matrix(runif(nCells * nTopics), nCells, nTopics)
+  Lmat <- Lmat / rowSums(Lmat); colnames(Lmat) <- paste0("k", 1:nTopics)
+
+  d <- file.path(tempdir(), "mock_approx"); unlink(d, recursive = TRUE)
+  for (k in 1:nTopics) {
+    rd <- file.path(d, paste0("k", k, "_output"), "results")
+    dir.create(rd, recursive = TRUE)
+    write.table(data.frame(Category = "L2_0", `Prop._SNPs` = 0.01,
+      `Prop._h2` = 0.05 * k, `Prop._h2_std_error` = 0.01,
+      Enrichment = 1 + k * 0.5, Enrichment_std_error = 0.2,
+      Coefficient = 1e-8, `Coefficient_std_error` = 1e-9,
+      `Coefficient_z-score` = 2.0, check.names = FALSE),
+      file = file.path(rd, "TestTrait.results"), sep = "\t",
+      row.names = FALSE, quote = FALSE)
+  }
+  r <- get_cs(list(Pmat = Pmat, Lmat = Lmat), d, "TestTrait", nTopics,
+              use_approximation = TRUE)
+  expect_equal(length(r$cs), nCells)
+  expect_equal(length(r$p_cell), nCells)
+  unlink(d, recursive = TRUE)
 })
