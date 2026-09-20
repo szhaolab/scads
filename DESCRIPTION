@@ -1,6 +1,6 @@
 Package: scads
 Title: Single-Cell ATAC-seq Disease Scoring via Topic Modeling and S-LDSC
-Version: 0.3.0
+Version: 0.4.0
 Authors@R: c(
     person("Liyang", "Yu", role = c("aut", "cre"), email = "liyang.yu@dartmouth.edu"),
     person("Siming", "Zhao", role = "aut"))
@@ -38,8 +38,9 @@ Imports:
     tibble,
     vroom
 Suggests:
-    R.utils,
+    CompQuadForm,
     data.table,
+    R.utils,
     ggplot2,
     knitr,
     patchwork,

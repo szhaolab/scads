@@ -2,6 +2,7 @@
 
 export(adp_gcEffects)
 export(build_sldsc_command)
+export(cell_type_heterogeneity)
 export(compute_topic_pvalues)
 export(get_annot_beds)
 export(get_cs)

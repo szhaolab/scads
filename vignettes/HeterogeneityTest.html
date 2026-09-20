@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Testing cell types for heterogeneous disease relevance</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Testing cell types for heterogeneous
+disease relevance</h1>
+
+
+
+<p>SCADS gives every cell a disease-relevance score. Averaging those
+within a cell type answers “is this cell type relevant?”, but discards a
+different question: do the cells <em>within</em> it differ from one
+another? <code>cell_type_heterogeneity()</code> tests that, returning
+one p-value per cell type.</p>
+<div id="why-the-score-makes-this-tractable" class="section level2">
+<h2>Why the score makes this tractable</h2>
+<p>The cell score is a weighted average of the per-topic heritability
+enrichments,</p>
+<p><span class="math display">\[s_i = w_i&#39; E, \qquad \sum_k w_{ik} =
+1\]</span></p>
+<p>with weights determined by the cell’s topic loadings and the topic
+annotation sizes. For a cell type <span class="math inline">\(g\)</span>, writing <span class="math inline">\(S_g\)</span> for the covariance of <span class="math inline">\(w\)</span> across its cells, the within-type
+variance of the score is a quadratic form,</p>
+<p><span class="math display">\[T_g = \hat E&#39; S_g \hat
+E\]</span></p>
+<p>The null of no heterogeneity is that every topic is equally enriched,
+<span class="math inline">\(E = c\mathbf{1}\)</span> for some unknown
+<span class="math inline">\(c\)</span> — <strong>not</strong> that
+nothing is enriched. If all topics share the same enrichment, every cell
+scores <span class="math inline">\(c\)</span> and the variance is zero
+whatever the loadings.</p>
+<p>Because the weights sum to one, <span class="math inline">\(S_g\mathbf{1} = 0\)</span> exactly, so <span class="math inline">\(c\)</span> cancels out of the null entirely
+and</p>
+<p><span class="math display">\[T_g \sim \sum_j \lambda_j
+\chi^2_1\]</span></p>
+<p>with <span class="math inline">\(\lambda\)</span> the eigenvalues of
+<span class="math inline">\(\Sigma^{1/2} S_g \Sigma^{1/2}\)</span>. The
+p-value is exact by Imhof inversion — no permutation, no resampling.</p>
+<p>That <span class="math inline">\(c\)</span> cancels is what makes the
+test usable: every topic annotation is open chromatin, which is
+genuinely enriched for heritability, so <span class="math inline">\(c
+\gg 1\)</span> in practice. A test that assumed <span class="math inline">\(c = 1\)</span> would reject in nearly every cell
+type, detecting only that the annotations are peaks.</p>
+</div>
+<div id="you-need-an-accurate-covariance" class="section level2">
+<h2>You need an accurate covariance</h2>
+<p>The test needs <span class="math inline">\(\Sigma\)</span>, the
+covariance of the topic enrichment estimates. SCADS approximates this
+elsewhere as <span class="math inline">\(se_k\,se_m \mathrm{Cor}(A_k,
+A_m)\)</span>, using the correlation between annotations in place of the
+correlation between their LD scores.</p>
+<p><strong>That approximation is not adequate here.</strong> It is fine
+for the cell score, whose weight vector has a large component along
+<span class="math inline">\(\mathbf{1}\)</span>, but this statistic is
+built to be orthogonal to <span class="math inline">\(\mathbf{1}\)</span>, which is exactly where the
+approximation errs. On null simulations it makes the test conservative
+at every threshold, whereas a block-jackknife <span class="math inline">\(\Sigma\)</span> is calibrated down to <span class="math inline">\(p &lt; 0.05\)</span>.</p>
+<p>Use <code>ldsc_jackknife_cov()</code>. It requires your S-LDSC runs
+to have been made with <code>--print-delete-vals</code>, and costs about
+three minutes for a 25-topic run.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>jk <span class="ot">&lt;-</span> <span class="fu">ldsc_jackknife_cov</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">ldsc_res_dir    =</span> <span class="st">&quot;path/to/scads_run&quot;</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">trait           =</span> <span class="st">&quot;IBD&quot;</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">nTopics         =</span> <span class="dv">25</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">baseline_prefix =</span> <span class="st">&quot;.../1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD.&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">frq_prefix      =</span> <span class="st">&quot;.../1000G_Phase3_frq/1000G.EUR.QC.&quot;</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>jk<span class="sc">$</span>pass        <span class="co"># TRUE if every topic reproduces S-LDSC&#39;s own Enrichment and SE</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">head</span>(jk<span class="sc">$</span>check) <span class="co"># the per-topic comparison</span></span></code></pre></div>
+<p><code>baseline_prefix</code> and <code>frq_prefix</code> must match
+the <code>--ref-ld-chr</code> and <code>--frqfile-chr</code> of the runs
+you are reconstructing; different runs in the same project may use
+different references. The acceptance check exists to catch this: if the
+prefixes are wrong, <code>pass</code> is <code>FALSE</code> and the
+reconstructed values will not match the reported ones.</p>
+</div>
+<div id="running-the-test" class="section level2">
+<h2>Running the test</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">cell_type_heterogeneity</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">topic_res  =</span> topic_res,        <span class="co"># from run_fastTopics(): needs Pmat and Lmat</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">enrichment =</span> jk<span class="sc">$</span>enrichment,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">Sigma      =</span> jk<span class="sc">$</span>Sigma,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">groups     =</span> cell_type_labels  <span class="co"># one label per cell, in Lmat row order</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">subset</span>(res, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div>
+<p><code>groups</code> is whatever grouping you want tested — published
+cell-type labels, clusters, or any partition of the cells. Groups
+smaller than <code>min_cells</code> (default 20) are skipped, and
+<code>NA</code> labels are dropped.</p>
+<p>The result has one row per cell type with the statistic, p-value and
+BH-adjusted FDR, sorted by significance.</p>
+</div>
+<div id="reading-the-output" class="section level2">
+<h2>Reading the output</h2>
+<p><strong>Score spread does not predict significance.</strong> <span class="math inline">\(T_g\)</span> and its null eigenvalues both scale
+linearly with <span class="math inline">\(S_g\)</span>, so the p-value
+is invariant to the overall size of within-group variation. What matters
+is whether the <em>direction</em> in which cells vary aligns with the
+direction in which topic enrichments differ. A cell type with a wide
+score range can be non-significant and a narrow one significant, so a
+range-based summary and this test will disagree — by construction, not
+by error.</p>
+<p><strong>Test association first.</strong> Heterogeneity within a cell
+type that carries no overall disease signal is heterogeneity in noise.
+Interpret these p-values only for cell types that are associated to
+begin with.</p>
+<p><strong>Power tracks the precision of the topic enrichments</strong>,
+not the number of cells. The test sees only <em>differences</em> between
+topics, so a trait whose enrichments are large but imprecisely estimated
+can yield no detections at all while a trait with a smaller but tighter
+spread detects readily.</p>
+<p><strong>The loadings are treated as fixed.</strong> Topic-model
+uncertainty is not propagated, the same limitation that applies to the
+cell score variance.</p>
+</div>
+<div id="what-the-test-does-not-do" class="section level2">
+<h2>What the test does not do</h2>
+<p>It does not identify <em>which</em> cells drive the heterogeneity, or
+describe its structure. Once a cell type is flagged, correlating the
+score against topic loadings within that cell type is the natural
+follow-up, and will point at the regulatory programs responsible.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

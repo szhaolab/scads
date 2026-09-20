@@ -8,67 +8,86 @@ ldsc_jackknife_cov(
   ldsc_res_dir,
   trait,
   nTopics,
-  M_annot = NULL,
-  allow_unvalidated = FALSE
+  baseline_prefix,
+  frq_prefix,
+  chrs = 1:22,
+  tol_enrichment = 0.01,
+  tol_se = 0.05,
+  verbose = TRUE
 )
 }
 \arguments{
-\item{ldsc_res_dir}{Directory containing \verb{k*_output/results/<trait>.results}
-and the matching \code{.part_delete} files.}
+\item{ldsc_res_dir}{Directory holding \verb{k*_output/} for each topic, as produced
+by \code{\link[=run_sldsc]{run_sldsc()}}.}
 
 \item{trait}{Trait name used in the S-LDSC output filenames.}
 
 \item{nTopics}{Number of topics (K).}
 
-\item{M_annot}{Optional numeric vector of per-category SNP counts (length
-\code{n_annot}) used to convert delete-one coefficients to per-category h2. If
-\code{NULL} (default), the \code{Prop._SNPs} column of the \code{.results} file is used;
-the total SNP count cancels in the ratio, so proportions suffice.}
+\item{baseline_prefix}{Prefix of the baseline annotation files, matching the
+\code{--ref-ld-chr} of the runs being reconstructed, e.g.
+\code{".../baselineLD_v2.2/baselineLD."}.}
+
+\item{frq_prefix}{Prefix of the PLINK frequency files matching
+\code{--frqfile-chr}, e.g. \code{".../1000G.EUR.QC."}. Used for the MAF 5-50\%
+restriction.}
+
+\item{chrs}{Chromosomes to use. Defaults to 1:22.}
+
+\item{tol_enrichment, tol_se}{Relative tolerances for the acceptance check.}
+
+\item{verbose}{Print per-chromosome progress and the acceptance table.}
 }
 \value{
-A \verb{K x K} covariance matrix of the enrichment estimates, or \code{NULL} if
-the delete-value files are not present (callers should then fall back to the
-annotation-correlation approximation).
+A list with
+\item{Sigma}{the \verb{K x K} covariance of the enrichment estimates}
+\item{check}{per-topic comparison against S-LDSC's reported values}
+\item{pass}{\code{TRUE} if every topic is within tolerance}
+\item{enrichment,se}{the reported point estimates and standard errors}
+\item{E_blocks}{\verb{n_blocks x K} matrix of per-block enrichments}
 }
 \description{
-Covariance of S-LDSC Enrichment Estimates from Block-Jackknife Delete Values
+Reconstructs the \verb{K x K} sampling covariance of the per-topic heritability
+enrichment estimates from the block-jackknife delete values that S-LDSC writes
+when run with \code{--print-delete-vals}.
 }
-\section{Status}{
+\details{
+This replaces the approximation
+\verb{Cov(e_k, e_m) ~ se_k se_m Cor(A_k, A_m)}, which substitutes the correlation
+between annotations for the correlation between their LD scores. That
+approximation captures only peak overlap: estimates from separate S-LDSC runs
+are also correlated because they share the GWAS summary statistics, the LD
+reference panel and the baseline-LD covariates, so two topics with disjoint
+peak sets still have correlated estimates.
+}
+\section{When it matters}{
 
-\strong{EXPERIMENTAL -- NOT VALIDATED. Do not use for published results.}
-The reconstruction of per-block enrichment from \code{.part_delete} does not
-currently reproduce LDSC's own reported values. On a test run the
-reconstructed enrichment standard errors were 1.26x, 1.41x and 1.78x the
-\code{Enrichment_std_error} reported by LDSC for topics k1-k3, and the mean of the
-delete values (0.2347) did not match the reported \code{Prop._h2} (0.3561).
-The likely cause is that LDSC reports overlap-corrected \code{Prop._h2}
-(\verb{_overlap_output} in regressions.py), which weights each category's
-heritability by its overlap with every other annotation, whereas this
-function uses the uncorrected ratio \code{cat_b / tot_b}. Until the diagonal of
-the returned matrix reproduces \code{Enrichment_std_error}, the result must not be
-passed to \code{\link[=get_cs]{get_cs()}}.
-
-Reconstructs the K x K sampling covariance of the per-topic enrichment
-estimates from the block-jackknife delete-one values that S-LDSC writes when
-run with \code{--print-delete-vals}.
-
-This replaces the annotation-correlation approximation
-\verb{Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')}, which captures only peak overlap.
-Enrichment estimates from separate S-LDSC runs are correlated for reasons the
-annotation correlation cannot see: they share the GWAS summary statistics, the
-LD reference panel, and the baseline-LD covariates. Two topics with disjoint
-peak sets therefore still have correlated estimates.
-
-Requires each per-topic S-LDSC run to have been invoked with
-\code{--print-delete-vals}, which writes \verb{<out>.part_delete}: an
-\verb{n_blocks x n_annot} matrix of delete-one per-category coefficient (tau)
-values. The focal topic annotation is assumed to be the first column, matching
-the convention used elsewhere in this package when reading \code{.results} files.
-
-The blocks must correspond across the K runs. They will if every run used the
-same summary statistics and the same reference SNPs; the function checks that
-the delete-value matrices all have the same number of rows, but cannot verify
-block identity beyond that. Confirm the K logs report the same retained-SNP
-count.
+For the cell score the approximation is usually adequate, because the score's
+weight vector has a large component along the constant direction where the two
+agree closely. For \code{\link[=cell_type_heterogeneity]{cell_type_heterogeneity()}} it is not: that statistic is
+constructed to be orthogonal to the constant direction, which is exactly where
+the approximation error concentrates.
 }
 
+\section{Method}{
+
+Per LD block \code{b}, for topic \code{k},
+\deqn{\hat E_{k,(b)} = \frac{\sum_j \mathrm{overlap}[k,j]\,\tau_{j,(b)}}{\sum_j M_j\,\tau_{j,(b)}} \Big/ \mathrm{Prop.\_SNPs}[k]}
+and Sigma is the ordinary block-jackknife covariance of those vectors. Two
+details are required for this to reproduce S-LDSC's own output:
+\itemize{
+\item \strong{Overlap correction.} S-LDSC reports overlap-corrected per-category
+heritability (\verb{_overlap_output}), weighting each category by its overlap
+with every other annotation. The uncorrected ratio
+\verb{M_k tau_k / sum_j M_j tau_j} is a different quantity, and annotations
+overlap heavily.
+\item \strong{MAF restriction.} When \code{--frqfile-chr} is supplied S-LDSC uses
+\code{M_5_50}, so the overlap must be computed over MAF 5-50\% variants only.
+}
+With both applied the reconstruction matches the reported \code{Enrichment} and
+\code{Enrichment_std_error} to four decimal places; \code{check} reports that agreement.
+}
+
+\seealso{
+\code{\link[=get_cs]{get_cs()}}, \code{\link[=cell_type_heterogeneity]{cell_type_heterogeneity()}}
+}

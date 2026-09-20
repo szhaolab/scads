@@ -206,7 +206,61 @@ test_that("supplied Sigma overrides the annotation-correlation fallback", {
 })
 
 
-test_that("ldsc_jackknife_cov refuses to run unless explicitly opted in", {
-  expect_error(ldsc_jackknife_cov("/nonexistent", "TRAIT", 3),
-               "EXPERIMENTAL")
+
+test_that("cell_type_heterogeneity: weights annihilate the constant vector", {
+  set.seed(3); K <- 5; n <- 400
+  Pmat <- matrix(0, 2000, K); for (k in 1:K) Pmat[((k-1)*400+1):(k*400), k] <- 1
+  Lmat <- gtools::rdirichlet(n, rep(0.3, K))
+  tr <- list(Pmat = Pmat, Lmat = Lmat)
+  a_k <- colSums(Pmat); W <- sweep(Lmat, 2, a_k, "*"); W <- W / rowSums(W)
+  expect_lt(max(abs(cov(W) %*% rep(1, K))), 1e-12)
+})
+
+test_that("cell_type_heterogeneity: the unknown common enrichment drops out", {
+  set.seed(3); K <- 5; n <- 400
+  Pmat <- matrix(0, 2000, K); for (k in 1:K) Pmat[((k-1)*400+1):(k*400), k] <- 1
+  Lmat <- gtools::rdirichlet(n, rep(0.3, K))
+  tr <- list(Pmat = Pmat, Lmat = Lmat)
+  Sig <- diag(c(.5, .4, .6, .3, .45)^2)
+  g <- rep("A", n)
+  set.seed(9); eps <- as.vector(t(chol(Sig)) %*% rnorm(K))
+  # E = c*1 + eps for two very different c must give the same p-value
+  p1 <- cell_type_heterogeneity(tr, 1  + eps, Sig, g)$p
+  p2 <- cell_type_heterogeneity(tr, 40 + eps, Sig, g)$p
+  expect_equal(p1, p2, tolerance = 1e-8)
+})
+
+test_that("cell_type_heterogeneity: null p-values are uniform", {
+  skip_if_not_installed("CompQuadForm")
+  set.seed(3); K <- 5; n <- 400
+  Pmat <- matrix(0, 2000, K); for (k in 1:K) Pmat[((k-1)*400+1):(k*400), k] <- 1
+  Lmat <- gtools::rdirichlet(n, rep(0.3, K))
+  tr <- list(Pmat = Pmat, Lmat = Lmat)
+  Sig <- diag(c(.5, .4, .6, .3, .45)^2); R <- chol(Sig)
+  g <- rep("A", n)
+  set.seed(11)
+  pv <- vapply(1:300, function(i)
+    cell_type_heterogeneity(tr, 7 + as.vector(t(R) %*% rnorm(K)), Sig, g)$p, 0)
+  expect_gt(suppressWarnings(ks.test(pv, "punif")$p.value), 0.01)
+  expect_lt(abs(mean(pv < 0.05) - 0.05), 0.04)
+})
+
+test_that("cell_type_heterogeneity: input validation and small groups", {
+  set.seed(3); K <- 3
+  Pmat <- matrix(0, 300, K); for (k in 1:K) Pmat[((k-1)*100+1):(k*100), k] <- 1
+  tr <- list(Pmat = Pmat, Lmat = gtools::rdirichlet(50, rep(0.3, K)))
+  Sig <- diag(K)
+  expect_error(cell_type_heterogeneity(tr, c(1, 2), Sig, rep("A", 50)),
+               "enrichment must have length 3")
+  expect_error(cell_type_heterogeneity(tr, rep(1, K), diag(2), rep("A", 50)),
+               "Sigma must be a 3 x 3 matrix")
+  expect_error(cell_type_heterogeneity(tr, rep(1, K), Sig, rep("A", 10)),
+               "one entry per cell")
+  expect_error(cell_type_heterogeneity(tr, rep(1, K), Sig, rep("A", 50),
+                                       min_cells = 100), "no group has at least")
+})
+
+test_that("ldsc_jackknife_cov signature no longer requires an opt-in flag", {
+  expect_false("allow_unvalidated" %in% names(formals(ldsc_jackknife_cov)))
+  expect_true(all(c("baseline_prefix","frq_prefix") %in% names(formals(ldsc_jackknife_cov))))
 })

@@ -1,3 +1,39 @@
+# scads 0.4.0
+
+## New
+
+* `cell_type_heterogeneity()` tests whether cells within a cell type differ in
+  disease relevance, giving one p-value per cell type. The score is linear in the
+  topic enrichments with weights summing to one, so the within-type variance is a
+  quadratic form whose null does not depend on the unknown common enrichment
+  level; the p-value is exact by Imhof inversion rather than permutation. See
+  `vignette("HeterogeneityTest")`.
+
+* `ldsc_jackknife_cov()` is rewritten and validated. It reconstructs the K x K
+  covariance of the enrichment estimates from S-LDSC `--print-delete-vals`
+  output, and now reproduces the reported `Enrichment` and `Enrichment_std_error`
+  to four decimal places. Two corrections were needed: overlap-corrected
+  per-category heritability (S-LDSC's `_overlap_output`) rather than the
+  uncorrected ratio, and restriction to MAF 5-50% variants when `--frqfile-chr`
+  is supplied. The function reports the acceptance check in `$check` and `$pass`,
+  and no longer requires an opt-in flag.
+
+  It takes `baseline_prefix` and `frq_prefix`, which must match the
+  `--ref-ld-chr` and `--frqfile-chr` of the runs being reconstructed. A 25-topic
+  run takes about three minutes.
+
+## Notes
+
+* The annotation-correlation approximation remains adequate for the cell score,
+  where the weight vector has a large component along the constant direction.
+  It is not adequate for `cell_type_heterogeneity()`, which is orthogonal to that
+  direction: on null simulations the approximation makes the test conservative at
+  every threshold, while the jackknife covariance is calibrated to p < 0.05.
+
+* `CompQuadForm` and `data.table` are new optional dependencies. Without
+  `CompQuadForm` the quadratic-form p-value falls back to a Satterthwaite
+  moment match; `data.table` is required by `ldsc_jackknife_cov()`.
+
 # scads 0.3.0
 
 Revision of NCOMMS-26-026605-T. Changes to the cell-level variance and p-value.
