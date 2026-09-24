@@ -101,10 +101,17 @@ cell_type_heterogeneity <- function(topic_res, enrichment, Sigma, groups,
 
 #' Upper-tail probability of a weighted sum of chi-square(1) variables
 #'
-#' Imhof inversion when CompQuadForm is available, with a Satterthwaite
-#' moment-match fallback. The eigenvalues here are typically of order 1e-2, at
-#' which scale `imhof` and `davies` return out-of-range values with `ifault` set;
-#' rescaling by their sum fixes this and leaves the p-value unchanged.
+#' Imhof inversion cross-checked against a Satterthwaite moment match.
+#'
+#' Two numerical traps are handled here. The eigenvalues are typically of order
+#' 1e-2, at which scale `imhof` and `davies` return out-of-range values;
+#' rescaling by their sum fixes that and leaves the p-value unchanged. More
+#' seriously, `imhof` loses all accuracy in the far tail *without* setting
+#' `ifault`: at a single eigenvalue and q = 675 it returns 5e-04 where the exact
+#' answer is 8e-149, and at q = 300 it returns a negative number. We therefore
+#' accept its value only when it agrees with the moment match to within two
+#' orders of magnitude, and otherwise use the moment match, which is exact for a
+#' single eigenvalue and well behaved throughout.
 #' @noRd
 .quadform_pvalue <- function(Tg, S_g, Sigma) {
   if (!is.finite(Tg) || Tg <= 0) return(NA_real_)
@@ -112,12 +119,17 @@ cell_type_heterogeneity <- function(topic_res, enrichment, Sigma, groups,
   lam <- eigen(R %*% S_g %*% t(R), symmetric = TRUE, only.values = TRUE)$values
   lam <- lam[lam > max(lam) * 1e-10]
   if (!length(lam)) return(NA_real_)
-  sc <- sum(lam)
-  if (requireNamespace("CompQuadForm", quietly = TRUE)) {
-    p <- tryCatch(CompQuadForm::imhof(Tg / sc, lambda = lam / sc)$Qq,
-                  error = function(e) NA_real_)
-    if (is.finite(p)) return(min(max(p, 0), 1))
-  }
-  m1 <- sum(lam); m2 <- 2 * sum(lam^2)
-  stats::pchisq(Tg / (m2 / (2 * m1)), df = 2 * m1^2 / m2, lower.tail = FALSE)
+  sc <- sum(lam); q <- Tg / sc; l <- lam / sc
+
+  # Satterthwaite moment match: exact when length(l) == 1
+  m1 <- sum(l); m2 <- 2 * sum(l^2)
+  p_mm <- stats::pchisq(q / (m2 / (2 * m1)), df = 2 * m1^2 / m2, lower.tail = FALSE)
+
+  if (!requireNamespace("CompQuadForm", quietly = TRUE)) return(p_mm)
+  p_im <- tryCatch(CompQuadForm::imhof(q, lambda = l)$Qq,
+                   error = function(e) NA_real_)
+  if (!is.finite(p_im) || p_im <= 0 || p_im >= 1) return(p_mm)
+  # imhof fails silently in the far tail; distrust it when it disagrees sharply
+  if (p_mm > 0 && abs(log10(p_im) - log10(p_mm)) > 2) return(p_mm)
+  min(max(p_im, 0), 1)
 }
