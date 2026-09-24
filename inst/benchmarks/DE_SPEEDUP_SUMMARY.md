@@ -10,6 +10,28 @@ On a real k=25 haematopoiesis run (452,004 peaks × 33,819 cells) this step take
 flow downstream: `compute_topic_pvalues()` turns them into the binarized topic
 annotation `Pmat` (FDR < 0.05), which is what S-LDSC consumes.
 
+
+## Why fastTopics uses MCMC (not a Gaussian approximation)
+
+fastTopics samples the posterior of the topic log-rate `g = log f` (flat prior on
+`f`) by MCMC because that posterior is **not Gaussian in the low-count regime that
+dominates single-cell data**:
+
+- **Skew at low effective counts.** The Poisson log-likelihood for a rate is far
+  from quadratic when few counts inform it, so the posterior of `log f` is
+  right-skewed; a symmetric Laplace fit mis-sizes the interval.
+- **Boundary breakdown.** When a peak has ~0 counts in a topic, the MLE `f -> 0`,
+  `log f -> -Inf`, and the Fisher information is unstable, so the normal SE is
+  undefined/inflated. MCMC with a proper prior stays finite and returns a valid
+  *asymmetric* HPD interval (the z-code reads `postmean/(postmean-lower)` off one
+  HPD bound for exactly this reason).
+
+MCMC is therefore robust across the whole dynamic range; the price is speed. This
+predicts the Laplace approximation is accurate only when the **effective per-topic
+count** `n_jk = F_jk * sum_i s_i L_ik` is large enough for the log-rate posterior
+to be ~symmetric -- i.e. high read depth, well-expressed peaks, and not-too-many
+topics (more topics split the reads thinner).
+
 ## Approaches tried
 
 1. **Reduce `ns`** (fewer MCMC samples). Exposed already via `control$ns`.
@@ -65,6 +87,61 @@ The Laplace annotation overlaps the published one at median Jaccard 0.84 and is
 within 8% on total size, with 95.6% of significance calls identical. Agreement is near-perfect at k=5 (median Jaccard 0.98) and good at k=25
 (median 0.84); the gap reflects greater topic collinearity at high k, which the
 full k×k Fisher inverse partly but not fully absorbs.
+
+### Real data: colon Fig6 (full 499,517 peaks, k=15), vs published ns=1000 z
+
+| metric | value |
+|--------|-------|
+| Laplace DE wall-time | 9.2 min |
+| z Spearman | 0.886 |
+| per-call FDR agreement | 0.954 |
+| Pmat Jaccard per topic | min 0.643, median 0.894, mean 0.872 |
+| total sig-peak ratio (laplace/ref) | 0.895 |
+
+### Read-depth sweep (Fig2 sim, 40k peaks, k=5; binomial thinning)
+
+MCMC ns=1000 reference recomputed at each depth; Laplace vs that reference.
+
+| thinning | median reads/cell | MCMC time | Laplace time | speedup | Jaccard median | FDR agree |
+|----------|-------------------|-----------|--------------|---------|----------------|-----------|
+| 1.00 | 19,631 | 267 s | 6 s | 49x | 0.991 | 0.995 |
+| 0.30 | 5,898  | 93 s  | 4 s | 22x | 0.981 | 0.990 |
+| 0.10 | 1,962  | 40 s  | 4 s | 9x  | 0.908 | 0.948 |
+
+At k=5 the approximation holds up even at ~2k reads/cell (Jaccard 0.91). Note the
+speedup shrinks at low depth: the sparse MCMC is cheaper when there are fewer
+nonzeros, while Laplace time is roughly flat -- so Laplace helps most at high
+depth / high nnz.
+
+### When is the Gaussian approximation good?
+
+Agreement binned by effective count `n_jk = F_jk * sum_i s_i L_ik`
+(sig-agreement at z>4.5):
+
+| n_eff bin | sim k=5 | colon k=15 | eczema k=25 |
+|-----------|---------|------------|-------------|
+| (0,1]     | 1.00    | 1.00       | 1.00  (both call non-sig) |
+| (10,20]   | 1.00    | 0.99       | 0.97 |
+| (20,50]   | 1.00    | 0.91       | 0.80 |
+| (50,100]  | 0.85    | 0.84       | 0.85 |
+| (100,Inf] | 1.00    | 0.98       | 0.93 |
+| % of calls with n_eff>100 | 63% | 18% | 10% |
+
+Disagreement concentrates in the **boundary range n_eff ~ 20-100**, where MCMC's
+capture of posterior skew flips marginally-significant calls; it is small both far
+below (both non-significant) and far above (both significant). The *fraction* of
+peak-topics in that boundary range grows with k (topics split the reads), which is
+why overall annotation concordance falls from ~0.98 (k=5) to ~0.89 (k=15) to
+~0.84 (k=25) at comparable read depth.
+
+**Practical guidance for `lfc.method = "laplace"`:**
+- **Recommended** when k is small-to-moderate (k <= ~15) at typical depth
+  (>= ~10k reads/cell): annotations 89-99% concordant, 9-49x faster.
+- **Use with a caveat** at high k (>= ~25) or low depth: expect ~84% annotation
+  concordance, with disagreement on borderline peaks (n_eff ~20-100). Prefer MCMC
+  if those borderline calls are load-bearing.
+- Read depth alone matters less than k: at k=5, thinning to 2k reads/cell still
+  gave Jaccard 0.91.
 
 ## Recommendation
 
