@@ -29,17 +29,27 @@ behaviour is unchanged unless the user opts in.**
 
 ## Results
 
-### Simulation (Fig2 sim, 30,000-peak subset, k=5), vs mcmc ns=1000 reference
+### Simulation (Fig2 sim, full 259,941 peaks, k=5)
 
-| method       | time   | speedup | z Spearman | sig-agree @z>2/4/6 |
-|--------------|--------|---------|-----------|--------------------|
-| mcmc ns=1000 | 244 s  | 1×      | (ref)     | —                  |
-| mcmc ns=200  | 58 s   | 4.2×    | 0.758     | 0.949/0.946/0.924  |
-| **laplace**  | 5.5 s  | **44.7×** | **0.857** | 0.948/0.941/0.919 |
+Compared against the **existing** published run's stored ns=1000 z
+(`run_fastTopics_res.rds$de_res$z`), using the same gc baseline:
 
-Laplace dominates ns-reduction: ~10× faster **and** higher rank fidelity.
-Reducing `ns` below ~500 also makes z **magnitudes** unstable (HPD SD from few
-samples is noisy), while Laplace is deterministic.
+| metric | value |
+|--------|-------|
+| Laplace DE wall-time | **0.60 min** (full 260k peaks) |
+| z Spearman vs stored ns=1000 z | 0.929 |
+| per-call FDR-significance agreement | **0.991** |
+| Pmat Jaccard per topic | 0.963–0.998, **median 0.983** |
+| total significant peaks (laplace / ref) | 0.837M / 0.846M (ratio 0.990) |
+
+Annotations are **96–99.8% identical** to the published ns=1000 run — the
+"minimally changed" bar is met at k=5.
+
+A separate speed comparison of the three LFC methods on a 30k-peak subset
+(mcmc ns=1000 vs ns=200 vs laplace) gave **laplace 44.7× faster** (5.5s vs
+244s) with higher rank fidelity (Spearman 0.857) than ns=200 (0.758, 4.2×).
+Reducing `ns` below ~500 makes z **magnitudes** unstable (HPD SD from few
+samples is noisy); laplace is deterministic.
 
 ### Real data (eczema haematopoiesis run, full 452,004 peaks, k=25), vs the published ns=1000 z
 
@@ -52,9 +62,9 @@ samples is noisy), while Laplace is deterministic.
 | total significant peaks (laplace / ref) | 2.98M / 2.77M (ratio 1.08) |
 
 The Laplace annotation overlaps the published one at median Jaccard 0.84 and is
-within 8% on total size, with 95.6% of significance calls identical. The small
-size bias is topic-dependent (slightly conservative on the k=5 sim, slightly
-liberal on the k=25 real run).
+within 8% on total size, with 95.6% of significance calls identical. Agreement is near-perfect at k=5 (median Jaccard 0.98) and good at k=25
+(median 0.84); the gap reflects greater topic collinearity at high k, which the
+full k×k Fisher inverse partly but not fully absorbs.
 
 ## Recommendation
 
