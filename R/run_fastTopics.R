@@ -23,11 +23,13 @@
 #' @export
 run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
                            baseline_method = "constant",
-                           bl_celltype_cells = NULL, 
+                           bl_celltype_cells = NULL,
                            bl_celltype_peak_file = NULL,
                            fdr_cutoff = 0.05,
+                           lfc.method = c("mcmc","laplace"),
                            outdir,
                            genome = "hg19", ...) {
+  lfc.method <- match.arg(lfc.method)
   
   
   if (is.null(rownames(count_matrix))) {
@@ -108,6 +110,7 @@ run_fastTopics <- function(count_matrix, nTopics = 10, n_s = 1000, n_c = 1,
     X = count_matrix_filtered,
     s = s,
     lfc.stat = "vsnull",
+    lfc.method = lfc.method,
     shrink.method = "none",
     control = list(ns = n_s, nc = n_c, minval = 1e-50),
     f0 = baseline

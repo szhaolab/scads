@@ -222,8 +222,10 @@ compute_lfc_stats_multicore2 <- function (X, F, L, f0, D, U, M, lfc.stat, #LY
 de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
                           fit.method = c("scd","em","mu","ccd","glm"),
                           shrink.method = c("ash","none"), lfc.stat = "le",
+                          lfc.method = c("mcmc","laplace"),
                           control = list(), verbose = TRUE, f0 = NULL, ...) { #LY
-  
+  lfc.method <- match.arg(lfc.method)
+
   # CHECK AND PROCESS INPUTS
   # ------------------------
   # Check and process input argument "fit".
@@ -377,6 +379,16 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
     cat("Computing log-fold change statistics from ")
     cat(sprintf("%d Poisson models with k=%d.\n",m,k))
   }
+  if (lfc.method == "laplace") {
+    # Closed-form Laplace / Fisher-information approximation (no MCMC).
+    if (verbose) cat("Using Laplace (Fisher-information) approximation.\n")
+    ncb <- RhpcBLASctl::blas_get_num_procs()
+    RhpcBLASctl::blas_set_num_threads(control$nc.blas)
+    out <- compute_lfc_stats_laplace(X, F, L, f0, lfc.stat = lfc.stat,
+                                     nc = control$nc, nsplit = control$nsplit,
+                                     verbose = verbose)
+    RhpcBLASctl::blas_set_num_threads(ncb)
+  } else {
   ns <- control$ns
   D <- matrix(rnorm(ns*k),ns,k)
   U <- matrix(runif(ns*k),ns,k)
@@ -399,6 +411,7 @@ de_analysis2 <- function (fit, X, s = rowSums(X), pseudocount = 0.01,
             "(control$ns) or modifying the noise level of the random-walk ",
             "proposal distribution (control$rw) to improve the acceptance ",
             "rates")
+  }
   
   # STABILIZE ESTIMATES USING ADAPTIVE SHRINKAGE
   # --------------------------------------------
