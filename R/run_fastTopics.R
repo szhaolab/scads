@@ -8,6 +8,11 @@
 #' @param nTopics An integer specifying the number of topics to fit. Default is 10.
 #' @param n_s Number of samples for the DE analysis (default: 1000).
 #' @param n_c Number of cores for parallel processing in DE analysis (default: 1).
+#' @param lfc.method Method for the DE log-fold-change step: `"mcmc"` (default,
+#'   the random-walk MCMC used in the paper) or `"laplace"` (a fast, deterministic
+#'   Fisher-information approximation). See `vignette("StepByStep")` for when to
+#'   use each; `"laplace"` is recommended only for small-to-moderate numbers of
+#'   topics at typical read depth.
 #' @param ... Additional arguments passed to `fastTopics::fit_topic_model()`.
 #' @return A list containing the factor matrices `Fmat` and `Lmat`, differential expression results `de_res`, p-values matrix `p_jk` and caculated baseline `baseline`.
 #' @details

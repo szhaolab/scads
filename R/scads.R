@@ -7,6 +7,8 @@
 #' @param baseline_method Method for calculating baseline f_kj0 (Default is gc; other options: constant, average, estimate)
 #' @param bl_celltype Use only if baseline_method == "estimate", otherwise NULL
 #' @param bl_celltype_peak_file Use only if baseline_method == "estimate", otherwise NULL
+#' @param lfc.method DE log-fold-change method passed to `run_fastTopics()`:
+#'   `"mcmc"` (default) or `"laplace"` (fast approximation). See `vignette("StepByStep")`.
 #' @param sumstats_dir Directory containing GWAS sumstats (file format: TRAIT.sumstats.txt.gz).
 #' @param gwas_nsamps Sample size of GWAS.
 #' @param gwas_trait GWAS trait name (e.g., "SIM", "IBD").
@@ -55,9 +57,10 @@ scads <- function(count_matrix,
                   n_s = 1000, 
                   n_c = 8, 
                   baseline_method = "gc", # c("constant", "average", "estimate"),
-                  bl_celltype = NULL, 
+                  bl_celltype = NULL,
                   bl_celltype_peak_file = NULL,
-                  sumstats_dir, 
+                  lfc.method = c("mcmc", "laplace"),
+                  sumstats_dir,
                   gwas_nsamps, 
                   gwas_trait, 
                   outdir,
@@ -76,6 +79,8 @@ scads <- function(count_matrix,
                   resume_from_step = NULL,
                   verbose = TRUE,
                   ...) {
+
+  lfc.method <- match.arg(lfc.method)
 
   # 0) create directories
   if (!dir.exists(outdir)) {
@@ -101,6 +106,7 @@ scads <- function(count_matrix,
 
     out1 <- run_fastTopics(count_matrix_t, nTopics, n_s, n_c,
                            baseline_method, bl_celltype, bl_celltype_peak_file,
+                           lfc.method = lfc.method,
                            outdir = outdir, genome = genome)
     if (save_intermediates) {
       saveRDS(out1, file.path(outdir, "run_fastTopics_res.rds"))

@@ -12,6 +12,7 @@ scads(
   baseline_method = "gc",
   bl_celltype = NULL,
   bl_celltype_peak_file = NULL,
+  lfc.method = c("mcmc", "laplace"),
   sumstats_dir,
   gwas_nsamps,
   gwas_trait,
@@ -47,6 +48,8 @@ scads(
 \item{bl_celltype}{Use only if baseline_method == "estimate", otherwise NULL}
 
 \item{bl_celltype_peak_file}{Use only if baseline_method == "estimate", otherwise NULL}
+
+\item{lfc.method}{DE log-fold-change method passed to \code{run_fastTopics()}: "mcmc" (default) or "laplace" (fast approximation). See \code{vignette("StepByStep")}.}
 
 \item{sumstats_dir}{Directory containing GWAS sumstats (file format: TRAIT.sumstats.txt.gz).}
 

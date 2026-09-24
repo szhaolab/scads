@@ -162,6 +162,35 @@ to obtain reasonable results and is the default used in this tutorial. In the
 paper, we used `n_s = 5000` for the final analyses. Increasing `n_s` improves
 the precision of the DE p-values but increases Step 1 runtime proportionally.
 
+**`lfc.method` (DE uncertainty method):** Controls how per-peak, per-topic
+log-fold-change uncertainty is quantified in the DE step, which is the runtime
+bottleneck of Step 1.
+
+| Method | Description |
+|--------|-------------|
+| `"mcmc"` | **(Default)** Random-walk MCMC (`n_s` samples per peak) drawing the log-rate posterior. Robust across the full count range, including the low-count / rare-peak regime where the posterior is skewed. This is what the paper used. |
+| `"laplace"` | A deterministic Laplace / Fisher-information approximation of the same posterior (no Monte Carlo). One `crossprod` and a small `k x k` solve per peak instead of an `n_s`-step chain. |
+
+*When is `"laplace"` appropriate?* It replaces the slow MCMC with a closed-form
+Gaussian approximation of the log-rate posterior. That approximation is accurate
+when the **effective per-topic count** at a peak,
+`n_eff = F[peak, topic] * sum_i s_i L[i, topic]`, is large enough for the
+posterior to be approximately symmetric. Benchmarks against `n_s = 1000` MCMC:
+
+- **Recommended** when the number of topics is small-to-moderate (`k <= ~15`) at
+  typical read depth (`>= ~10,000` reads/cell): the binarized topic annotations
+  are **89-99% concordant** with MCMC (Jaccard 0.89-0.99), while Step 1 runs
+  **~10-45x faster** (e.g. a 3+ hour DE step finishes in ~8 minutes on a
+  452,000-peak, k=25 dataset).
+- **Use with care** at high `k` (`>= ~25`) or low read depth: expect ~84%
+  annotation concordance, with the disagreement concentrated on
+  *borderline-significant* peaks (`n_eff ~ 20-100`). Prefer the default `"mcmc"`
+  if those marginal calls are important for your analysis.
+
+The number of topics matters more than read depth: at `k = 5`, thinning to
+~2,000 reads/cell still gave 91% concordance. We keep `"mcmc"` as the default;
+`"laplace"` is an opt-in speed-up.
+
 **`baseline_method`:** Controls how the null hypothesis is set for
 differential accessibility testing:
 
@@ -196,6 +225,7 @@ out1 <- run_fastTopics(
   bl_celltype_cells = bl_ct,
   bl_celltype_peak_file = bl_peaks,
   fdr_cutoff    = 0.05,
+  lfc.method    = "mcmc",   # default; use "laplace" for a fast approximation (see above)
   outdir        = output_dir,
   genome        = "hg19"
 )

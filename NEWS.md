@@ -1,3 +1,27 @@
+# scads 0.6.0
+
+## New
+
+* `run_fastTopics()` and `scads()` gain `lfc.method = c("mcmc", "laplace")`.
+  The default `"mcmc"` is unchanged. `"laplace"` replaces the per-peak
+  random-walk MCMC in the DE step (the Step-1 runtime bottleneck) with a
+  deterministic Laplace / Fisher-information approximation of the log-rate
+  posterior for `lfc.stat = "vsnull"`. On a 452,000-peak, k=25 dataset the DE
+  step drops from 3+ hours (did not finish) to ~8 minutes.
+
+## When to use `"laplace"`
+
+fastTopics uses MCMC because the log-rate posterior is skewed and
+boundary-unstable at low counts, where a Gaussian approximation is poor. The
+approximation is accurate when the effective per-topic count
+`n_eff = F[peak, topic] * sum_i s_i L[i, topic]` is large. Benchmarks vs
+`n_s = 1000` MCMC: topic annotations are 89-99% concordant (Jaccard) at
+`k <= ~15` and `>= ~10,000` reads/cell, and ~84% concordant at `k = 25`
+(disagreement on borderline-significant peaks). Recommended as an opt-in
+speed-up for small-to-moderate `k`; keep the default `"mcmc"` at high `k` or low
+depth when marginal calls matter. Benchmark scripts and full results are in
+`inst/benchmarks/`.
+
 # scads 0.5.0
 
 ## New

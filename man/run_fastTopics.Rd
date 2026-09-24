@@ -13,6 +13,7 @@ run_fastTopics(
   bl_celltype_cells = NULL,
   bl_celltype_peak_file = NULL,
   fdr_cutoff = 0.05,
+  lfc.method = c("mcmc", "laplace"),
   outdir,
   genome = "hg19",
   ...
@@ -26,6 +27,8 @@ run_fastTopics(
 \item{n_s}{Number of samples for the DE analysis (default: 1000).}
 
 \item{n_c}{Number of cores for parallel processing in DE analysis (default: 1).}
+
+\item{lfc.method}{Method for the DE log-fold-change step: "mcmc" (default, the random-walk MCMC used in the paper) or "laplace" (a fast, deterministic Fisher-information approximation). See \code{vignette("StepByStep")} for when to use each; "laplace" is recommended only for small-to-moderate numbers of topics at typical read depth.}
 
 \item{...}{Additional arguments passed to \code{fastTopics::fit_topic_model()}.}
 }
