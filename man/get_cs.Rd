@@ -14,7 +14,10 @@ get_cs(
   Sigma = NULL,
   use_approximation = FALSE,
   alternative = c("two.sided", "greater"),
-  min_prop_snps = 0.005
+  min_pct_blocks = 1.7,
+  block_coverage = NULL,
+  small_annot = c("floor", "warn"),
+  min_prop_snps = NULL
 )
 }
 \arguments{
@@ -45,8 +48,20 @@ behaviour) or \code{"greater"} for a one-sided test of enrichment. Under
 FDR; if the scores are presented as disease relevance, \code{"greater"} is
 usually the intended test.}
 
-\item{min_prop_snps}{Annotations covering less than this fraction of the
-genome are floored (see Details). Default 0.005.}
+\item{min_pct_blocks}{Minimum percentage of the genome's 0.01 cM blocks a
+topic annotation must overlap (see Small annotations). Default 1.7.}
+
+\item{block_coverage}{Optional precomputed coverage: the data frame returned
+by \code{\link[=annot_block_coverage]{annot_block_coverage()}}, or a numeric vector of \code{pct_blocks} of length
+K. Computed from \code{baseline_prefix} when \code{NULL}.}
+
+\item{small_annot}{What to do with topics below \code{min_pct_blocks}:
+\code{"floor"} (default) floors them as described in Details; \code{"warn"} keeps
+them. Both warn.}
+
+\item{min_prop_snps}{Deprecated. If given, the previous rule (floor topics
+with S-LDSC \code{Prop._SNPs} below this fraction) is used instead of block
+coverage.}
 }
 \value{
 A list with
@@ -60,6 +75,9 @@ variance is zero or non-finite
 \item ldsc_res_table: the raw tau_display table from S-LDSC
 \item ash_res: results from running ASH on S-LDSC enrichment estimates
 \item cs_dat: intermediate estimates for calculating cell score
+\item topic_qc: one row per topic with the S-LDSC enrichment, \code{Prop._SNPs},
+\code{pct_blocks}, \code{small} (below the size threshold), \code{negative} (negative
+enrichment) and \code{floored}
 }
 }
 \description{
@@ -71,13 +89,36 @@ genome-wide).
 }
 \details{
 Two filtering rules are applied to the S-LDSC estimates before they enter the
-score. A topic whose annotation covers < \code{min_prop_snps} of the genome, or
-whose estimated enrichment is negative, is floored to \code{e_k = 1} with
-\code{w_k = 0}. Such topics contribute nothing to the numerator and nothing to the
-variance, but they remain in the weight denominator, so the effect is to
-dilute the score toward 1 rather than to renormalise over the retained topics.
-This is deliberate and conservative.
+score. A topic whose estimated enrichment is negative, or whose annotation is
+too small for S-LDSC's p-values to control type I error (below), is floored
+to \code{e_k = 1} with \code{w_k = 0}. Such topics contribute nothing to the numerator
+and nothing to the variance, but they remain in the weight denominator, so
+the effect is to dilute the score toward 1 rather than to renormalise over
+the retained topics. This is deliberate and conservative.
+}
+\section{Small annotations}{
+
+For small annotations S-LDSC's block-jackknife p-values do not control type I
+error: the tail of very small p-values is inflated (Tashman et al. 2021).
+Following that paper, an annotation is judged by the percentage of the
+genome's 0.01 cM blocks it overlaps, which reflects both its size and how
+clustered it is (see \code{\link[=annot_block_coverage]{annot_block_coverage()}}). Topics overlapping fewer than
+\code{min_pct_blocks} percent (default 1.7, the paper's threshold for the one-sided
+and enrichment tests) are reported in a warning and, with
+\code{small_annot = "floor"} (default), floored. With \code{small_annot = "warn"} they
+are kept, and the warning is the only safeguard.
+
+Block coverage needs the reference SNPs' genetic map positions, read from
+\code{baseline_prefix}, or a precomputed \code{block_coverage}. Without either, the
+previous rule is used instead, flooring topics with S-LDSC \code{Prop._SNPs} below
+0.5\%, and a message says so.
+}
+
+\references{
+Tashman KC, Cui R, O'Connor LJ, Neale BM, Finucane HK (2021).
+Significance testing for small annotations in stratified LD-Score
+regression. medRxiv 2021.03.13.21249938.
 }
 \seealso{
-\code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}
+\code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}, \code{\link[=annot_block_coverage]{annot_block_coverage()}}
 }

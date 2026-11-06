@@ -370,6 +370,13 @@ produce a per-cell disease relevance score:
 
 1. Reads S-LDSC results for each topic and applies adaptive shrinkage (ASH) to
    stabilize enrichment estimates.
+   Topics whose annotation is too small for S-LDSC's p-values to control type I
+   error are flagged: following Tashman et al. (2021), a topic must overlap at
+   least 1.7% of the genome's 0.01 cM blocks (`min_pct_blocks`), which reflects
+   both its size and how clustered it is. Flagged topics are reported in a
+   warning and floored to an enrichment of 1 (`small_annot = "floor"`, the
+   default) or kept (`small_annot = "warn"`). This replaces the earlier rule of
+   0.5% of SNPs.
 2. Computes a weighted score per cell: `cs_i = sum(L_ik * a_k * e_k) / sum(L_ik * a_k)`,
    where `L_ik` is the cell's loading on topic `k`, `a_k` is the number of
    peaks in topic `k`, and `e_k` is the (shrunk) enrichment estimate.
@@ -427,6 +434,10 @@ print(cs_res$ash_res$PosteriorMean)
 - **`ldsc_res_table`**: Raw S-LDSC results per topic.
 - **`ash_res`**: Enrichment estimates after adaptive shrinkage (more stable).
 - **`cs_dat`**: Intermediate values (`M_i`, `N_i`) used in score computation.
+- **`topic_qc`**: One row per topic: S-LDSC enrichment, `Prop._SNPs`, the
+  percentage of 0.01 cM blocks overlapped (`pct_blocks`), and whether the topic
+  is below the size threshold (`small`), has negative enrichment (`negative`)
+  or was floored (`floored`).
 
 Higher cell scores indicate cells whose chromatin accessibility profiles overlap
 more strongly with disease-associated regions. Cells dominated by topics with

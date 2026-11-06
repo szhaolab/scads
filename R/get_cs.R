@@ -7,12 +7,28 @@
 #' genome-wide).
 #'
 #' Two filtering rules are applied to the S-LDSC estimates before they enter the
-#' score. A topic whose annotation covers < `min_prop_snps` of the genome, or
-#' whose estimated enrichment is negative, is floored to `e_k = 1` with
-#' `w_k = 0`. Such topics contribute nothing to the numerator and nothing to the
-#' variance, but they remain in the weight denominator, so the effect is to
-#' dilute the score toward 1 rather than to renormalise over the retained topics.
-#' This is deliberate and conservative.
+#' score. A topic whose estimated enrichment is negative, or whose annotation is
+#' too small for S-LDSC's p-values to control type I error (below), is floored
+#' to `e_k = 1` with `w_k = 0`. Such topics contribute nothing to the numerator
+#' and nothing to the variance, but they remain in the weight denominator, so
+#' the effect is to dilute the score toward 1 rather than to renormalise over
+#' the retained topics. This is deliberate and conservative.
+#'
+#' @section Small annotations:
+#' For small annotations S-LDSC's block-jackknife p-values do not control type I
+#' error: the tail of very small p-values is inflated (Tashman et al. 2021).
+#' Following that paper, an annotation is judged by the percentage of the
+#' genome's 0.01 cM blocks it overlaps, which reflects both its size and how
+#' clustered it is (see [annot_block_coverage()]). Topics overlapping fewer than
+#' `min_pct_blocks` percent (default 1.7, the paper's threshold for the one-sided
+#' and enrichment tests) are reported in a warning and, with
+#' `small_annot = "floor"` (default), floored. With `small_annot = "warn"` they
+#' are kept, and the warning is the only safeguard.
+#'
+#' Block coverage needs the reference SNPs' genetic map positions, read from
+#' `baseline_prefix`, or a precomputed `block_coverage`. Without either, the
+#' previous rule is used instead, flooring topics with S-LDSC `Prop._SNPs` below
+#' 0.5%, and a message says so.
 #'
 #' @param topic_res Results from run_fastTopics_res, with Pmat (J×K) and Lmat (I×K)
 #' @param ldsc_res_dir Directory containing k*_output/results/Trait.results
@@ -33,8 +49,17 @@
 #'   `"two.sided"`, cells that are significantly *depleted* (z < 0) also pass
 #'   FDR; if the scores are presented as disease relevance, `"greater"` is
 #'   usually the intended test.
-#' @param min_prop_snps Annotations covering less than this fraction of the
-#'   genome are floored (see Details). Default 0.005.
+#' @param min_pct_blocks Minimum percentage of the genome's 0.01 cM blocks a
+#'   topic annotation must overlap (see Small annotations). Default 1.7.
+#' @param block_coverage Optional precomputed coverage: the data frame returned
+#'   by [annot_block_coverage()], or a numeric vector of `pct_blocks` of length
+#'   K. Computed from `baseline_prefix` when `NULL`.
+#' @param small_annot What to do with topics below `min_pct_blocks`:
+#'   `"floor"` (default) floors them as described in Details; `"warn"` keeps
+#'   them. Both warn.
+#' @param min_prop_snps Deprecated. If given, the previous rule (floor topics
+#'   with S-LDSC `Prop._SNPs` below this fraction) is used instead of block
+#'   coverage.
 #' @return A list with
 #'   - cs: cell scores (vector of length I)
 #'   - z_cell: z-score accounting for variance
@@ -44,18 +69,28 @@
 #'   - Sigma_used: the K x K covariance actually used
 #'   - ldsc_res_table: the raw tau_display table from S-LDSC
 #'   - ash_res: results from running ASH on S-LDSC enrichment estimates 
-#'   - cs_dat: intermediate estimates for calculating cell score 
-#'   
-#' @seealso [ldsc_jackknife_cov()]
+#'   - cs_dat: intermediate estimates for calculating cell score
+#'   - topic_qc: one row per topic with the S-LDSC enrichment, `Prop._SNPs`,
+#'     `pct_blocks`, `small` (below the size threshold), `negative` (negative
+#'     enrichment) and `floored`
+#'
+#' @references Tashman KC, Cui R, O'Connor LJ, Neale BM, Finucane HK (2021).
+#'   Significance testing for small annotations in stratified LD-Score
+#'   regression. medRxiv 2021.03.13.21249938.
+#' @seealso [ldsc_jackknife_cov()], [annot_block_coverage()]
 #' @export
 get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
                    baseline_prefix = NULL, frq_prefix = NULL,
                    Sigma = NULL,
                    use_approximation = FALSE,
                    alternative = c("two.sided", "greater"),
-                   min_prop_snps = 0.005) {
+                   min_pct_blocks = 1.7,
+                   block_coverage = NULL,
+                   small_annot = c("floor", "warn"),
+                   min_prop_snps = NULL) {
 
   alternative <- match.arg(alternative)
+  small_annot <- match.arg(small_annot)
 
 
   # --- Input validation ---
@@ -119,15 +154,63 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
   # 3) per-topic peak counts (assuming one variant per peak)
   a_k <- colSums(p_jk)  # length K
   
-  # instead filter by annotation size 
-  # Flooring rule: negative enrichment, or an annotation smaller than
-  # min_prop_snps of the genome, contributes e_k = 1 and w_k = 0. See Details.
-  drop_k <- tau_display$Enrichment < 0 | tau_display$`Prop._SNPs` < min_prop_snps
+  # Annotation size: share of the genome's 0.01 cM blocks overlapped
+  # (Tashman et al. 2021), or the deprecated Prop._SNPs rule. See Small annotations.
+  pct_blocks <- rep(NA_real_, nTopics)
+  if (!is.null(min_prop_snps)) {
+    warning("min_prop_snps is deprecated; topic size is now judged by 0.01 cM ",
+            "block coverage (min_pct_blocks). Using Prop._SNPs < ", min_prop_snps,
+            " as requested.", call. = FALSE)
+    small_k <- tau_display$`Prop._SNPs` < min_prop_snps
+    size_rule <- paste0("Prop._SNPs < ", min_prop_snps)
+  } else {
+    if (is.null(block_coverage) && !is.null(baseline_prefix))
+      block_coverage <- tryCatch(
+        annot_block_coverage(ldsc_res_dir = ldsc_res_dir, trait = trait,
+                             nTopics = nTopics, baseline_prefix = baseline_prefix),
+        error = function(e) {
+          message("Could not compute 0.01 cM block coverage: ", conditionMessage(e))
+          NULL })
+    if (!is.null(block_coverage)) {
+      pct_blocks <- if (is.data.frame(block_coverage)) block_coverage$pct_blocks else
+        as.numeric(block_coverage)
+      if (length(pct_blocks) != nTopics)
+        stop("block_coverage must have one value per topic (", nTopics, ")")
+      small_k <- pct_blocks < min_pct_blocks
+      size_rule <- paste0("< ", min_pct_blocks, "% of 0.01 cM blocks")
+    } else {
+      message("Block coverage unavailable (no baseline_prefix or block_coverage); ",
+              "flooring topics with Prop._SNPs < 0.005 instead.")
+      small_k <- tau_display$`Prop._SNPs` < 0.005
+      size_rule <- "Prop._SNPs < 0.005"
+    }
+  }
+  if (any(small_k))
+    warning(sum(small_k), " topic(s) below the annotation-size threshold (",
+            size_rule, "): ",
+            paste0("k", which(small_k),
+                   if (all(is.na(pct_blocks))) "" else
+                     paste0(" (", round(pct_blocks[small_k], 2), "%)"),
+                   collapse = ", "),
+            ". S-LDSC p-values for annotations this small may not control type I ",
+            "error (Tashman et al. 2021); ",
+            if (small_annot == "floor") "these topics are floored to e = 1." else
+              "they are kept because small_annot = \"warn\".", call. = FALSE)
+
+  # Flooring rule: negative enrichment, or a small annotation when
+  # small_annot = "floor", contributes e_k = 1 and w_k = 0. See Details.
+  floor_small <- small_k & small_annot == "floor"
+  drop_k <- tau_display$Enrichment < 0 | floor_small
   e_Ck <- ifelse(drop_k, 1, tau_display$Enrichment)
   se_e <- ifelse(drop_k, 0, tau_display$Enrichment_std_error)
-  e_Ck_ash <- ifelse((tau_display_ash$result$PosteriorMean < 0 |
-                        tau_display$`Prop._SNPs` < min_prop_snps),
+  e_Ck_ash <- ifelse((tau_display_ash$result$PosteriorMean < 0 | floor_small),
                      1, tau_display_ash$result$PosteriorMean)
+  topic_qc <- data.frame(topic = paste0("k", seq_len(nTopics)),
+                         Enrichment = tau_display$Enrichment,
+                         Prop._SNPs = tau_display$`Prop._SNPs`,
+                         pct_blocks = pct_blocks, small = small_k,
+                         negative = tau_display$Enrichment < 0,
+                         floored = drop_k, check.names = FALSE)
   
   # 4) single-cell score
   M_i <- as.numeric(l_ik %*% (a_k * e_Ck_ash))
@@ -165,6 +248,8 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     if (!is.matrix(Sigma) || any(dim(Sigma) != c(nTopics, nTopics))) {
       stop("Sigma must be a ", nTopics, " x ", nTopics, " matrix")
     }
+    # floored topics contribute no variance, as in the approximation branch
+    Sigma[drop_k, ] <- 0; Sigma[, drop_k] <- 0
     v_ik_diag <- rowSums((l_ik %*% Sigma) * l_ik)
   } else {
     v_ik_diag <- rowSums((v_ik %*% corm) * v_ik)
@@ -191,6 +276,7 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     Sigma_used    = if (is.null(Sigma)) outer(se_e, se_e) * corm else Sigma,
     ldsc_res_table = tau_display,
     ash_res        = tau_display_ash$result,
-    cs_dat = list(M_i=M_i, N_i=N_i))
+    cs_dat = list(M_i=M_i, N_i=N_i),
+    topic_qc       = topic_qc)
   )
 }

@@ -1,3 +1,34 @@
+# scads 0.7.0
+
+## Changed
+
+* The annotation-size rule in `get_cs()` now follows Tashman et al. (2021,
+  medRxiv 2021.03.13.21249938): a topic must overlap at least `min_pct_blocks`
+  (default 1.7) percent of the genome's 0.01 cM blocks. This replaces the
+  hard cut-off of 0.5% of SNPs. Block coverage reflects both an annotation's
+  size and how clustered it is, and it is the metric that separated S-LDSC
+  annotations with controlled type I error from those without. A topic with
+  fewer than 0.5% of SNPs but spread across the genome is now kept; a larger
+  but clustered topic can now be flagged.
+* Topics below the threshold are always reported in a warning. They are
+  floored to `e = 1` (`small_annot = "floor"`, default, as before) or kept
+  (`small_annot = "warn"`). `scads()` passes both settings through.
+* `get_cs()` returns `topic_qc`, one row per topic with `Prop._SNPs`,
+  `pct_blocks` and the flooring decision.
+* When `Sigma` is supplied (including the default jackknife covariance),
+  floored topics now contribute no variance, as documented. Previously their
+  rows of `Sigma` were kept, so cells loading on floored topics had an inflated
+  variance and conservative p-values.
+* `min_prop_snps` is deprecated. Supplying it restores the old rule. Without a
+  `baseline_prefix` (or precomputed `block_coverage`) block coverage cannot be
+  computed, and `get_cs()` falls back to the 0.5% rule with a message.
+
+## New
+
+* `annot_block_coverage()` computes, per topic, the percentage of 0.01 cM blocks
+  overlapped, from the baseline annotation's genetic map and the thin topic
+  annotations written by `run_sldsc()`.
+
 # scads 0.6.0
 
 ## New

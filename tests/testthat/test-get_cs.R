@@ -77,7 +77,7 @@ test_that("get_cs computes cell scores from mock LDSC results", {
 
   expect_true(is.list(result))
   expect_named(result, c("cs", "z_cell", "p_cell", "var_cell", "Sigma_used",
-                         "ldsc_res_table", "ash_res", "cs_dat"))
+                         "ldsc_res_table", "ash_res", "cs_dat", "topic_qc"))
   expect_equal(length(result$cs), nCells)
   expect_true(all(is.finite(result$cs)))
   expect_true(all(result$cs > 0))

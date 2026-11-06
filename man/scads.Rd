@@ -28,6 +28,8 @@ scads(
   n_cores_ldsc = NULL,
   chrs = 1:22,
   genome = "hg19",
+  min_pct_blocks = 1.7,
+  small_annot = c("floor", "warn"),
   save_intermediates = TRUE,
   resume_from_step = NULL,
   verbose = TRUE,
@@ -85,6 +87,11 @@ Set to \code{1} to run topics sequentially.}
 \item{chrs}{Number of chromosomes for running S-LDSC (Default is chr1-22)}
 
 \item{genome}{Genome build (Default is hg19)}
+
+\item{min_pct_blocks, small_annot}{Annotation-size rule passed to \code{\link[=get_cs]{get_cs()}}:
+topics overlapping fewer than \code{min_pct_blocks} percent of the genome's
+0.01 cM blocks (default 1.7) are reported, and floored when
+\code{small_annot = "floor"} (default) or kept when \code{"warn"}.}
 
 \item{save_intermediates}{Logical. If \code{TRUE}, saves intermediate results (fastTopics, BED dirs,
 cell scores) to \code{outdir} as RDS files. Default is \code{TRUE}.}

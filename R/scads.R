@@ -28,6 +28,10 @@
 #'   By default (\code{NULL}), uses \code{min(detectCores(), nTopics, 5)}.
 #'   Set to \code{1} to run topics sequentially.
 #' @param chrs Number of chromosomes for running S-LDSC (Default is chr1-22)
+#' @param min_pct_blocks,small_annot Annotation-size rule passed to [get_cs()]:
+#'   topics overlapping fewer than `min_pct_blocks` percent of the genome's
+#'   0.01 cM blocks (default 1.7) are reported, and floored when
+#'   `small_annot = "floor"` (default) or kept when `"warn"`.
 #' @param genome Genome build (Default is hg19)
 #' @param ... Additional arguments passed to internal functions.
 #'
@@ -75,12 +79,15 @@ scads <- function(count_matrix,
                   n_cores_ldsc = NULL,
                   chrs = 1:22,
                   genome = "hg19",
+                  min_pct_blocks = 1.7,
+                  small_annot = c("floor", "warn"),
                   save_intermediates = TRUE,
                   resume_from_step = NULL,
                   verbose = TRUE,
                   ...) {
 
   lfc.method <- match.arg(lfc.method)
+  small_annot <- match.arg(small_annot)
 
   # 0) create directories
   if (!dir.exists(outdir)) {
@@ -194,7 +201,9 @@ scads <- function(count_matrix,
                    trait           = gwas_trait,
                    nTopics         = nTopics,
                    baseline_prefix = baseline_dir,
-                   frq_prefix      = frqfile_pref)
+                   frq_prefix      = frqfile_pref,
+                   min_pct_blocks  = min_pct_blocks,
+                   small_annot     = small_annot)
 
   if (save_intermediates) {
     saveRDS(cs_res, file.path(outdir, "cs_res.rds"))
