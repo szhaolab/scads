@@ -77,7 +77,7 @@ test_that("get_cs computes cell scores from mock LDSC results", {
 
   expect_true(is.list(result))
   expect_named(result, c("cs", "z_cell", "p_cell", "var_cell", "Sigma_used",
-                         "ldsc_res_table", "ash_res", "cs_dat", "topic_qc"))
+                         "ldsc_res_table", "rank_fdr", "cs_dat", "topic_qc"))
   expect_equal(length(result$cs), nCells)
   expect_true(all(is.finite(result$cs)))
   expect_true(all(result$cs > 0))
@@ -306,4 +306,109 @@ test_that("get_cs(use_approximation = TRUE) still runs", {
   expect_equal(length(r$cs), nCells)
   expect_equal(length(r$p_cell), nCells)
   unlink(d, recursive = TRUE)
+})
+
+test_that("get_cs uses the raw enrichments and returns the rank FDR", {
+  nTopics <- 3; nPeaks <- 100; nCells <- 60
+  pn <- paste0("chr1:", seq(1000, by = 501, length.out = nPeaks),
+               "-", seq(1500, by = 501, length.out = nPeaks))
+  Pmat <- matrix(0, nPeaks, nTopics)
+  Pmat[1:40, 1] <- 1; Pmat[41:70, 2] <- 1; Pmat[71:100, 3] <- 1
+  rownames(Pmat) <- pn; colnames(Pmat) <- paste0("k", 1:nTopics)
+  set.seed(4); Lmat <- matrix(runif(nCells * nTopics), nCells, nTopics)
+  Lmat <- Lmat / rowSums(Lmat); colnames(Lmat) <- paste0("k", 1:nTopics)
+  E <- c(1.5, 8, 3)
+  d <- file.path(tempdir(), "mock_raw"); unlink(d, recursive = TRUE)
+  for (k in 1:nTopics) {
+    rd <- file.path(d, paste0("k", k, "_output"), "results")
+    dir.create(rd, recursive = TRUE)
+    write.table(data.frame(Category = "L2_0", `Prop._SNPs` = 0.01,
+      `Prop._h2` = 0.05 * k, `Prop._h2_std_error` = 0.01,
+      Enrichment = E[k], Enrichment_std_error = 0.5,
+      Coefficient = 1e-8, `Coefficient_std_error` = 1e-9,
+      `Coefficient_z-score` = 2.0, check.names = FALSE),
+      file = file.path(rd, "TestTrait.results"), sep = "\t",
+      row.names = FALSE, quote = FALSE)
+  }
+  r <- get_cs(list(Pmat = Pmat, Lmat = Lmat), d, "TestTrait", nTopics,
+              Sigma = diag(0.25, nTopics), fdr_draws = 200)
+  a_k <- colSums(Pmat); W <- sweep(Lmat, 2, a_k, "*"); W <- W / rowSums(W)
+  expect_equal(r$cs, as.vector(W %*% E), tolerance = 1e-12)   # no shrinkage
+  expect_equal(r$cs_dat$W, W, tolerance = 1e-12, ignore_attr = TRUE)
+  expect_true(all(c("curve", "mean_fdr", "fdr_top10", "n_sig", "sig") %in% names(r$rank_fdr)))
+  expect_equal(length(r$rank_fdr$sig), nCells)
+  expect_true(all(r$rank_fdr$curve$fdr >= 0 & r$rank_fdr$curve$fdr <= 1))
+  expect_null(get_cs(list(Pmat = Pmat, Lmat = Lmat), d, "TestTrait", nTopics,
+                     Sigma = diag(0.25, nTopics), fdr_draws = 0)$rank_fdr)
+  unlink(d, recursive = TRUE)
+})
+
+test_that("floored topics add nothing to the cell variance", {
+  nTopics <- 3; nPeaks <- 100; nCells <- 30
+  pn <- paste0("chr1:", seq(1000, by = 501, length.out = nPeaks),
+               "-", seq(1500, by = 501, length.out = nPeaks))
+  Pmat <- matrix(0, nPeaks, nTopics)
+  Pmat[1:40, 1] <- 1; Pmat[41:70, 2] <- 1; Pmat[71:100, 3] <- 1
+  rownames(Pmat) <- pn
+  set.seed(5); Lmat <- matrix(runif(nCells * nTopics), nCells, nTopics)
+  Lmat <- Lmat / rowSums(Lmat)
+  d <- file.path(tempdir(), "mock_floor"); unlink(d, recursive = TRUE)
+  E <- c(-2, 4, 2)   # topic 1 negative -> floored
+  for (k in 1:nTopics) {
+    rd <- file.path(d, paste0("k", k, "_output"), "results")
+    dir.create(rd, recursive = TRUE)
+    write.table(data.frame(Category = "L2_0", `Prop._SNPs` = 0.01,
+      `Prop._h2` = 0.05, `Prop._h2_std_error` = 0.01,
+      Enrichment = E[k], Enrichment_std_error = 1,
+      Coefficient = 1e-8, `Coefficient_std_error` = 1e-9,
+      `Coefficient_z-score` = 2.0, check.names = FALSE),
+      file = file.path(rd, "TestTrait.results"), sep = "\t",
+      row.names = FALSE, quote = FALSE)
+  }
+  S1 <- diag(nTopics); S2 <- S1; S2[1, 1] <- 100
+  r1 <- get_cs(list(Pmat = Pmat, Lmat = Lmat), d, "TestTrait", nTopics, Sigma = S1, fdr_draws = 0)
+  r2 <- get_cs(list(Pmat = Pmat, Lmat = Lmat), d, "TestTrait", nTopics, Sigma = S2, fdr_draws = 0)
+  expect_equal(r1$z_cell, r2$z_cell)
+  unlink(d, recursive = TRUE)
+})
+
+test_that("rank_fdr follows the resolvable-error definition", {
+  # direct implementation of the documented definition on a small example
+  set.seed(7); K <- 3; n <- 120
+  W <- matrix(runif(n * K), n, K); W <- W / rowSums(W)
+  e <- c(1.5, 6, 5); Sig <- matrix(c(1, .3, .2, .3, 1.5, .4, .2, .4, 1.2), K)
+  r <- rank_fdr(W, e, Sig, n_draws = 50, seed = 3, pct = c(5, 10, 25))
+  s <- as.vector(W %*% e); z <- (s - 1) / sqrt(rowSums((W %*% Sig) * W))
+  sig <- p.adjust(pnorm(-z), "BH") < 0.05; ns <- sum(sig); Ws <- W[sig, , drop = FALSE]
+  o <- order(-s[sig]); ks <- pmax(1, round(c(5, 10, 25) / 100 * ns)); h <- max(1, round(0.01 * ns))
+  set.seed(3); E <- MASS::mvrnorm(50, e, Sig); E[E < 0] <- 1
+  ref <- sapply(ks, function(k) {
+    cl <- o[seq_len(k)]; wn <- o[max(1, k - h):min(ns, k + h)]
+    m <- sapply(cl, function(i) sqrt(mean(sapply(wn, function(j) { d <- Ws[i, ] - Ws[j, ]; sum(d * (Sig %*% d)) }))))
+    mean(apply(E, 1, function(eb) { sb <- as.vector(Ws %*% eb); sort(sb, decreasing = TRUE)[k] - sb[cl] > m }))
+  })
+  expect_equal(r$curve$fdr, ref, tolerance = 1e-12)
+  # near-ties within the margin are not errors: never above the share of calls ranked below k
+  rk <- sapply(ks, function(k) mean(apply(E, 1, function(eb) rank(-as.vector(Ws %*% eb))[o[seq_len(k)]] > k)))
+  expect_true(all(r$curve$fdr <= rk + 1e-12))
+})
+
+test_that("rank_fdr: exact ranking gives zero FDR, undefined with < 2 significant cells", {
+  set.seed(6); K <- 3; n <- 200
+  W <- matrix(runif(n * K), n, K); W <- W / rowSums(W)
+  e <- c(1, 5, 20)
+  r0 <- rank_fdr(W, e, diag(1e-12, K), n_draws = 20, seed = 1)
+  expect_true(r0$n_sig > 10)
+  expect_equal(max(r0$curve$fdr), 0)
+  # noisier enrichments give a larger FDR
+  r1 <- rank_fdr(W, e, diag(c(1, 1, 1) * 4, K), n_draws = 200, seed = 1)
+  r2 <- rank_fdr(W, e, diag(c(1, 1, 1) * 36, K), n_draws = 200, seed = 1)
+  expect_gt(r2$mean_fdr, r1$mean_fdr)
+  # chunking does not change the result
+  r1b <- rank_fdr(W, e, diag(c(1, 1, 1) * 4, K), n_draws = 200, seed = 1, chunk = 7)
+  expect_equal(r1$curve$fdr, r1b$curve$fdr)
+  # no enrichment: no significant cells
+  rn <- rank_fdr(W, c(1, 1, 1), diag(K), n_draws = 10, seed = 1)
+  expect_null(rn$curve); expect_true(is.na(rn$mean_fdr))
+  expect_error(rank_fdr(W, e, diag(2)), "3 x 3")
 })

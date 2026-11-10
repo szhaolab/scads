@@ -203,7 +203,8 @@ scads <- function(count_matrix,
                    baseline_prefix = baseline_dir,
                    frq_prefix      = frqfile_pref,
                    min_pct_blocks  = min_pct_blocks,
-                   small_annot     = small_annot)
+                   small_annot     = small_annot,
+                   chrs            = chrs)
 
   if (save_intermediates) {
     saveRDS(cs_res, file.path(outdir, "cs_res.rds"))

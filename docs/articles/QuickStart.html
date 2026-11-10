@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.8.0</span>
       </span>
     </div>
 
@@ -63,7 +63,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Getting Started</h1>
             
-            <h4 data-toc-skip class="date">2026-09-20</h4>
+            <h4 data-toc-skip class="date">2026-11-10</h4>
       
 
       <div class="hidden name"><code>QuickStart.Rmd</code></div>
@@ -303,11 +303,14 @@ call:</p>
 <span><span class="co">#&gt; Cell score summary:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt;   1.291   2.472   3.544   3.780   5.172   7.089</span></span>
+<span><span class="co">#&gt;   5.972   7.078   8.397   8.292   9.628  10.697</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nSignificant cells (p &lt; 0.05):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">p_cell</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span>, <span class="st">"of"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">p_cell</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Significant cells (p &lt; 0.05): 413 of 500</span></span></code></pre></div>
+<span><span class="co">#&gt; Significant cells (p &lt; 0.05): 330 of 500</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Estimated rank FDR, top 10% of significant cells:"</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">rank_fdr</span><span class="op">$</span><span class="va">fdr_top10</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Estimated rank FDR, top 10% of significant cells: 0.24</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="umap-visualization-of-cell-scores">UMAP visualization of cell scores<a class="anchor" aria-label="anchor" href="#umap-visualization-of-cell-scores"></a>
 </h3>

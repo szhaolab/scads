@@ -88,7 +88,7 @@ test_that("get_cs floors topics below min_pct_blocks, regardless of Prop._SNPs",
   expect_equal(r$topic_qc$pct_blocks, c(1.0, 10, 5))
   # a floored topic adds nothing to the score numerator: cs depends only on k2, k3
   expect_equal(r$cs_dat$M_i - r$cs_dat$N_i,
-               as.numeric(tr$Lmat %*% (colSums(tr$Pmat) * (c(1, r$ash_res$PosteriorMean[2:3]) - 1))))
+               as.numeric(tr$Lmat %*% (colSums(tr$Pmat) * (c(1, r$ldsc_res_table$Enrichment[2:3]) - 1))))
 
   # small_annot = "warn" keeps the topic and still warns
   expect_warning(w <- get_cs(tr, d, "TestTrait", 3, use_approximation = TRUE,
@@ -160,5 +160,19 @@ test_that("get_cs computes block coverage from baseline_prefix", {
                              baseline_prefix = file.path(d, "baseline.")), "k2 \\(0.45%\\)")
   expect_equal(r$topic_qc$pct_blocks, c(10, 100 / 220, 50))
   expect_equal(r$topic_qc$floored, c(FALSE, TRUE, FALSE))
+  unlink(d, recursive = TRUE)
+})
+
+test_that("get_cs uses only the chromosomes given in chrs", {
+  skip_if_not_installed("ashr"); skip_if_not_installed("GenomicRanges")
+  skip_if_not_installed("data.table")
+  tr <- mock_topics()
+  # S-LDSC run on chromosome 2 only: 10 blocks of one SNP each
+  cm <- list(`2` = seq(0.001, by = 0.01, length.out = 10))
+  annot <- list(list(`2` = c(1, rep(0, 9))), list(`2` = rep(c(1, 0), 5)), list(`2` = rep(1, 10)))
+  d <- mock_sldsc(file.path(tempdir(), "mock_chrs"), enrich = c(3, 2, 4), annot = annot, cm = cm)
+  expect_error(suppressWarnings(get_cs(tr, d, "TestTrait", 3, Sigma = diag(0.04, 3), baseline_prefix = file.path(d, "baseline."))) , NA)
+  r <- suppressWarnings(get_cs(tr, d, "TestTrait", 3, Sigma = diag(0.04, 3), baseline_prefix = file.path(d, "baseline."), chrs = 2))
+  expect_equal(r$topic_qc$pct_blocks, c(10, 50, 100))
   unlink(d, recursive = TRUE)
 })

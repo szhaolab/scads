@@ -19,7 +19,7 @@ the factor matrices along with differential expression results."><!-- mathjax --
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.8.0</span>
       </span>
     </div>
 
@@ -63,6 +63,7 @@ the factor matrices along with differential expression results.</p>
 <span>  bl_celltype_cells <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  bl_celltype_peak_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fdr_cutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  lfc.method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mcmc"</span>, <span class="st">"laplace"</span><span class="op">)</span>,</span>
 <span>  <span class="va">outdir</span>,</span>
 <span>  genome <span class="op">=</span> <span class="st">"hg19"</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -87,6 +88,10 @@ the factor matrices along with differential expression results.</p>
 
 <dt id="arg-n-c">n_c<a class="anchor" aria-label="anchor" href="#arg-n-c"></a></dt>
 <dd><p>Number of cores for parallel processing in DE analysis (default: 1).</p></dd>
+
+
+<dt id="arg-lfc-method">lfc.method<a class="anchor" aria-label="anchor" href="#arg-lfc-method"></a></dt>
+<dd><p>Method for the DE log-fold-change step: "mcmc" (default, the random-walk MCMC used in the paper) or "laplace" (a fast, deterministic Fisher-information approximation). See <code><a href="../articles/StepByStep.html">vignette("StepByStep")</a></code> for when to use each; "laplace" is recommended only for small-to-moderate numbers of topics at typical read depth.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

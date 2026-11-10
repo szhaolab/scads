@@ -17,7 +17,11 @@ get_cs(
   min_pct_blocks = 1.7,
   block_coverage = NULL,
   small_annot = c("floor", "warn"),
-  min_prop_snps = NULL
+  min_prop_snps = NULL,
+  fdr_alpha = 0.05,
+  fdr_draws = 1000,
+  fdr_seed = 1,
+  chrs = 1:22
 )
 }
 \arguments{
@@ -62,6 +66,17 @@ them. Both warn.}
 \item{min_prop_snps}{Deprecated. If given, the previous rule (floor topics
 with S-LDSC \code{Prop._SNPs} below this fraction) is used instead of block
 coverage.}
+
+\item{fdr_alpha}{BH level defining the significant cells ranked by the rank
+FDR. Default 0.05.}
+
+\item{fdr_draws}{Number of enrichment draws for the rank FDR. Default 1000.
+Set to 0 to skip it.}
+
+\item{fdr_seed}{Random seed for the rank FDR draws. Default 1.}
+
+\item{chrs}{Chromosomes the S-LDSC runs used, for the jackknife covariance and
+the block coverage. Default \code{1:22}.}
 }
 \value{
 A list with
@@ -73,17 +88,21 @@ variance is zero or non-finite
 \item var_cell: cell score variance used in the denominator of z
 \item Sigma_used: the K x K covariance actually used
 \item ldsc_res_table: the raw tau_display table from S-LDSC
-\item ash_res: results from running ASH on S-LDSC enrichment estimates
-\item cs_dat: intermediate estimates for calculating cell score
+\item rank_fdr: resolvable-error rank FDR of the significant cells, as returned by
+\code{\link[=rank_fdr]{rank_fdr()}} (\code{curve}, \code{mean_fdr}, \code{fdr_top10}, \code{n_sig}, \code{sig}); \code{NULL}
+if \code{fdr_draws = 0}
+\item cs_dat: intermediate estimates for calculating cell score, including the
+normalised cell topic weights \code{W} and the floored-topic indicator \code{drop}
 \item topic_qc: one row per topic with the S-LDSC enrichment, \code{Prop._SNPs},
 \code{pct_blocks}, \code{small} (below the size threshold), \code{negative} (negative
 enrichment) and \code{floored}
 }
 }
 \description{
-The cell score is a weighted average of the per-topic enrichment estimates,
+The cell score is a weighted average of the raw S-LDSC enrichment estimates,
 \verb{cs_i = sum_k w_ik ehat_k} with \verb{w_ik = l_ik s_k / sum_k l_ik s_k}, so the
 weights sum to one and the score equals 1 when no topic is enriched. The
+enrichments are used without shrinkage. The
 z-score tests \code{cs_i = 1} (no enrichment in the cell's open regions relative to
 genome-wide).
 }
@@ -112,6 +131,10 @@ Block coverage needs the reference SNPs' genetic map positions, read from
 \code{baseline_prefix}, or a precomputed \code{block_coverage}. Without either, the
 previous rule is used instead, flooring topics with S-LDSC \code{Prop._SNPs} below
 0.5\%, and a message says so.
+
+The reliability of the cell ranking is summarised by the resolvable-error rank
+FDR (\code{\link[=rank_fdr]{rank_fdr()}}), computed among the significant cells (one-sided BH <
+\code{fdr_alpha}) from the enrichments and \code{Sigma}.
 }
 
 \references{
@@ -120,5 +143,5 @@ Significance testing for small annotations in stratified LD-Score
 regression. medRxiv 2021.03.13.21249938.
 }
 \seealso{
-\code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}, \code{\link[=annot_block_coverage]{annot_block_coverage()}}
+\code{\link[=ldsc_jackknife_cov]{ldsc_jackknife_cov()}}, \code{\link[=annot_block_coverage]{annot_block_coverage()}}, \code{\link[=rank_fdr]{rank_fdr()}}
 }

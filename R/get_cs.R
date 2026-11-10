@@ -1,8 +1,9 @@
 #' Compute Single-Cell Level Scores (c_i)
 #'
-#' The cell score is a weighted average of the per-topic enrichment estimates,
+#' The cell score is a weighted average of the raw S-LDSC enrichment estimates,
 #' `cs_i = sum_k w_ik ehat_k` with `w_ik = l_ik s_k / sum_k l_ik s_k`, so the
 #' weights sum to one and the score equals 1 when no topic is enriched. The
+#' enrichments are used without shrinkage. The
 #' z-score tests `cs_i = 1` (no enrichment in the cell's open regions relative to
 #' genome-wide).
 #'
@@ -29,6 +30,10 @@
 #' `baseline_prefix`, or a precomputed `block_coverage`. Without either, the
 #' previous rule is used instead, flooring topics with S-LDSC `Prop._SNPs` below
 #' 0.5%, and a message says so.
+#'
+#' The reliability of the cell ranking is summarised by the resolvable-error rank
+#' FDR ([rank_fdr()]), computed among the significant cells (one-sided BH <
+#' `fdr_alpha`) from the enrichments and `Sigma`.
 #'
 #' @param topic_res Results from run_fastTopics_res, with Pmat (J×K) and Lmat (I×K)
 #' @param ldsc_res_dir Directory containing k*_output/results/Trait.results
@@ -60,6 +65,13 @@
 #' @param min_prop_snps Deprecated. If given, the previous rule (floor topics
 #'   with S-LDSC `Prop._SNPs` below this fraction) is used instead of block
 #'   coverage.
+#' @param fdr_alpha BH level defining the significant cells ranked by the rank
+#'   FDR. Default 0.05.
+#' @param fdr_draws Number of enrichment draws for the rank FDR. Default 1000.
+#'   Set to 0 to skip it.
+#' @param fdr_seed Random seed for the rank FDR draws. Default 1.
+#' @param chrs Chromosomes the S-LDSC runs used, for the jackknife covariance and
+#'   the block coverage. Default `1:22`.
 #' @return A list with
 #'   - cs: cell scores (vector of length I)
 #'   - z_cell: z-score accounting for variance
@@ -68,8 +80,11 @@
 #'   - var_cell: cell score variance used in the denominator of z
 #'   - Sigma_used: the K x K covariance actually used
 #'   - ldsc_res_table: the raw tau_display table from S-LDSC
-#'   - ash_res: results from running ASH on S-LDSC enrichment estimates 
-#'   - cs_dat: intermediate estimates for calculating cell score
+#'   - rank_fdr: resolvable-error rank FDR of the significant cells, as returned by
+#'     [rank_fdr()] (`curve`, `mean_fdr`, `fdr_top10`, `n_sig`, `sig`); `NULL`
+#'     if `fdr_draws = 0`
+#'   - cs_dat: intermediate estimates for calculating cell score, including the
+#'     normalised cell topic weights `W` and the floored-topic indicator `drop`
 #'   - topic_qc: one row per topic with the S-LDSC enrichment, `Prop._SNPs`,
 #'     `pct_blocks`, `small` (below the size threshold), `negative` (negative
 #'     enrichment) and `floored`
@@ -77,7 +92,7 @@
 #' @references Tashman KC, Cui R, O'Connor LJ, Neale BM, Finucane HK (2021).
 #'   Significance testing for small annotations in stratified LD-Score
 #'   regression. medRxiv 2021.03.13.21249938.
-#' @seealso [ldsc_jackknife_cov()], [annot_block_coverage()]
+#' @seealso [ldsc_jackknife_cov()], [annot_block_coverage()], [rank_fdr()]
 #' @export
 get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
                    baseline_prefix = NULL, frq_prefix = NULL,
@@ -87,7 +102,9 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
                    min_pct_blocks = 1.7,
                    block_coverage = NULL,
                    small_annot = c("floor", "warn"),
-                   min_prop_snps = NULL) {
+                   min_prop_snps = NULL,
+                   fdr_alpha = 0.05, fdr_draws = 1000, fdr_seed = 1,
+                   chrs = 1:22) {
 
   alternative <- match.arg(alternative)
   small_annot <- match.arg(small_annot)
@@ -112,7 +129,7 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     jk <- ldsc_jackknife_cov(ldsc_res_dir = ldsc_res_dir, trait = trait,
                              nTopics = nTopics,
                              baseline_prefix = baseline_prefix,
-                             frq_prefix = frq_prefix, verbose = FALSE)
+                             frq_prefix = frq_prefix, chrs = chrs, verbose = FALSE)
     if (!jk$pass)
       warning("jackknife covariance failed its acceptance check; ",
               "verify baseline_prefix and frq_prefix match this run's S-LDSC call")
@@ -148,9 +165,6 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     }
   }
   
-  cat("\nRunning ASH on enrichment estimates")
-  tau_display_ash <- ash(tau_display$Enrichment, tau_display$Enrichment_std_error)
-  
   # 3) per-topic peak counts (assuming one variant per peak)
   a_k <- colSums(p_jk)  # length K
   
@@ -167,7 +181,8 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     if (is.null(block_coverage) && !is.null(baseline_prefix))
       block_coverage <- tryCatch(
         annot_block_coverage(ldsc_res_dir = ldsc_res_dir, trait = trait,
-                             nTopics = nTopics, baseline_prefix = baseline_prefix),
+                             nTopics = nTopics, baseline_prefix = baseline_prefix,
+                             chrs = chrs),
         error = function(e) {
           message("Could not compute 0.01 cM block coverage: ", conditionMessage(e))
           NULL })
@@ -203,8 +218,6 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
   drop_k <- tau_display$Enrichment < 0 | floor_small
   e_Ck <- ifelse(drop_k, 1, tau_display$Enrichment)
   se_e <- ifelse(drop_k, 0, tau_display$Enrichment_std_error)
-  e_Ck_ash <- ifelse((tau_display_ash$result$PosteriorMean < 0 | floor_small),
-                     1, tau_display_ash$result$PosteriorMean)
   topic_qc <- data.frame(topic = paste0("k", seq_len(nTopics)),
                          Enrichment = tau_display$Enrichment,
                          Prop._SNPs = tau_display$`Prop._SNPs`,
@@ -212,8 +225,8 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
                          negative = tau_display$Enrichment < 0,
                          floored = drop_k, check.names = FALSE)
   
-  # 4) single-cell score
-  M_i <- as.numeric(l_ik %*% (a_k * e_Ck_ash))
+  # 4) single-cell score, from the raw (floored) enrichments
+  M_i <- as.numeric(l_ik %*% (a_k * e_Ck))
   N_i <- as.numeric(l_ik %*% a_k)
   cs <- M_i / N_i
   
@@ -221,6 +234,7 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
   
   # weight each topic 
   l_ik <- sweep(l_ik, 2, a_k, FUN = "*")/sum(a_k)
+  W <- l_ik / rowSums(l_ik)   # normalised cell topic weights, for the rank FDR
   v_ik <- sweep(l_ik, 2, se_e, FUN = "*")
   
   cat("\nAccounting for correlation")
@@ -248,9 +262,10 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     if (!is.matrix(Sigma) || any(dim(Sigma) != c(nTopics, nTopics))) {
       stop("Sigma must be a ", nTopics, " x ", nTopics, " matrix")
     }
-    # floored topics contribute no variance, as in the approximation branch
-    Sigma[drop_k, ] <- 0; Sigma[, drop_k] <- 0
-    v_ik_diag <- rowSums((l_ik %*% Sigma) * l_ik)
+    # floored topics contribute nothing to the variance (see Details)
+    Sigma_f <- Sigma
+    Sigma_f[drop_k, ] <- 0; Sigma_f[, drop_k] <- 0
+    v_ik_diag <- rowSums((l_ik %*% Sigma_f) * l_ik)
   } else {
     v_ik_diag <- rowSums((v_ik %*% corm) * v_ik)
   }
@@ -268,15 +283,31 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
     pnorm(z_cell[ok], lower.tail = FALSE)
   }
   
+  # 6) resolvable-error rank FDR among the significant cells
+  Sigma_used <- if (is.null(Sigma)) outer(tau_display$Enrichment_std_error,
+                                          tau_display$Enrichment_std_error) * corm else Sigma
+  fdr_res <- NULL
+  if (fdr_draws > 0) {
+    cat("\nResolvable-error rank FDR (", fdr_draws, " draws)", sep = "")
+    fdr_res <- rank_fdr(W, tau_display$Enrichment, Sigma_used, small = floor_small,
+                        alpha = fdr_alpha, n_draws = fdr_draws, seed = fdr_seed)
+    if (is.na(fdr_res$mean_fdr)) {
+      cat("\nFewer than two significant cells: rank FDR not defined\n")
+    } else {
+      cat(sprintf("\n%d significant cells; estimated FDR top 10%%: %.2f, mean over top 1-50%%: %.2f\n",
+                  fdr_res$n_sig, fdr_res$fdr_top10, fdr_res$mean_fdr))
+    }
+  }
+
   return(list(
     cs            = cs,
     z_cell        = z_cell,
     p_cell        = p_cell,
     var_cell      = v_ik_diag,
-    Sigma_used    = if (is.null(Sigma)) outer(se_e, se_e) * corm else Sigma,
+    Sigma_used    = Sigma_used,
     ldsc_res_table = tau_display,
-    ash_res        = tau_display_ash$result,
-    cs_dat = list(M_i=M_i, N_i=N_i),
+    rank_fdr       = fdr_res,
+    cs_dat = list(M_i=M_i, N_i=N_i, W=W, drop=drop_k),
     topic_qc       = topic_qc)
   )
 }

@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.8.0</span>
       </span>
     </div>
 
@@ -44,6 +44,53 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.8.0" id="scads-080">scads 0.8.0<a class="anchor" aria-label="anchor" href="#scads-080"></a></h2>
+<div class="section level3">
+<h3 id="changed-0-8-0">Changed<a class="anchor" aria-label="anchor" href="#changed-0-8-0"></a></h3>
+<ul><li>
+<strong>The cell score uses the raw S-LDSC enrichments.</strong> <code><a href="../reference/get_cs.html">get_cs()</a></code> no longer shrinks the topic enrichments with ASH before forming <code>cs</code>; the score is <code>sum_k w_ik e_k</code> from the reported <code>Enrichment</code>, floored as before. The <code>ash_res</code> element is removed from the output. On the revision simulations ASH shrinkage lowered the correlation with the truth, most where the causal topic had the largest standard error.</li>
+<li>
+<code>Sigma_used</code> from the annotation-correlation path is now the covariance of the reported enrichments for all topics (previously floored topics had zero rows), matching what the jackknife path returns.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-0-8-0">New<a class="anchor" aria-label="anchor" href="#new-0-8-0"></a></h3>
+<ul><li><p><code><a href="../reference/rank_fdr.html">rank_fdr()</a></code> and a new <code><a href="../reference/get_cs.html">get_cs()</a></code> output, <code>rank_fdr</code>: the resolvable-error rank FDR of the significant cells (one-sided BH &lt; <code>fdr_alpha</code>). Calling the top <code>k</code> significant cells by score, a call counts as false only if the cell is below the k-th score by more than one standard deviation of the estimation noise of its score difference with the cells at the cut-off (the cells within 1% of position <code>k</code>); near-ties within that noise are not errors. The FDR is the average share of such calls when the enrichments are drawn from <code>N(e_hat, Sigma)</code>. It is returned as a curve over the top 1-50% of significant cells, with summaries <code>mean_fdr</code> and <code>fdr_top10</code>. The topics floored in the score (negative enrichment, or below the annotation-size threshold with <code>small_annot = "floor"</code>) are floored in the draws too. <code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>fdr_alpha</code> (0.05), <code>fdr_draws</code> (1000; 0 skips it) and <code>fdr_seed</code> (1); <code>cs_dat</code> gains the normalised cell topic weights <code>W</code> and the floored-topic indicator <code>drop</code>. ## Fixed</p></li>
+<li><p><code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>chrs</code> (default <code>1:22</code>), passed to <code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code> and <code><a href="../reference/annot_block_coverage.html">annot_block_coverage()</a></code>, and <code><a href="../reference/scads.html">scads()</a></code> passes its <code>chrs</code> through. Previously a pipeline run on a subset of chromosomes (e.g. <code>scads(chrs = 10)</code>) failed in <code><a href="../reference/get_cs.html">get_cs()</a></code>, which read all 22 chromosomes for the covariance.</p></li>
+<li><p>On the revision simulations (20 settings, about 480 GWAS replicates) the rank FDR averaged over runs agrees with the actual share of resolvable errors within run-to-run noise, and that share tracks how often a run ranks the wrong cell population on top.</p></li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.7.0" id="scads-070">scads 0.7.0<a class="anchor" aria-label="anchor" href="#scads-070"></a></h2>
+<div class="section level3">
+<h3 id="changed-0-7-0">Changed<a class="anchor" aria-label="anchor" href="#changed-0-7-0"></a></h3>
+<ul><li>The annotation-size rule in <code><a href="../reference/get_cs.html">get_cs()</a></code> now follows Tashman et al. (2021, medRxiv 2021.03.13.21249938): a topic must overlap at least <code>min_pct_blocks</code> (default 1.7) percent of the genome’s 0.01 cM blocks. This replaces the hard cut-off of 0.5% of SNPs. Block coverage reflects both an annotation’s size and how clustered it is, and it is the metric that separated S-LDSC annotations with controlled type I error from those without. A topic with fewer than 0.5% of SNPs but spread across the genome is now kept; a larger but clustered topic can now be flagged.</li>
+<li>Topics below the threshold are always reported in a warning. They are floored to <code>e = 1</code> (<code>small_annot = "floor"</code>, default, as before) or kept (<code>small_annot = "warn"</code>). <code><a href="../reference/scads.html">scads()</a></code> passes both settings through.</li>
+<li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> returns <code>topic_qc</code>, one row per topic with <code>Prop._SNPs</code>, <code>pct_blocks</code> and the flooring decision.</li>
+<li>When <code>Sigma</code> is supplied (including the default jackknife covariance), floored topics now contribute no variance, as documented. Previously their rows of <code>Sigma</code> were kept, so cells loading on floored topics had an inflated variance and conservative p-values.</li>
+<li>
+<code>min_prop_snps</code> is deprecated. Supplying it restores the old rule. Without a <code>baseline_prefix</code> (or precomputed <code>block_coverage</code>) block coverage cannot be computed, and <code><a href="../reference/get_cs.html">get_cs()</a></code> falls back to the 0.5% rule with a message.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-0-7-0">New<a class="anchor" aria-label="anchor" href="#new-0-7-0"></a></h3>
+<ul><li>
+<code><a href="../reference/annot_block_coverage.html">annot_block_coverage()</a></code> computes, per topic, the percentage of 0.01 cM blocks overlapped, from the baseline annotation’s genetic map and the thin topic annotations written by <code><a href="../reference/run_sldsc.html">run_sldsc()</a></code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.6.0" id="scads-060">scads 0.6.0<a class="anchor" aria-label="anchor" href="#scads-060"></a></h2>
+<div class="section level3">
+<h3 id="new-0-6-0">New<a class="anchor" aria-label="anchor" href="#new-0-6-0"></a></h3>
+<ul><li>
+<code><a href="../reference/run_fastTopics.html">run_fastTopics()</a></code> and <code><a href="../reference/scads.html">scads()</a></code> gain <code>lfc.method = c("mcmc", "laplace")</code>. The default <code>"mcmc"</code> is unchanged. <code>"laplace"</code> replaces the per-peak random-walk MCMC in the DE step (the Step-1 runtime bottleneck) with a deterministic Laplace / Fisher-information approximation of the log-rate posterior for <code>lfc.stat = "vsnull"</code>. On a 452,000-peak, k=25 dataset the DE step drops from 3+ hours (did not finish) to ~8 minutes.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="when-to-use-laplace-0-6-0">When to use <code>"laplace"</code>
+<a class="anchor" aria-label="anchor" href="#when-to-use-laplace-0-6-0"></a></h3>
+<p>fastTopics uses MCMC because the log-rate posterior is skewed and boundary-unstable at low counts, where a Gaussian approximation is poor. The approximation is accurate when the effective per-topic count <code>n_eff = F[peak, topic] * sum_i s_i L[i, topic]</code> is large. Benchmarks vs <code>n_s = 1000</code> MCMC: topic annotations are 89-99% concordant (Jaccard) at <code>k &lt;= ~15</code> and <code>&gt;= ~10,000</code> reads/cell, and ~84% concordant at <code>k = 25</code> (disagreement on borderline-significant peaks). Recommended as an opt-in speed-up for small-to-moderate <code>k</code>; keep the default <code>"mcmc"</code> at high <code>k</code> or low depth when marginal calls matter. Benchmark scripts and full results are in <code>inst/benchmarks/</code>.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.5.0" id="scads-050">scads 0.5.0<a class="anchor" aria-label="anchor" href="#scads-050"></a></h2>
 <div class="section level3">

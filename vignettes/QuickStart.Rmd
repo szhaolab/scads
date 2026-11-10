@@ -197,6 +197,8 @@ cat("Cell score summary:\n")
 print(summary(cs_res$cs))
 cat("\nSignificant cells (p < 0.05):", sum(cs_res$p_cell < 0.05), "of",
     length(cs_res$p_cell), "\n")
+cat("Estimated rank FDR, top 10% of significant cells:",
+    round(cs_res$rank_fdr$fdr_top10, 2), "\n")
 ```
 
 ### UMAP visualization of cell scores

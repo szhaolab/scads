@@ -1,3 +1,45 @@
+# scads 0.8.0
+
+## Changed
+
+* **The cell score uses the raw S-LDSC enrichments.** `get_cs()` no longer
+  shrinks the topic enrichments with ASH before forming `cs`; the score is
+  `sum_k w_ik e_k` from the reported `Enrichment`, floored as before. The
+  `ash_res` element is removed from the output. On the revision simulations ASH
+  shrinkage lowered the correlation with the truth, most where the causal topic
+  had the largest standard error.
+* `Sigma_used` from the annotation-correlation path is now the covariance of
+  the reported enrichments for all topics (previously floored topics had zero
+  rows), matching what the jackknife path returns.
+
+## New
+
+* `rank_fdr()` and a new `get_cs()` output, `rank_fdr`: the resolvable-error
+  rank FDR of the significant cells (one-sided BH < `fdr_alpha`). Calling the
+  top `k` significant cells by score, a call counts as false only if the cell
+  is below the k-th score by more than one standard deviation of the estimation
+  noise of its score difference with the cells at the cut-off (the cells within
+  1% of position `k`); near-ties within that noise are not errors. The FDR is
+  the average share of such calls when the enrichments are drawn from
+  `N(e_hat, Sigma)`. It is returned as a curve over the top 1-50% of
+  significant cells, with summaries `mean_fdr` and `fdr_top10`. The topics
+  floored in the score (negative enrichment, or below the annotation-size
+  threshold with `small_annot = "floor"`) are floored in the draws too.
+  `get_cs()` gains `fdr_alpha` (0.05), `fdr_draws` (1000; 0 skips it) and
+  `fdr_seed` (1); `cs_dat` gains the normalised cell topic weights `W` and the
+  floored-topic indicator `drop`.
+## Fixed
+
+* `get_cs()` gains `chrs` (default `1:22`), passed to `ldsc_jackknife_cov()` and
+  `annot_block_coverage()`, and `scads()` passes its `chrs` through. Previously
+  a pipeline run on a subset of chromosomes (e.g. `scads(chrs = 10)`) failed in
+  `get_cs()`, which read all 22 chromosomes for the covariance.
+
+* On the revision simulations (20 settings, about 480 GWAS replicates) the
+  rank FDR averaged over runs agrees with the actual share of resolvable errors
+  within run-to-run noise, and that share tracks how often a run ranks the
+  wrong cell population on top.
+
 # scads 0.7.0
 
 ## Changed

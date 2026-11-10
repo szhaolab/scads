@@ -368,8 +368,8 @@ processes the S-LDSC output files).
 Combines the S-LDSC enrichment estimates with cell-level topic loadings to
 produce a per-cell disease relevance score:
 
-1. Reads S-LDSC results for each topic and applies adaptive shrinkage (ASH) to
-   stabilize enrichment estimates.
+1. Reads the S-LDSC enrichment estimate of each topic; the estimates are used
+   without shrinkage.
    Topics whose annotation is too small for S-LDSC's p-values to control type I
    error are flagged: following Tashman et al. (2021), a topic must overlap at
    least 1.7% of the genome's 0.01 cM blocks (`min_pct_blocks`), which reflects
@@ -379,9 +379,17 @@ produce a per-cell disease relevance score:
    0.5% of SNPs.
 2. Computes a weighted score per cell: `cs_i = sum(L_ik * a_k * e_k) / sum(L_ik * a_k)`,
    where `L_ik` is the cell's loading on topic `k`, `a_k` is the number of
-   peaks in topic `k`, and `e_k` is the (shrunk) enrichment estimate.
-3. Computes z-scores and p-values accounting for correlation between topic
-   annotations.
+   peaks in topic `k`, and `e_k` is the S-LDSC enrichment estimate.
+3. Computes z-scores and p-values from the covariance of the enrichment
+   estimates. By default this is the block-jackknife covariance rebuilt from
+   S-LDSC's delete values (`ldsc_jackknife_cov()`), which needs the baseline and
+   frequency file prefixes used for S-LDSC (`baseline_prefix`, `frq_prefix`);
+   `chrs` must match the chromosomes S-LDSC was run on.
+4. Estimates how reliable the ranking of the significant cells is: the
+   resolvable-error rank FDR (`rank_fdr`). Calling the top `k` significant cells,
+   a call counts as an error only if the cell is below the cut-off by more than
+   one SD of the estimation noise of its score difference with the cells at the
+   cut-off.
 
 **Runtime:** < 10 seconds.
 **Memory:** ~650 MB (due to correlation matrix computation).
@@ -395,10 +403,13 @@ if (!run_step4) cs_res <- readRDS(cs_cache)
 ```{r eval=run_step4}
 t4_start <- Sys.time()
 cs_res <- get_cs(
-  topic_res    = out1,
-  ldsc_res_dir = output_dir,
-  trait        = trait,
-  nTopics      = n_topics
+  topic_res       = out1,
+  ldsc_res_dir    = output_dir,
+  trait           = trait,
+  nTopics         = n_topics,
+  baseline_prefix = baseline_pref,   # jackknife covariance and block coverage
+  frq_prefix      = frq_pref,
+  chrs            = 10               # the chromosomes S-LDSC was run on
 )
 t4_end <- Sys.time()
 cat("Step 4 runtime:", round(difftime(t4_end, t4_start, units = "secs"), 1), "seconds\n")
@@ -420,8 +431,29 @@ print(summary(as.numeric(cs_res$z_cell)))
 cat("\nNumber of significant cells (p < 0.05):", sum(cs_res$p_cell < 0.05), "\n")
 cat("Number of significant cells (p < 0.01):", sum(cs_res$p_cell < 0.01), "\n")
 
-cat("\nASH-shrunk enrichment estimates:\n")
-print(cs_res$ash_res$PosteriorMean)
+cat("\nResolvable-error rank FDR of the significant cells:\n")
+print(cs_res$rank_fdr[c("n_sig", "fdr_top10", "mean_fdr")])
+```
+
+**Topic size check:** one row per topic, with the percentage of 0.01 cM blocks
+its annotation overlaps and whether it was floored.
+
+```{r}
+print(cs_res$topic_qc)
+```
+
+**Rank FDR curve:** the estimated FDR when calling the top 1-50% of the
+significant cells by score. It is usually highest for the very top cells, where
+cells from different topics compete, so read it at fixed fractions (e.g. the top
+10%).
+
+```{r fig.width=6, fig.height=4}
+ggplot(cs_res$rank_fdr$curve, aes(x = pct, y = fdr)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  labs(title = "Resolvable-error rank FDR",
+       x = "Top % of significant cells called", y = "Estimated FDR") +
+  ylim(0, 1) +
+  theme_minimal()
 ```
 
 **Understanding the output:**
@@ -431,9 +463,17 @@ print(cs_res$ash_res$PosteriorMean)
 - **`z_cell`**: Z-score for each cell, accounting for variance in enrichment
   estimates and correlation between topic annotations.
 - **`p_cell`**: Two-sided p-value for each cell's score.
-- **`ldsc_res_table`**: Raw S-LDSC results per topic.
-- **`ash_res`**: Enrichment estimates after adaptive shrinkage (more stable).
-- **`cs_dat`**: Intermediate values (`M_i`, `N_i`) used in score computation.
+- **`ldsc_res_table`**: Raw S-LDSC results per topic. The score uses these
+  enrichments directly, without shrinkage.
+- **`rank_fdr`**: Resolvable-error rank FDR of the significant cells (one-sided
+  BH < 0.05). `curve` gives the estimated FDR when calling the top 1-50% of
+  significant cells by score; `fdr_top10` and `mean_fdr` summarise it. A called
+  cell counts as an error only if it is below the cut-off by more than one SD of
+  the estimation noise of its score difference with the cells at the cut-off, so
+  near-ties the data cannot resolve are not counted. The FDR is usually highest
+  for the very top cells and falls as more cells are called (see `?rank_fdr`).
+- **`cs_dat`**: Intermediate values (`M_i`, `N_i`, the cell topic weights `W`,
+  the floored-topic indicator `drop`) used in score computation.
 - **`topic_qc`**: One row per topic: S-LDSC enrichment, `Prop._SNPs`, the
   percentage of 0.01 cM blocks overlapped (`pct_blocks`), and whether the topic
   is below the size threshold (`small`), has negative enrichment (`negative`)
@@ -504,9 +544,6 @@ are the informative ones.
 ```{r fig.width=6, fig.height=4}
 ldsc_tab <- cs_res$ldsc_res_table
 
-# Add ASH-shrunk estimates
-ldsc_tab$ASH_Enrichment <- cs_res$ash_res$PosteriorMean
-
 # Bar plot of enrichment per topic
 ggplot(ldsc_tab, aes(x = Category, y = Enrichment)) +
   geom_col(fill = "steelblue", width = 0.6) +
@@ -525,14 +562,14 @@ ggplot(ldsc_tab, aes(x = Category, y = Enrichment)) +
 ```{r}
 # Full results table
 print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
-                    "Enrichment_std_error", "ASH_Enrichment")])
+                    "Enrichment_std_error")])
 ```
 
 > **Interpreting enrichment:** Enrichment > 1 means heritability is
 > concentrated in a topic's peaks more than expected by chance. Topics with
 > enrichment significantly > 1 (confidence interval not crossing 1) indicate
-> disease-relevant chromatin programs. After adaptive shrinkage (ASH), the
-> estimates are stabilized and used to weight cell scores in Step 4.
+> disease-relevant chromatin programs. These estimates, without shrinkage,
+> weight the cell scores in Step 4.
 
 ### Cell score distribution
 
@@ -664,8 +701,9 @@ The result list returned by `scads()` has two elements:
   - `z_cell`: Z-scores per cell
   - `p_cell`: P-values per cell
   - `ldsc_res_table`: S-LDSC results per topic
-  - `ash_res`: ASH-stabilized enrichment estimates
-  - `cs_dat`: Intermediate `M_i` and `N_i` values
+  - `rank_fdr`: Resolvable-error rank FDR of the significant cells
+  - `cs_dat`: Intermediate `M_i`, `N_i`, the cell topic weights `W` and the floored-topic indicator `drop`
+  - `topic_qc`: Per-topic size check and flooring decision
 
 ## Troubleshooting
 

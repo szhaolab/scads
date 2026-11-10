@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.8.0</span>
       </span>
     </div>
 
@@ -58,6 +58,7 @@
 <span>  baseline_method <span class="op">=</span> <span class="st">"gc"</span>,</span>
 <span>  bl_celltype <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  bl_celltype_peak_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  lfc.method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mcmc"</span>, <span class="st">"laplace"</span><span class="op">)</span>,</span>
 <span>  <span class="va">sumstats_dir</span>,</span>
 <span>  <span class="va">gwas_nsamps</span>,</span>
 <span>  <span class="va">gwas_trait</span>,</span>
@@ -73,6 +74,8 @@
 <span>  n_cores_ldsc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  chrs <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">22</span>,</span>
 <span>  genome <span class="op">=</span> <span class="st">"hg19"</span>,</span>
+<span>  min_pct_blocks <span class="op">=</span> <span class="fl">1.7</span>,</span>
+<span>  small_annot <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"floor"</span>, <span class="st">"warn"</span><span class="op">)</span>,</span>
 <span>  save_intermediates <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  resume_from_step <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -110,6 +113,10 @@
 
 <dt id="arg-bl-celltype-peak-file">bl_celltype_peak_file<a class="anchor" aria-label="anchor" href="#arg-bl-celltype-peak-file"></a></dt>
 <dd><p>Use only if baseline_method == "estimate", otherwise NULL</p></dd>
+
+
+<dt id="arg-lfc-method">lfc.method<a class="anchor" aria-label="anchor" href="#arg-lfc-method"></a></dt>
+<dd><p>DE log-fold-change method passed to <code><a href="run_fastTopics.html">run_fastTopics()</a></code>: "mcmc" (default) or "laplace" (fast approximation). See <code><a href="../articles/StepByStep.html">vignette("StepByStep")</a></code>.</p></dd>
 
 
 <dt id="arg-sumstats-dir">sumstats_dir<a class="anchor" aria-label="anchor" href="#arg-sumstats-dir"></a></dt>
@@ -175,6 +182,13 @@ Set to <code>1</code> to run topics sequentially.</p></dd>
 
 <dt id="arg-genome">genome<a class="anchor" aria-label="anchor" href="#arg-genome"></a></dt>
 <dd><p>Genome build (Default is hg19)</p></dd>
+
+
+<dt id="arg-min-pct-blocks-small-annot">min_pct_blocks, small_annot<a class="anchor" aria-label="anchor" href="#arg-min-pct-blocks-small-annot"></a></dt>
+<dd><p>Annotation-size rule passed to <code><a href="get_cs.html">get_cs()</a></code>:
+topics overlapping fewer than <code>min_pct_blocks</code> percent of the genome's
+0.01 cM blocks (default 1.7) are reported, and floored when
+<code>small_annot = "floor"</code> (default) or kept when <code>"warn"</code>.</p></dd>
 
 
 <dt id="arg-save-intermediates">save_intermediates<a class="anchor" aria-label="anchor" href="#arg-save-intermediates"></a></dt>

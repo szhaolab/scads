@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">scads</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.8.0</span>
       </span>
     </div>
 
@@ -63,7 +63,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Step-by-Step Tutorial</h1>
             
-            <h4 data-toc-skip class="date">2026-09-20</h4>
+            <h4 data-toc-skip class="date">2026-11-10</h4>
       
 
       <div class="hidden name"><code>StepByStep.Rmd</code></div>
@@ -300,6 +300,64 @@ reasonable results and is the default used in this tutorial. In the
 paper, we used <code>n_s = 5000</code> for the final analyses.
 Increasing <code>n_s</code> improves the precision of the DE p-values
 but increases Step 1 runtime proportionally.</p>
+<p><strong><code>lfc.method</code> (DE uncertainty method):</strong>
+Controls how per-peak, per-topic log-fold-change uncertainty is
+quantified in the DE step, which is the runtime bottleneck of Step
+1.</p>
+<table class="table">
+<colgroup>
+<col width="38%">
+<col width="61%">
+</colgroup>
+<thead><tr class="header">
+<th>Method</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>"mcmc"</code></td>
+<td>
+<strong>(Default)</strong> Random-walk MCMC (<code>n_s</code>
+samples per peak) drawing the log-rate posterior. Robust across the full
+count range, including the low-count / rare-peak regime where the
+posterior is skewed. This is what the paper used.</td>
+</tr>
+<tr class="even">
+<td><code>"laplace"</code></td>
+<td>A deterministic Laplace / Fisher-information approximation of the
+same posterior (no Monte Carlo). One <code>crossprod</code> and a small
+<code>k x k</code> solve per peak instead of an <code>n_s</code>-step
+chain.</td>
+</tr>
+</tbody>
+</table>
+<p><em>When is <code>"laplace"</code> appropriate?</em> It replaces the
+slow MCMC with a closed-form Gaussian approximation of the log-rate
+posterior. That approximation is accurate when the <strong>effective
+per-topic count</strong> at a peak,
+<code>n_eff = F[peak, topic] * sum_i s_i L[i, topic]</code>, is large
+enough for the posterior to be approximately symmetric. Benchmarks
+against <code>n_s = 1000</code> MCMC:</p>
+<ul>
+<li>
+<strong>Recommended</strong> when the number of topics is
+small-to-moderate (<code>k &lt;= ~15</code>) at typical read depth
+(<code>&gt;= ~10,000</code> reads/cell): the binarized topic annotations
+are <strong>89-99% concordant</strong> with MCMC (Jaccard 0.89-0.99),
+while Step 1 runs <strong>~10-45x faster</strong> (e.g. a 3+ hour DE
+step finishes in ~8 minutes on a 452,000-peak, k=25 dataset).</li>
+<li>
+<strong>Use with care</strong> at high <code>k</code>
+(<code>&gt;= ~25</code>) or low read depth: expect ~84% annotation
+concordance, with the disagreement concentrated on
+<em>borderline-significant</em> peaks (<code>n_eff ~ 20-100</code>).
+Prefer the default <code>"mcmc"</code> if those marginal calls are
+important for your analysis.</li>
+</ul>
+<p>The number of topics matters more than read depth: at
+<code>k = 5</code>, thinning to ~2,000 reads/cell still gave 91%
+concordance. We keep <code>"mcmc"</code> as the default;
+<code>"laplace"</code> is an opt-in speed-up.</p>
 <p><strong><code>baseline_method</code>:</strong> Controls how the null
 hypothesis is set for differential accessibility testing:</p>
 <table class="table">
@@ -354,6 +412,7 @@ peaks. Requires <code>bl_celltype</code> and
 <span>  bl_celltype_cells <span class="op">=</span> <span class="va">bl_ct</span>,</span>
 <span>  bl_celltype_peak_file <span class="op">=</span> <span class="va">bl_peaks</span>,</span>
 <span>  fdr_cutoff    <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  lfc.method    <span class="op">=</span> <span class="st">"mcmc"</span>,   <span class="co"># default; use "laplace" for a fast approximation (see above)</span></span>
 <span>  outdir        <span class="op">=</span> <span class="va">output_dir</span>,</span>
 <span>  genome        <span class="op">=</span> <span class="st">"hg19"</span></span>
 <span><span class="op">)</span></span>
@@ -480,25 +539,44 @@ reads and processes the S-LDSC output files).</p>
 <p>Combines the S-LDSC enrichment estimates with cell-level topic
 loadings to produce a per-cell disease relevance score:</p>
 <ol style="list-style-type: decimal">
-<li>Reads S-LDSC results for each topic and applies adaptive shrinkage
-(ASH) to stabilize enrichment estimates.</li>
+<li>Reads the S-LDSC enrichment estimate of each topic; the estimates
+are used without shrinkage. Topics whose annotation is too small for
+S-LDSC’s p-values to control type I error are flagged: following Tashman
+et al. (2021), a topic must overlap at least 1.7% of the genome’s 0.01
+cM blocks (<code>min_pct_blocks</code>), which reflects both its size
+and how clustered it is. Flagged topics are reported in a warning and
+floored to an enrichment of 1 (<code>small_annot = "floor"</code>, the
+default) or kept (<code>small_annot = "warn"</code>). This replaces the
+earlier rule of 0.5% of SNPs.</li>
 <li>Computes a weighted score per cell:
 <code>cs_i = sum(L_ik * a_k * e_k) / sum(L_ik * a_k)</code>, where
 <code>L_ik</code> is the cell’s loading on topic <code>k</code>,
 <code>a_k</code> is the number of peaks in topic <code>k</code>, and
-<code>e_k</code> is the (shrunk) enrichment estimate.</li>
-<li>Computes z-scores and p-values accounting for correlation between
-topic annotations.</li>
+<code>e_k</code> is the S-LDSC enrichment estimate.</li>
+<li>Computes z-scores and p-values from the covariance of the enrichment
+estimates. By default this is the block-jackknife covariance rebuilt
+from S-LDSC’s delete values (<code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code>), which
+needs the baseline and frequency file prefixes used for S-LDSC
+(<code>baseline_prefix</code>, <code>frq_prefix</code>);
+<code>chrs</code> must match the chromosomes S-LDSC was run on.</li>
+<li>Estimates how reliable the ranking of the significant cells is: the
+resolvable-error rank FDR (<code>rank_fdr</code>). Calling the top
+<code>k</code> significant cells, a call counts as an error only if the
+cell is below the cut-off by more than one SD of the estimation noise of
+its score difference with the cells at the cut-off.</li>
 </ol>
 <p><strong>Runtime:</strong> &lt; 10 seconds. <strong>Memory:</strong>
 ~650 MB (due to correlation matrix computation).</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">t4_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">cs_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_cs.html">get_cs</a></span><span class="op">(</span></span>
-<span>  topic_res    <span class="op">=</span> <span class="va">out1</span>,</span>
-<span>  ldsc_res_dir <span class="op">=</span> <span class="va">output_dir</span>,</span>
-<span>  trait        <span class="op">=</span> <span class="va">trait</span>,</span>
-<span>  nTopics      <span class="op">=</span> <span class="va">n_topics</span></span>
+<span>  topic_res       <span class="op">=</span> <span class="va">out1</span>,</span>
+<span>  ldsc_res_dir    <span class="op">=</span> <span class="va">output_dir</span>,</span>
+<span>  trait           <span class="op">=</span> <span class="va">trait</span>,</span>
+<span>  nTopics         <span class="op">=</span> <span class="va">n_topics</span>,</span>
+<span>  baseline_prefix <span class="op">=</span> <span class="va">baseline_pref</span>,   <span class="co"># jackknife covariance and block coverage</span></span>
+<span>  frq_prefix      <span class="op">=</span> <span class="va">frq_pref</span>,</span>
+<span>  chrs            <span class="op">=</span> <span class="fl">10</span>               <span class="co"># the chromosomes S-LDSC was run on</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">t4_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Step 4 runtime:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="va">t4_end</span>, <span class="va">t4_start</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"seconds\n"</span><span class="op">)</span></span></code></pre></div>
@@ -508,26 +586,56 @@ topic annotations.</li>
 <span><span class="co">#&gt; Cell score summary:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt;   1.291   2.472   3.544   3.780   5.172   7.089</span></span>
+<span><span class="co">#&gt;   5.972   7.078   8.397   8.292   9.628  10.697</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nZ-score summary:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Z-score summary:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">z_cell</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt;   1.500   2.155   2.503   2.401   2.738   3.216</span></span>
+<span><span class="co">#&gt;   1.500   1.871   2.102   2.065   2.320   2.577</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nNumber of significant cells (p &lt; 0.05):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">p_cell</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Number of significant cells (p &lt; 0.05): 413</span></span>
+<span><span class="co">#&gt; Number of significant cells (p &lt; 0.05): 330</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of significant cells (p &lt; 0.01):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">p_cell</span> <span class="op">&lt;</span> <span class="fl">0.01</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Number of significant cells (p &lt; 0.01): 220</span></span>
+<span><span class="co">#&gt; Number of significant cells (p &lt; 0.01): 26</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nASH-shrunk enrichment estimates:\n"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResolvable-error rank FDR of the significant cells:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ASH-shrunk enrichment estimates:</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">ash_res</span><span class="op">$</span><span class="va">PosteriorMean</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 1.804256 2.697942 7.089065 5.443484 1.291199</span></span></code></pre></div>
+<span><span class="co">#&gt; Resolvable-error rank FDR of the significant cells:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">rank_fdr</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"n_sig"</span>, <span class="st">"fdr_top10"</span>, <span class="st">"mean_fdr"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $n_sig</span></span>
+<span><span class="co">#&gt; [1] 407</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $fdr_top10</span></span>
+<span><span class="co">#&gt; [1] 0.2397853</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $mean_fdr</span></span>
+<span><span class="co">#&gt; [1] 0.1135952</span></span></code></pre></div>
+<p><strong>Topic size check:</strong> one row per topic, with the
+percentage of 0.01 cM blocks its annotation overlaps and whether it was
+floored.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">topic_qc</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic Enrichment Prop._SNPs pct_blocks small negative floored</span></span>
+<span><span class="co">#&gt; 1    k1     8.4002   0.014473   12.67093 FALSE    FALSE   FALSE</span></span>
+<span><span class="co">#&gt; 2    k2     6.6492   0.030417   20.62620 FALSE    FALSE   FALSE</span></span>
+<span><span class="co">#&gt; 3    k3    10.6970   0.024685   18.11502 FALSE    FALSE   FALSE</span></span>
+<span><span class="co">#&gt; 4    k4     9.8865   0.019800   15.97444 FALSE    FALSE   FALSE</span></span>
+<span><span class="co">#&gt; 5    k5     5.9718   0.022393   17.25240 FALSE    FALSE   FALSE</span></span></code></pre></div>
+<p><strong>Rank FDR curve:</strong> the estimated FDR when calling the
+top 1-50% of the significant cells by score. It is usually highest for
+the very top cells, where cells from different topics compete, so read
+it at fixed fractions (e.g. the top 10%).</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">rank_fdr</span><span class="op">$</span><span class="va">curve</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">pct</span>, y <span class="op">=</span> <span class="va">fdr</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"steelblue"</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Resolvable-error rank FDR"</span>,</span>
+<span>       x <span class="op">=</span> <span class="st">"Top % of significant cells called"</span>, y <span class="op">=</span> <span class="st">"Estimated FDR"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-22-1.png" alt="" width="576"></p>
 <p><strong>Understanding the output:</strong></p>
 <ul>
 <li>
@@ -543,13 +651,29 @@ topic annotations.</li>
 cell’s score.</li>
 <li>
 <strong><code>ldsc_res_table</code></strong>: Raw S-LDSC results per
-topic.</li>
+topic. The score uses these enrichments directly, without
+shrinkage.</li>
 <li>
-<strong><code>ash_res</code></strong>: Enrichment estimates after
-adaptive shrinkage (more stable).</li>
+<strong><code>rank_fdr</code></strong>: Resolvable-error rank FDR of
+the significant cells (one-sided BH &lt; 0.05). <code>curve</code> gives
+the estimated FDR when calling the top 1-50% of significant cells by
+score; <code>fdr_top10</code> and <code>mean_fdr</code> summarise it. A
+called cell counts as an error only if it is below the cut-off by more
+than one SD of the estimation noise of its score difference with the
+cells at the cut-off, so near-ties the data cannot resolve are not
+counted. The FDR is usually highest for the very top cells and falls as
+more cells are called (see <code><a href="../reference/rank_fdr.html">?rank_fdr</a></code>).</li>
 <li>
 <strong><code>cs_dat</code></strong>: Intermediate values
-(<code>M_i</code>, <code>N_i</code>) used in score computation.</li>
+(<code>M_i</code>, <code>N_i</code>, the cell topic weights
+<code>W</code>, the floored-topic indicator <code>drop</code>) used in
+score computation.</li>
+<li>
+<strong><code>topic_qc</code></strong>: One row per topic: S-LDSC
+enrichment, <code>Prop._SNPs</code>, the percentage of 0.01 cM blocks
+overlapped (<code>pct_blocks</code>), and whether the topic is below the
+size threshold (<code>small</code>), has negative enrichment
+(<code>negative</code>) or was floored (<code>floored</code>).</li>
 </ul>
 <p>Higher cell scores indicate cells whose chromatin accessibility
 profiles overlap more strongly with disease-associated regions. Cells
@@ -573,7 +697,7 @@ stage.</p>
 the Poisson rate parameters for each peak in each topic. Examining the
 distribution of log10(F) per topic reveals whether the model separates
 foreground (high F) from background (low F) peaks.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">Fmat</span> <span class="op">&lt;-</span> <span class="va">out1</span><span class="op">$</span><span class="va">Fmat</span></span>
 <span></span>
 <span><span class="co"># Histogram of log10(Fmat) per topic</span></span>
@@ -590,7 +714,7 @@ foreground (high F) from background (low F) peaks.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Distribution of log10(F) per topic"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"log10(F)"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-21-1.png" alt="" width="768"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-23-1.png" alt="" width="768"></p>
 </div>
 <div class="section level4">
 <h4 id="structure-plot">Structure plot<a class="anchor" aria-label="anchor" href="#structure-plot"></a>
@@ -599,7 +723,7 @@ foreground (high F) from background (low F) peaks.</p>
 distributed across topics. Each vertical bar represents a cell, colored
 by its topic proportions (from the <code>Lmat</code> loading matrix).
 Cells dominated by a single topic form clusters.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">fastTopics</span><span class="fu">::</span><span class="fu"><a href="https://stephenslab.github.io/fastTopics/reference/structure_plot.html" class="external-link">structure_plot</a></span><span class="op">(</span><span class="va">out1</span><span class="op">$</span><span class="va">fastTopics_fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Running tsne on 500 x 5 matrix.</span></span>
 <span><span class="co">#&gt; Read the 500 x 5 data matrix successfully!</span></span>
@@ -609,15 +733,15 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Done in 0.07 seconds (sparsity = 0.769136)!</span></span>
 <span><span class="co">#&gt; Learning embedding...</span></span>
 <span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 150: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 200: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 250: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 300: error is 0.446991 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 250: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 300: error is 0.446991 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 350: error is 0.440582 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 400: error is 0.440534 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 450: error is 0.440535 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
@@ -629,7 +753,7 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 1000: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Fitting performed in 0.66 seconds.</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-22-1.png" alt="" width="768"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-24-1.png" alt="" width="768"></p>
 </div>
 </div>
 <div class="section level3">
@@ -648,11 +772,8 @@ confidence intervals.</p>
 <p>Visualizing enrichment estimates with error bars helps identify which
 topics carry disease signal. Topics with positive enrichment (and small
 standard error) are the informative ones.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ldsc_tab</span> <span class="op">&lt;-</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">ldsc_res_table</span></span>
-<span></span>
-<span><span class="co"># Add ASH-shrunk estimates</span></span>
-<span><span class="va">ldsc_tab</span><span class="op">$</span><span class="va">ASH_Enrichment</span> <span class="op">&lt;-</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">ash_res</span><span class="op">$</span><span class="va">PosteriorMean</span></span>
 <span></span>
 <span><span class="co"># Bar plot of enrichment per topic</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">ldsc_tab</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Category</span>, y <span class="op">=</span> <span class="va">Enrichment</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -665,28 +786,27 @@ standard error) are the informative ones.</p>
 <span>       subtitle <span class="op">=</span> <span class="st">"Dashed line = no enrichment (1.0). Error bars = 95% CI."</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Topic"</span>, y <span class="op">=</span> <span class="st">"Enrichment"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-23-1.png" alt="" width="576"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-25-1.png" alt="" width="576"></p>
 </div>
 <div class="section level4">
 <h4 id="s-ldsc-results-table">S-LDSC results table<a class="anchor" aria-label="anchor" href="#s-ldsc-results-table"></a>
 </h4>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Full results table</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ldsc_tab</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Category"</span>, <span class="st">"Prop._SNPs"</span>, <span class="st">"Prop._h2"</span>, <span class="st">"Enrichment"</span>,</span>
-<span>                    <span class="st">"Enrichment_std_error"</span>, <span class="st">"ASH_Enrichment"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   Category Prop._SNPs Prop._h2 Enrichment Enrichment_std_error ASH_Enrichment</span></span>
-<span><span class="co">#&gt; 1       k1   0.014473  0.12158     8.4002               4.8179       1.804256</span></span>
-<span><span class="co">#&gt; 2       k2   0.030417  0.20225     6.6492               2.8804       2.697942</span></span>
-<span><span class="co">#&gt; 3       k3   0.024685  0.26406    10.6970               3.7634       7.089065</span></span>
-<span><span class="co">#&gt; 4       k4   0.019800  0.19575     9.8865               3.8306       5.443484</span></span>
-<span><span class="co">#&gt; 5       k5   0.022393  0.13373     5.9718               3.3137       1.291199</span></span></code></pre></div>
+<span>                    <span class="st">"Enrichment_std_error"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   Category Prop._SNPs Prop._h2 Enrichment Enrichment_std_error</span></span>
+<span><span class="co">#&gt; 1       k1   0.014473  0.12158     8.4002               4.8179</span></span>
+<span><span class="co">#&gt; 2       k2   0.030417  0.20225     6.6492               2.8804</span></span>
+<span><span class="co">#&gt; 3       k3   0.024685  0.26406    10.6970               3.7634</span></span>
+<span><span class="co">#&gt; 4       k4   0.019800  0.19575     9.8865               3.8306</span></span>
+<span><span class="co">#&gt; 5       k5   0.022393  0.13373     5.9718               3.3137</span></span></code></pre></div>
 <blockquote>
 <p><strong>Interpreting enrichment:</strong> Enrichment &gt; 1 means
 heritability is concentrated in a topic’s peaks more than expected by
 chance. Topics with enrichment significantly &gt; 1 (confidence interval
-not crossing 1) indicate disease-relevant chromatin programs. After
-adaptive shrinkage (ASH), the estimates are stabilized and used to
-weight cell scores in Step 4.</p>
+not crossing 1) indicate disease-relevant chromatin programs. These
+estimates, without shrinkage, weight the cell scores in Step 4.</p>
 </blockquote>
 </div>
 </div>
@@ -696,7 +816,7 @@ weight cell scores in Step 4.</p>
 <div class="section level4">
 <h4 id="histogram-of-cell-scores">Histogram of cell scores<a class="anchor" aria-label="anchor" href="#histogram-of-cell-scores"></a>
 </h4>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cs_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>cs <span class="op">=</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">cs_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">cs</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -704,7 +824,7 @@ weight cell scores in Step 4.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Distribution of cell scores"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Cell score"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-25-1.png" alt="" width="576"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-27-1.png" alt="" width="576"></p>
 </div>
 <div class="section level4">
 <h4 id="z-score-distribution">Z-score distribution<a class="anchor" aria-label="anchor" href="#z-score-distribution"></a>
@@ -712,7 +832,7 @@ weight cell scores in Step 4.</p>
 <p>The z-scores account for variance in enrichment estimates and
 correlation between topic annotations. Under the null (no disease
 signal), z-scores should be approximately standard normal.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">z_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">z_cell</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">z_df</span> <span class="op">&lt;-</span> <span class="va">z_df</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">z_df</span><span class="op">$</span><span class="va">z</span><span class="op">)</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span></span>
@@ -723,7 +843,7 @@ signal), z-scores should be approximately standard normal.</p>
 <span>       subtitle <span class="op">=</span> <span class="st">"Dashed lines = +/-1.96 (p = 0.05 threshold)"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Z-score"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-26-1.png" alt="" width="576"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-28-1.png" alt="" width="576"></p>
 </div>
 </div>
 <div class="section level3">
@@ -732,7 +852,7 @@ signal), z-scores should be approximately standard normal.</p>
 <p>UMAP provides a 2D embedding of cells based on the topic loading
 matrix (<code>Lmat</code>). Coloring cells by their disease score
 reveals whether disease-relevant cells cluster together.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"uwot"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Install 'uwot' for UMAP: install.packages('uwot')"</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
@@ -775,7 +895,7 @@ reveals whether disease-relevant cells cluster together.</p>
 <span>  <span class="co"># Combine plots</span></span>
 <span>  <span class="va">p3</span> <span class="op">+</span> <span class="va">p1</span> <span class="op">+</span> <span class="va">p2</span> <span class="op">+</span> <span class="fu"><a href="https://patchwork.data-imaginist.com/reference/plot_layout.html" class="external-link">plot_layout</a></span><span class="op">(</span>ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-27-1.png" alt="" width="960"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-29-1.png" alt="" width="960"></p>
 <blockquote>
 <p><strong>Note:</strong> Cells dominated by topics with high enrichment
 will appear as “hot spots” on the score UMAP. The z-score UMAP
@@ -842,10 +962,16 @@ including:
 <li>
 <code>ldsc_res_table</code>: S-LDSC results per topic</li>
 <li>
-<code>ash_res</code>: ASH-stabilized enrichment estimates</li>
+<code>rank_fdr</code>: Resolvable-error rank FDR of the significant
+cells</li>
 <li>
-<code>cs_dat</code>: Intermediate <code>M_i</code> and
-<code>N_i</code> values</li>
+<code>cs_dat</code>: Intermediate <code>M_i</code>,
+<code>N_i</code>, the cell topic weights <code>W</code> and the
+floored-topic indicator <code>drop</code>
+</li>
+<li>
+<code>topic_qc</code>: Per-topic size check and flooring
+decision</li>
 </ul>
 </li>
 </ul>
