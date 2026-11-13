@@ -63,7 +63,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Step-by-Step Tutorial</h1>
             
-            <h4 data-toc-skip class="date">2026-11-10</h4>
+            <h4 data-toc-skip class="date">2026-11-13</h4>
       
 
       <div class="hidden name"><code>StepByStep.Rmd</code></div>
@@ -730,10 +730,10 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Using no_dims = 1, perplexity = 100.000000, and theta = 0.100000</span></span>
 <span><span class="co">#&gt; Computing input similarities...</span></span>
 <span><span class="co">#&gt; Building tree...</span></span>
-<span><span class="co">#&gt; Done in 0.07 seconds (sparsity = 0.769136)!</span></span>
+<span><span class="co">#&gt; Done in 0.06 seconds (sparsity = 0.769136)!</span></span>
 <span><span class="co">#&gt; Learning embedding...</span></span>
 <span><span class="co">#&gt; Iteration 50: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 100: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 150: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 200: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 250: error is 48.722003 (50 iterations in 0.03 seconds)</span></span>
@@ -741,18 +741,18 @@ Cells dominated by a single topic form clusters.</p>
 <span><span class="co">#&gt; Iteration 350: error is 0.440582 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 400: error is 0.440534 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 450: error is 0.440535 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 500: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 550: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 600: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 650: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 700: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 750: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 800: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
+<span><span class="co">#&gt; Iteration 850: error is 0.440536 (50 iterations in 0.04 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 900: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 950: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
 <span><span class="co">#&gt; Iteration 1000: error is 0.440536 (50 iterations in 0.03 seconds)</span></span>
-<span><span class="co">#&gt; Fitting performed in 0.66 seconds.</span></span></code></pre></div>
+<span><span class="co">#&gt; Fitting performed in 0.64 seconds.</span></span></code></pre></div>
 <p><img src="StepByStep_files/figure-html/unnamed-chunk-24-1.png" alt="" width="768"></p>
 </div>
 </div>
@@ -811,48 +811,12 @@ estimates, without shrinkage, weight the cell scores in Step 4.</p>
 </div>
 </div>
 <div class="section level3">
-<h3 id="cell-score-distribution">Cell score distribution<a class="anchor" aria-label="anchor" href="#cell-score-distribution"></a>
-</h3>
-<div class="section level4">
-<h4 id="histogram-of-cell-scores">Histogram of cell scores<a class="anchor" aria-label="anchor" href="#histogram-of-cell-scores"></a>
-</h4>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cs_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>cs <span class="op">=</span> <span class="va">cs_res</span><span class="op">$</span><span class="va">cs</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">cs_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">cs</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span>bins <span class="op">=</span> <span class="fl">50</span>, fill <span class="op">=</span> <span class="st">"steelblue"</span>, color <span class="op">=</span> <span class="st">"white"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Distribution of cell scores"</span>,</span>
-<span>       x <span class="op">=</span> <span class="st">"Cell score"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-27-1.png" alt="" width="576"></p>
-</div>
-<div class="section level4">
-<h4 id="z-score-distribution">Z-score distribution<a class="anchor" aria-label="anchor" href="#z-score-distribution"></a>
-</h4>
-<p>The z-scores account for variance in enrichment estimates and
-correlation between topic annotations. Under the null (no disease
-signal), z-scores should be approximately standard normal.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">z_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">cs_res</span><span class="op">$</span><span class="va">z_cell</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">z_df</span> <span class="op">&lt;-</span> <span class="va">z_df</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">z_df</span><span class="op">$</span><span class="va">z</span><span class="op">)</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
-<span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">z_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">z</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span>bins <span class="op">=</span> <span class="fl">50</span>, fill <span class="op">=</span> <span class="st">"steelblue"</span>, color <span class="op">=</span> <span class="st">"white"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.96</span>, <span class="fl">1.96</span><span class="op">)</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Distribution of cell z-scores"</span>,</span>
-<span>       subtitle <span class="op">=</span> <span class="st">"Dashed lines = +/-1.96 (p = 0.05 threshold)"</span>,</span>
-<span>       x <span class="op">=</span> <span class="st">"Z-score"</span>, y <span class="op">=</span> <span class="st">"Count"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-28-1.png" alt="" width="576"></p>
-</div>
-</div>
-<div class="section level3">
 <h3 id="umap-visualization">UMAP visualization<a class="anchor" aria-label="anchor" href="#umap-visualization"></a>
 </h3>
 <p>UMAP provides a 2D embedding of cells based on the topic loading
 matrix (<code>Lmat</code>). Coloring cells by their disease score
 reveals whether disease-relevant cells cluster together.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"uwot"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Install 'uwot' for UMAP: install.packages('uwot')"</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
@@ -895,7 +859,7 @@ reveals whether disease-relevant cells cluster together.</p>
 <span>  <span class="co"># Combine plots</span></span>
 <span>  <span class="va">p3</span> <span class="op">+</span> <span class="va">p1</span> <span class="op">+</span> <span class="va">p2</span> <span class="op">+</span> <span class="fu"><a href="https://patchwork.data-imaginist.com/reference/plot_layout.html" class="external-link">plot_layout</a></span><span class="op">(</span>ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><img src="StepByStep_files/figure-html/unnamed-chunk-29-1.png" alt="" width="960"></p>
+<p><img src="StepByStep_files/figure-html/unnamed-chunk-27-1.png" alt="" width="960"></p>
 <blockquote>
 <p><strong>Note:</strong> Cells dominated by topics with high enrichment
 will appear as “hot spots” on the score UMAP. The z-score UMAP

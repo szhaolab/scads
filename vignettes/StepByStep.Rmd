@@ -571,39 +571,6 @@ print(ldsc_tab[, c("Category", "Prop._SNPs", "Prop._h2", "Enrichment",
 > disease-relevant chromatin programs. These estimates, without shrinkage,
 > weight the cell scores in Step 4.
 
-### Cell score distribution
-
-#### Histogram of cell scores
-
-```{r fig.width=6, fig.height=4}
-cs_df <- data.frame(cs = cs_res$cs)
-
-ggplot(cs_df, aes(x = cs)) +
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  labs(title = "Distribution of cell scores",
-       x = "Cell score", y = "Count") +
-  theme_minimal()
-```
-
-#### Z-score distribution
-
-The z-scores account for variance in enrichment estimates and correlation
-between topic annotations. Under the null (no disease signal), z-scores should
-be approximately standard normal.
-
-```{r fig.width=6, fig.height=4}
-z_df <- data.frame(z = as.numeric(cs_res$z_cell))
-z_df <- z_df[is.finite(z_df$z), , drop = FALSE]
-
-ggplot(z_df, aes(x = z)) +
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  geom_vline(xintercept = c(-1.96, 1.96), linetype = "dashed", color = "red") +
-  labs(title = "Distribution of cell z-scores",
-       subtitle = "Dashed lines = +/-1.96 (p = 0.05 threshold)",
-       x = "Z-score", y = "Count") +
-  theme_minimal()
-```
-
 ### UMAP visualization
 
 UMAP provides a 2D embedding of cells based on the topic loading matrix (`Lmat`).
