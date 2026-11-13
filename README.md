@@ -171,7 +171,7 @@ scads_res <- scads(
 )
 ```
 
-See the [tutorial](https://szhaolab.github.io/scads/articles/Introduction.html) for a complete example.
+See the [quick start](https://szhaolab.github.io/scads/articles/QuickStart.html) and the [step-by-step tutorial](https://szhaolab.github.io/scads/articles/StepByStep.html) for complete examples.
 
 # Reference
 
