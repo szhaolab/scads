@@ -46,87 +46,55 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.8.0" id="scads-080">scads 0.8.0<a class="anchor" aria-label="anchor" href="#scads-080"></a></h2>
-<div class="section level3">
-<h3 id="changed-0-8-0">Changed<a class="anchor" aria-label="anchor" href="#changed-0-8-0"></a></h3>
 <ul><li>
-<strong>The cell score uses the raw S-LDSC enrichments.</strong> <code><a href="../reference/get_cs.html">get_cs()</a></code> no longer shrinks the topic enrichments with ASH before forming <code>cs</code>; the score is <code>sum_k w_ik e_k</code> from the reported <code>Enrichment</code>, floored as before. The <code>ash_res</code> element is removed from the output. On the revision simulations ASH shrinkage lowered the correlation with the truth, most where the causal topic had the largest standard error.</li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code>: the cell score uses the raw S-LDSC enrichments; ASH shrinkage and the <code>ash_res</code> output are removed.</li>
+<li>New <code><a href="../reference/rank_fdr.html">rank_fdr()</a></code>, also returned by <code><a href="../reference/get_cs.html">get_cs()</a></code> as <code>rank_fdr</code>: resolvable-error rank FDR of the significant cells.</li>
 <li>
-<code>Sigma_used</code> from the annotation-correlation path is now the covariance of the reported enrichments for all topics (previously floored topics had zero rows), matching what the jackknife path returns.</li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>fdr_alpha</code>, <code>fdr_draws</code> and <code>fdr_seed</code>; <code>cs_dat</code> gains <code>W</code> and <code>drop</code>.</li>
+<li>
+<code>Sigma_used</code> from the annotation-correlation approximation includes floored topics.</li>
+<li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>chrs</code>, passed through by <code><a href="../reference/scads.html">scads()</a></code>; runs on a subset of chromosomes no longer fail.</li>
 </ul></div>
-<div class="section level3">
-<h3 id="new-0-8-0">New<a class="anchor" aria-label="anchor" href="#new-0-8-0"></a></h3>
-<ul><li><p><code><a href="../reference/rank_fdr.html">rank_fdr()</a></code> and a new <code><a href="../reference/get_cs.html">get_cs()</a></code> output, <code>rank_fdr</code>: the resolvable-error rank FDR of the significant cells (one-sided BH &lt; <code>fdr_alpha</code>). Calling the top <code>k</code> significant cells by score, a call counts as false only if the cell is below the k-th score by more than one standard deviation of the estimation noise of its score difference with the cells at the cut-off (the cells within 1% of position <code>k</code>); near-ties within that noise are not errors. The FDR is the average share of such calls when the enrichments are drawn from <code>N(e_hat, Sigma)</code>. It is returned as a curve over the top 1-50% of significant cells, with summaries <code>mean_fdr</code> and <code>fdr_top10</code>. The topics floored in the score (negative enrichment, or below the annotation-size threshold with <code>small_annot = "floor"</code>) are floored in the draws too. <code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>fdr_alpha</code> (0.05), <code>fdr_draws</code> (1000; 0 skips it) and <code>fdr_seed</code> (1); <code>cs_dat</code> gains the normalised cell topic weights <code>W</code> and the floored-topic indicator <code>drop</code>. ## Fixed</p></li>
-<li><p><code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>chrs</code> (default <code>1:22</code>), passed to <code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code> and <code><a href="../reference/annot_block_coverage.html">annot_block_coverage()</a></code>, and <code><a href="../reference/scads.html">scads()</a></code> passes its <code>chrs</code> through. Previously a pipeline run on a subset of chromosomes (e.g. <code>scads(chrs = 10)</code>) failed in <code><a href="../reference/get_cs.html">get_cs()</a></code>, which read all 22 chromosomes for the covariance.</p></li>
-<li><p>On the revision simulations (20 settings, about 480 GWAS replicates) the rank FDR averaged over runs agrees with the actual share of resolvable errors within run-to-run noise, and that share tracks how often a run ranks the wrong cell population on top.</p></li>
-</ul></div>
-</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.7.0" id="scads-070">scads 0.7.0<a class="anchor" aria-label="anchor" href="#scads-070"></a></h2>
-<div class="section level3">
-<h3 id="changed-0-7-0">Changed<a class="anchor" aria-label="anchor" href="#changed-0-7-0"></a></h3>
-<ul><li>The annotation-size rule in <code><a href="../reference/get_cs.html">get_cs()</a></code> now follows Tashman et al. (2021, medRxiv 2021.03.13.21249938): a topic must overlap at least <code>min_pct_blocks</code> (default 1.7) percent of the genome’s 0.01 cM blocks. This replaces the hard cut-off of 0.5% of SNPs. Block coverage reflects both an annotation’s size and how clustered it is, and it is the metric that separated S-LDSC annotations with controlled type I error from those without. A topic with fewer than 0.5% of SNPs but spread across the genome is now kept; a larger but clustered topic can now be flagged.</li>
-<li>Topics below the threshold are always reported in a warning. They are floored to <code>e = 1</code> (<code>small_annot = "floor"</code>, default, as before) or kept (<code>small_annot = "warn"</code>). <code><a href="../reference/scads.html">scads()</a></code> passes both settings through.</li>
-<li>
-<code><a href="../reference/get_cs.html">get_cs()</a></code> returns <code>topic_qc</code>, one row per topic with <code>Prop._SNPs</code>, <code>pct_blocks</code> and the flooring decision.</li>
-<li>When <code>Sigma</code> is supplied (including the default jackknife covariance), floored topics now contribute no variance, as documented. Previously their rows of <code>Sigma</code> were kept, so cells loading on floored topics had an inflated variance and conservative p-values.</li>
-<li>
-<code>min_prop_snps</code> is deprecated. Supplying it restores the old rule. Without a <code>baseline_prefix</code> (or precomputed <code>block_coverage</code>) block coverage cannot be computed, and <code><a href="../reference/get_cs.html">get_cs()</a></code> falls back to the 0.5% rule with a message.</li>
-</ul></div>
-<div class="section level3">
-<h3 id="new-0-7-0">New<a class="anchor" aria-label="anchor" href="#new-0-7-0"></a></h3>
 <ul><li>
-<code><a href="../reference/annot_block_coverage.html">annot_block_coverage()</a></code> computes, per topic, the percentage of 0.01 cM blocks overlapped, from the baseline annotation’s genetic map and the thin topic annotations written by <code><a href="../reference/run_sldsc.html">run_sldsc()</a></code>.</li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> judges topic size by 0.01 cM block coverage (<code>min_pct_blocks</code>, default 1.7%; Tashman et al. 2021) instead of 0.5% of SNPs.</li>
+<li>Small topics are reported in a warning and floored (<code>small_annot = "floor"</code>, default) or kept (<code>"warn"</code>); <code><a href="../reference/scads.html">scads()</a></code> passes both settings through.</li>
+<li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> returns <code>topic_qc</code>.</li>
+<li>Floored topics contribute no variance when <code>Sigma</code> is supplied.</li>
+<li>
+<code>min_prop_snps</code> is deprecated. Without <code>baseline_prefix</code> or <code>block_coverage</code>, <code><a href="../reference/get_cs.html">get_cs()</a></code> falls back to the 0.5% rule.</li>
+<li>New <code><a href="../reference/annot_block_coverage.html">annot_block_coverage()</a></code>.</li>
 </ul></div>
-</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.6.0" id="scads-060">scads 0.6.0<a class="anchor" aria-label="anchor" href="#scads-060"></a></h2>
-<div class="section level3">
-<h3 id="new-0-6-0">New<a class="anchor" aria-label="anchor" href="#new-0-6-0"></a></h3>
 <ul><li>
-<code><a href="../reference/run_fastTopics.html">run_fastTopics()</a></code> and <code><a href="../reference/scads.html">scads()</a></code> gain <code>lfc.method = c("mcmc", "laplace")</code>. The default <code>"mcmc"</code> is unchanged. <code>"laplace"</code> replaces the per-peak random-walk MCMC in the DE step (the Step-1 runtime bottleneck) with a deterministic Laplace / Fisher-information approximation of the log-rate posterior for <code>lfc.stat = "vsnull"</code>. On a 452,000-peak, k=25 dataset the DE step drops from 3+ hours (did not finish) to ~8 minutes.</li>
+<code><a href="../reference/run_fastTopics.html">run_fastTopics()</a></code> and <code><a href="../reference/scads.html">scads()</a></code> gain <code>lfc.method = c("mcmc", "laplace")</code>; <code>"laplace"</code> is a faster approximation of the differential accessibility step. Benchmarks in <code>inst/benchmarks/</code>.</li>
 </ul></div>
-<div class="section level3">
-<h3 id="when-to-use-laplace-0-6-0">When to use <code>"laplace"</code>
-<a class="anchor" aria-label="anchor" href="#when-to-use-laplace-0-6-0"></a></h3>
-<p>fastTopics uses MCMC because the log-rate posterior is skewed and boundary-unstable at low counts, where a Gaussian approximation is poor. The approximation is accurate when the effective per-topic count <code>n_eff = F[peak, topic] * sum_i s_i L[i, topic]</code> is large. Benchmarks vs <code>n_s = 1000</code> MCMC: topic annotations are 89-99% concordant (Jaccard) at <code>k &lt;= ~15</code> and <code>&gt;= ~10,000</code> reads/cell, and ~84% concordant at <code>k = 25</code> (disagreement on borderline-significant peaks). Recommended as an opt-in speed-up for small-to-moderate <code>k</code>; keep the default <code>"mcmc"</code> at high <code>k</code> or low depth when marginal calls matter. Benchmark scripts and full results are in <code>inst/benchmarks/</code>.</p>
-</div>
-</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.5.0" id="scads-050">scads 0.5.0<a class="anchor" aria-label="anchor" href="#scads-050"></a></h2>
-<div class="section level3">
-<h3 id="new-0-5-0">New<a class="anchor" aria-label="anchor" href="#new-0-5-0"></a></h3>
-<ul><li><p><code><a href="../reference/cell_type_heterogeneity.html">cell_type_heterogeneity()</a></code> tests whether cells within a cell type differ in disease relevance, giving one p-value per cell type. The score is linear in the topic enrichments with weights summing to one, so the within-type variance is a quadratic form whose null does not depend on the unknown common enrichment level; the p-value is exact by Imhof inversion rather than permutation. See <code><a href="../articles/HeterogeneityTest.html">vignette("HeterogeneityTest")</a></code>.</p></li>
+<ul><li>New <code><a href="../reference/cell_type_heterogeneity.html">cell_type_heterogeneity()</a></code>: test of heterogeneity within each cell type (<code><a href="../articles/HeterogeneityTest.html">vignette("HeterogeneityTest")</a></code>).</li>
 <li>
-<p><code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code> is rewritten and validated. It reconstructs the K x K covariance of the enrichment estimates from S-LDSC <code>--print-delete-vals</code> output, and now reproduces the reported <code>Enrichment</code> and <code>Enrichment_std_error</code> to four decimal places. Two corrections were needed: overlap-corrected per-category heritability (S-LDSC’s <code>_overlap_output</code>) rather than the uncorrected ratio, and restriction to MAF 5-50% variants when <code>--frqfile-chr</code> is supplied. The function reports the acceptance check in <code>$check</code> and <code>$pass</code>, and no longer requires an opt-in flag.</p>
-<p>It takes <code>baseline_prefix</code> and <code>frq_prefix</code>, which must match the <code>--ref-ld-chr</code> and <code>--frqfile-chr</code> of the runs being reconstructed. A 25-topic run takes about three minutes.</p>
-</li>
+<code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code> rewritten: overlap-corrected heritability, MAF 5-50% variants, reproduces the S-LDSC <code>Enrichment</code> and its SE; takes <code>baseline_prefix</code> and <code>frq_prefix</code>; returns <code>$check</code> and <code>$pass</code>.</li>
 <li>
-<p><code><a href="../reference/get_cs.html">get_cs()</a></code> now uses the jackknife covariance <strong>by default</strong>. It gains <code>baseline_prefix</code> and <code>frq_prefix</code>, which <code><a href="../reference/scads.html">scads()</a></code> passes through from its own arguments, so the covariance is built as part of the pipeline with no extra steps. Supplying <code>Sigma</code> directly still works.</p>
-<p><strong>Breaking:</strong> calling <code><a href="../reference/get_cs.html">get_cs()</a></code> with none of <code>Sigma</code>, the reference prefixes, or <code>use_approximation = TRUE</code> is now an error rather than a silent fallback to the annotation-correlation approximation. Set <code>use_approximation = TRUE</code> to keep the previous behaviour.</p>
-</li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> uses the jackknife covariance by default and gains <code>baseline_prefix</code> and <code>frq_prefix</code>, passed through by <code><a href="../reference/scads.html">scads()</a></code>.</li>
+<li>
+<strong>Breaking:</strong> <code><a href="../reference/get_cs.html">get_cs()</a></code> without <code>Sigma</code>, the reference prefixes or <code>use_approximation = TRUE</code> is an error.</li>
+<li>
+<code>CompQuadForm</code> and <code>data.table</code> added to Suggests.</li>
 </ul></div>
-<div class="section level3">
-<h3 id="notes-0-5-0">Notes<a class="anchor" aria-label="anchor" href="#notes-0-5-0"></a></h3>
-<ul><li>
-<code>CompQuadForm</code> and <code>data.table</code> are new optional dependencies. Without <code>CompQuadForm</code> the quadratic-form p-value falls back to a Satterthwaite moment match; <code>data.table</code> is required by <code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code>.</li>
-</ul></div>
-</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.3.0" id="scads-030">scads 0.3.0<a class="anchor" aria-label="anchor" href="#scads-030"></a></h2>
-<p>Revision of NCOMMS-26-026605-T. Changes to the cell-level variance and p-value.</p>
-<div class="section level3">
-<h3 id="breaking-0-3-0">Breaking<a class="anchor" aria-label="anchor" href="#breaking-0-3-0"></a></h3>
-<ul><li><p><code><a href="../reference/get_cs.html">get_cs()</a></code> now computes the cell score variance as the <strong>full double sum</strong> over ordered topic pairs, <code>Var(sum_k a_k e_k) = sum_k sum_k' a_k a_k' Cov(e_k, e_k')</code>. Previously the correlation matrix was masked to its upper triangle, which omits the factor of 2 on the off-diagonal terms and understates the variance whenever topic annotations are positively correlated. Cell-level z-scores decrease and p-values increase; the effect grows with the mean annotation correlation (roughly 17% at rho = 0.05, 34% at rho = 0.3 for K = 25).</p></li>
-<li><p><code><a href="../reference/get_cs.html">get_cs()</a></code> returns <code>p_cell</code> of length I, with <code>NA</code> where the variance is zero or non-finite. Previously non-finite values were dropped, so the returned vector could be shorter than <code>cs</code> and <code>z_cell</code> and every subsequent p-value was attributed to the wrong cell.</p></li>
+<ul><li>
+<strong>Breaking:</strong> <code><a href="../reference/get_cs.html">get_cs()</a></code> cell-score variance includes both off-diagonal terms of each topic pair; z-scores decrease.</li>
+<li>
+<strong>Breaking:</strong> <code><a href="../reference/get_cs.html">get_cs()</a></code> returns <code>p_cell</code> of length I, <code>NA</code> where the variance is zero or non-finite.</li>
+<li>New <code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code>: covariance of the enrichment estimates from S-LDSC block-jackknife delete values, for <code>get_cs(Sigma = )</code>.</li>
+<li>
+<code><a href="../reference/get_cs.html">get_cs()</a></code> gains <code>alternative</code> and <code>min_prop_snps</code>, and returns <code>var_cell</code> and <code>Sigma_used</code>.</li>
 </ul></div>
-<div class="section level3">
-<h3 id="new-0-3-0">New<a class="anchor" aria-label="anchor" href="#new-0-3-0"></a></h3>
-<ul><li><p><code><a href="../reference/ldsc_jackknife_cov.html">ldsc_jackknife_cov()</a></code> reconstructs the K x K covariance of the enrichment estimates from S-LDSC block-jackknife delete values (<code>--print-delete-vals</code>). Pass the result to <code>get_cs(Sigma = )</code> to replace the annotation-correlation approximation, which captures only peak overlap and ignores the correlation induced by the shared GWAS, LD reference and baseline-LD covariates.</p></li>
-<li><p><code>get_cs(alternative = )</code> selects a two-sided (default, unchanged) or one-sided (<code>"greater"</code>) test. Under the two-sided test, significantly <em>depleted</em> cells also pass FDR.</p></li>
-<li><p><code><a href="../reference/get_cs.html">get_cs()</a></code> returns <code>var_cell</code> and <code>Sigma_used</code>.</p></li>
-<li><p><code>get_cs(min_prop_snps = )</code> exposes the annotation-size floor, previously hardcoded at 0.005. The flooring behaviour is now documented: floored topics remain in the weight denominator, diluting the score toward 1 rather than renormalising over retained topics.</p></li>
-</ul></div>
-</div>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
