@@ -343,12 +343,15 @@ p-values</h1>
 
 
 <p>SCADS produces two kinds of inference. At the level of a single cell,
-a disease relevance score with a p-value. At the level of a cell type, a
-test of whether the cells within it differ from one another in disease
-relevance. This vignette gives both formulas and shows how to run
+a disease relevance score with a p-value, and a rank FDR for how far the
+ordering of the significant cells can be trusted. At the level of a cell
+type, a test of whether the cells within it differ from one another in
+disease relevance. This vignette gives the formulas and shows how to run
 them.</p>
-<div id="the-cell-score" class="section level2">
-<h2>The cell score</h2>
+<div id="cell-score" class="section level2">
+<h2>Cell score</h2>
+<div id="the-score" class="section level3">
+<h3>The score</h3>
 <p>Each cell’s score is the enrichment of disease heritability in its
 open regions relative to genome-wide, reconstructed from the topic
 model:</p>
@@ -362,6 +365,9 @@ enrichment from S-LDSC. The weights <span class="math inline">\(w_{ik}
 annotation sizes <span class="math inline">\(s_k\)</span>, and sum to
 one, so <span class="math inline">\(c_i = 1\)</span> when no topic is
 enriched.</p>
+</div>
+<div id="p-value" class="section level3">
+<h3>P-value</h3>
 <p>The score is a linear function of the enrichment estimates, so its
 variance is a quadratic form in their covariance <span class="math inline">\(\Sigma\)</span>:</p>
 <p><span class="math display">\[\mathrm{Var}(\hat c_i) = \sum_k \sum_m
@@ -370,8 +376,79 @@ w_{ik}\, w_{im}\, \Sigma_{km}\]</span></p>
 <p><span class="math display">\[z_i = \frac{\hat c_i -
 1}{\sqrt{\mathrm{Var}(\hat c_i)}}\]</span></p>
 </div>
-<div id="the-cell-type-heterogeneity-test" class="section level2">
-<h2>The cell-type heterogeneity test</h2>
+<div id="rank-fdr" class="section level3">
+<h3>Rank FDR</h3>
+<p>The p-value tests whether a cell is enriched at all. Among the
+significant cells (one-sided BH-adjusted p below
+<code>fdr_alpha</code>), the rank FDR measures how far their order by
+score can be trusted.</p>
+<p>When the top <span class="math inline">\(k\)</span> significant cells
+are called, a call is false only if the cell is below the <span class="math inline">\(k\)</span>-th score by more than the data can
+resolve. Called cell <span class="math inline">\(i\)</span> gets the
+margin</p>
+<p><span class="math display">\[m_i = \sqrt{\operatorname{mean}_j\,(w_i
+- w_j)^\top \Sigma_f\,(w_i - w_j)}\]</span></p>
+<p>the root-mean-square SD of its score difference with the cells <span class="math inline">\(j\)</span> ranked within 1% of the significant
+cells of position <span class="math inline">\(k\)</span>, where <span class="math inline">\(\Sigma_f\)</span> is <span class="math inline">\(\Sigma\)</span> with the floored topics set to
+zero. Cells with nearly the same topic mix as the cells at the cut-off
+have a margin near zero; near-ties within the noise are not errors.</p>
+<p>For draws <span class="math inline">\(e^* \sim N(\hat e,
+\Sigma)\)</span>, floored as in the score, with scores <span class="math inline">\(s^* = W e^*\)</span>, a called cell is false in
+the draw if</p>
+<p><span class="math display">\[s^*_{(k)} - s^*_i &gt; m_i\]</span></p>
+<p>where <span class="math inline">\(s^*_{(k)}\)</span> is the <span class="math inline">\(k\)</span>-th largest drawn score among the
+significant cells. The estimated FDR at <span class="math inline">\(k\)</span> is the share of false calls, averaged
+over draws.</p>
+</div>
+<div id="running-it" class="section level3">
+<h3>Running it</h3>
+<p><code>scads()</code> computes these as part of the pipeline:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">scads</span>(...)          <span class="co"># see vignette(&quot;StepByStep&quot;)</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>cs         <span class="co"># per-cell score</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>p_cell     <span class="co"># per-cell p-value, one per cell</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>var_cell   <span class="co"># per-cell variance</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>Sigma_used <span class="co"># covariance of the topic enrichments</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>fdr <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(res<span class="sc">$</span>cs_res<span class="sc">$</span>p_cell, <span class="st">&quot;BH&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>rf <span class="ot">&lt;-</span> res<span class="sc">$</span>cs_res<span class="sc">$</span>rank_fdr</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>rf<span class="sc">$</span>n_sig       <span class="co"># number of significant cells ranked</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>rf<span class="sc">$</span>fdr_top10   <span class="co"># estimated rank FDR when calling the top 10% of them</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>rf<span class="sc">$</span>curve       <span class="co"># pct, k, fdr: calling the top 1-50%</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="fu">plot</span>(fdr <span class="sc">~</span> pct, <span class="at">data =</span> rf<span class="sc">$</span>curve, <span class="at">type =</span> <span class="st">&quot;l&quot;</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;top % of significant cells&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;estimated rank FDR&quot;</span>)</span></code></pre></div>
+<p><code>p_cell</code> is <code>NA</code> where the variance is zero, so
+it always aligns with <code>cs</code>.
+<code>alternative = &quot;greater&quot;</code> gives a one-sided test of
+enrichment; the default is two-sided, which also flags significantly
+depleted cells.</p>
+<p><code>get_cs()</code> sets which cells are ranked
+(<code>fdr_alpha</code>, default 0.05), the number of draws
+(<code>fdr_draws</code>, default 1000; 0 skips the rank FDR) and the
+seed (<code>fdr_seed</code>). <code>rank_fdr()</code> computes it
+directly from the weights, enrichments and <code>Sigma</code>. With
+fewer than two significant cells the rank FDR is not defined.</p>
+</div>
+<div id="interpreting-the-results" class="section level3">
+<h3>Interpreting the results</h3>
+<p><strong>Read the rank FDR at fixed fractions.</strong> It is usually
+highest for the very top cells, where cells from different topics
+compete, and falls as more cells are called, so it is not a cut-off
+rule. A high FDR at the top means the leading topics’ enrichments are
+within noise of each other, and so is the order of their cells.</p>
+<p><strong>The p-value and the rank FDR cover GWAS noise only.</strong>
+Errors in the fitted loadings, or systematic differences between the
+S-LDSC and the true topic enrichments, are not included; in simulations
+they added about 0.04 to the actual share of wrong calls when calling
+the top 11-30% of significant cells.</p>
+</div>
+</div>
+<div id="cell-type-heterogeneity-test" class="section level2">
+<h2>Cell-type heterogeneity test</h2>
+<div id="the-test" class="section level3">
+<h3>The test</h3>
 <p>For a cell type <span class="math inline">\(g\)</span>, let <span class="math inline">\(S_g\)</span> be the covariance of the weight
 vectors <span class="math inline">\(w\)</span> across its cells. The
 within-type variance of the score is</p>
@@ -392,25 +469,8 @@ removes every term in <span class="math inline">\(c\)</span>:</p>
 and the unknown level <span class="math inline">\(c\)</span> never has
 to be estimated.</p>
 </div>
-<div id="cell-scores-and-p-values" class="section level2">
-<h2>Cell scores and p-values</h2>
-<p><code>scads()</code> computes these as part of the pipeline:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">scads</span>(...)          <span class="co"># see vignette(&quot;StepByStep&quot;)</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>cs         <span class="co"># per-cell score</span></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>p_cell     <span class="co"># per-cell p-value, one per cell</span></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>var_cell   <span class="co"># per-cell variance</span></span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>res<span class="sc">$</span>cs_res<span class="sc">$</span>Sigma_used <span class="co"># covariance of the topic enrichments</span></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>fdr <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(res<span class="sc">$</span>cs_res<span class="sc">$</span>p_cell, <span class="st">&quot;BH&quot;</span>)</span></code></pre></div>
-<p><code>p_cell</code> is <code>NA</code> where the variance is zero, so
-it always aligns with <code>cs</code>.
-<code>alternative = &quot;greater&quot;</code> gives a one-sided test of
-enrichment; the default is two-sided, which also flags significantly
-depleted cells.</p>
-</div>
-<div id="cell-type-heterogeneity" class="section level2">
-<h2>Cell-type heterogeneity</h2>
+<div id="running-it-1" class="section level3">
+<h3>Running it</h3>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>ht <span class="ot">&lt;-</span> <span class="fu">cell_type_heterogeneity</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">topic_res  =</span> res<span class="sc">$</span>out1,</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">enrichment =</span> res<span class="sc">$</span>cs_res<span class="sc">$</span>ldsc_res_table<span class="sc">$</span>Enrichment,</span>
@@ -425,32 +485,33 @@ any partition of the cells. Groups smaller than <code>min_cells</code>
 gives <code>cell_type</code>, <code>n</code>, the statistic,
 <code>p</code> and BH-adjusted <code>fdr</code>, sorted by p-value.</p>
 </div>
-<div id="interpreting-the-results" class="section level2">
-<h2>Interpreting the results</h2>
+<div id="interpreting-the-results-1" class="section level3">
+<h3>Interpreting the results</h3>
 <p><strong>Score spread does not predict heterogeneity.</strong> <span class="math inline">\(T_g\)</span> and its null eigenvalues both scale
 linearly with <span class="math inline">\(S_g\)</span>, so the p-value
 is invariant to the overall size of within-group variation. What matters
 is whether the direction in which cells vary aligns with the direction
 in which topic enrichments differ. A cell type with a wide score range
 can be non-significant, and a narrow one significant.</p>
-<p><strong>Test association before heterogeneity.</strong> Heterogeneity
-within a cell type that carries no overall disease signal is
-heterogeneity in noise.</p>
 <p><strong>Power follows the precision of the topic
 enrichments</strong>, not the number of cells. The test sees only
 differences between topics, so a trait with large but imprecisely
 estimated enrichments can give no detections while a trait with a
 smaller, tighter spread detects readily.</p>
-<p><strong>Loadings are treated as fixed.</strong> Topic-model
-uncertainty is not propagated into either variance.</p>
+<p><strong>The test does not account for topic-model
+uncertainty;</strong> the loadings are treated as fixed. So a
+significant result means the estimated loadings vary within the cell
+type in the direction in which the enrichments differ. In our
+simulations, the sampling noise of a loading is small (relative SD below
+10%) once about 2,000 of the cell’s reads are mapped to that topic; at
+about 20,000 reads per cell it adds about 0.5% to the within-type
+variance of the score.</p>
+<p><strong>Following up a significant cell type.</strong> The test says
+that cells within a cell type differ; it does not say which cells, or
+along what axis. Correlating the cell score against the topic loadings
+within that cell type identifies the topics driving the gradient, and
+their annotations point at the regulatory programs responsible.</p>
 </div>
-<div id="following-up-a-significant-cell-type" class="section level2">
-<h2>Following up a significant cell type</h2>
-<p>The test says that cells within a cell type differ; it does not say
-which cells, or along what axis. Correlating the cell score against the
-topic loadings within that cell type identifies the topics driving the
-gradient, and their annotations point at the regulatory programs
-responsible.</p>
 </div>
 
 

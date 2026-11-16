@@ -35,8 +35,8 @@
 #' in the fitted topic loadings are not modelled. The curve is usually highest
 #' for the very top cells, where cells from different topics compete, and falls
 #' toward zero as more cells are called, so it is best read at fixed fractions
-#' (`fdr_top10`, or the `curve`) rather than as a cut-off rule. On the revision
-#' simulations (20 settings, about 480 runs) its average over runs agreed with
+#' (`fdr_top10`, or the `curve`) rather than as a cut-off rule. In simulations
+#' (20 settings, about 480 runs) its average over runs agreed with
 #' the actual share of resolvable errors within run-to-run noise, and that share
 #' tracked how often a run put the wrong cell population on top. A single run
 #' whose enrichment estimates confidently favour the wrong topic gets a low

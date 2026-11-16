@@ -12,11 +12,14 @@ knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>")
 ```
 
 SCADS produces two kinds of inference. At the level of a single cell, a disease
-relevance score with a p-value. At the level of a cell type, a test of whether
+relevance score with a p-value, and a rank FDR for how far the ordering of the
+significant cells can be trusted. At the level of a cell type, a test of whether
 the cells within it differ from one another in disease relevance. This vignette
-gives both formulas and shows how to run them.
+gives the formulas and shows how to run them.
 
-## The cell score
+## Cell score
+
+### The score
 
 Each cell's score is the enrichment of disease heritability in its open regions
 relative to genome-wide, reconstructed from the topic model:
@@ -29,6 +32,8 @@ open in topic $k$, and $e_k$ is that topic's heritability enrichment from S-LDSC
 The weights $w_{ik} \propto l_{ik} s_k$ depend on the loadings and the topic
 annotation sizes $s_k$, and sum to one, so $c_i = 1$ when no topic is enriched.
 
+### P-value
+
 The score is a linear function of the enrichment estimates, so its variance is a
 quadratic form in their covariance $\Sigma$:
 
@@ -38,7 +43,80 @@ summed over all ordered pairs. The p-value tests $c_i = 1$:
 
 $$z_i = \frac{\hat c_i - 1}{\sqrt{\mathrm{Var}(\hat c_i)}}$$
 
-## The cell-type heterogeneity test
+### Rank FDR
+
+The p-value tests whether a cell is enriched at all. Among the significant cells
+(one-sided BH-adjusted p below `fdr_alpha`), the rank FDR measures how far their
+order by score can be trusted.
+
+When the top $k$ significant cells are called, a call is false only if the cell
+is below the $k$-th score by more than the data can resolve. Called cell $i$
+gets the margin
+
+$$m_i = \sqrt{\operatorname{mean}_j\,(w_i - w_j)^\top \Sigma_f\,(w_i - w_j)}$$
+
+the root-mean-square SD of its score difference with the cells $j$ ranked within
+1% of the significant cells of position $k$, where $\Sigma_f$ is $\Sigma$ with
+the floored topics set to zero. Cells with nearly the same topic mix as the
+cells at the cut-off have a margin near zero; near-ties within the noise are not
+errors.
+
+For draws $e^* \sim N(\hat e, \Sigma)$, floored as in the score, with scores
+$s^* = W e^*$, a called cell is false in the draw if
+
+$$s^*_{(k)} - s^*_i > m_i$$
+
+where $s^*_{(k)}$ is the $k$-th largest drawn score among the significant cells.
+The estimated FDR at $k$ is the share of false calls, averaged over draws.
+
+### Running it
+
+`scads()` computes these as part of the pipeline:
+
+```{r cs, eval=FALSE}
+res <- scads(...)          # see vignette("StepByStep")
+
+res$cs_res$cs         # per-cell score
+res$cs_res$p_cell     # per-cell p-value, one per cell
+res$cs_res$var_cell   # per-cell variance
+res$cs_res$Sigma_used # covariance of the topic enrichments
+
+fdr <- p.adjust(res$cs_res$p_cell, "BH")
+
+rf <- res$cs_res$rank_fdr
+rf$n_sig       # number of significant cells ranked
+rf$fdr_top10   # estimated rank FDR when calling the top 10% of them
+rf$curve       # pct, k, fdr: calling the top 1-50%
+
+plot(fdr ~ pct, data = rf$curve, type = "l",
+     xlab = "top % of significant cells", ylab = "estimated rank FDR")
+```
+
+`p_cell` is `NA` where the variance is zero, so it always aligns with `cs`.
+`alternative = "greater"` gives a one-sided test of enrichment; the default is
+two-sided, which also flags significantly depleted cells.
+
+`get_cs()` sets which cells are ranked (`fdr_alpha`, default 0.05), the number
+of draws (`fdr_draws`, default 1000; 0 skips the rank FDR) and the seed
+(`fdr_seed`). `rank_fdr()` computes it directly from the weights, enrichments
+and `Sigma`. With fewer than two significant cells the rank FDR is not defined.
+
+### Interpreting the results
+
+**Read the rank FDR at fixed fractions.** It is usually highest for the very top
+cells, where cells from different topics compete, and falls as more cells are
+called, so it is not a cut-off rule. A high FDR at the top means the leading
+topics' enrichments are within noise of each other, and so is the order of
+their cells.
+
+**The p-value and the rank FDR cover GWAS noise only.** Errors in the fitted
+loadings, or systematic differences between the S-LDSC and the true topic
+enrichments, are not included; in simulations they added about 0.04 to the
+actual share of wrong calls when calling the top 11-30% of significant cells.
+
+## Cell-type heterogeneity test
+
+### The test
 
 For a cell type $g$, let $S_g$ be the covariance of the weight vectors $w$ across
 its cells. The within-type variance of the score is
@@ -60,26 +138,7 @@ $$T_g = \varepsilon' S_g \varepsilon \sim \sum_j \lambda_j \chi^2_1, \qquad
 The p-value is exact by Imhof inversion. No permutation is involved, and the
 unknown level $c$ never has to be estimated.
 
-## Cell scores and p-values
-
-`scads()` computes these as part of the pipeline:
-
-```{r cs, eval=FALSE}
-res <- scads(...)          # see vignette("StepByStep")
-
-res$cs_res$cs         # per-cell score
-res$cs_res$p_cell     # per-cell p-value, one per cell
-res$cs_res$var_cell   # per-cell variance
-res$cs_res$Sigma_used # covariance of the topic enrichments
-
-fdr <- p.adjust(res$cs_res$p_cell, "BH")
-```
-
-`p_cell` is `NA` where the variance is zero, so it always aligns with `cs`.
-`alternative = "greater"` gives a one-sided test of enrichment; the default is
-two-sided, which also flags significantly depleted cells.
-
-## Cell-type heterogeneity
+### Running it
 
 ```{r hetero, eval=FALSE}
 ht <- cell_type_heterogeneity(
@@ -97,7 +156,7 @@ cells. Groups smaller than `min_cells` (default 20) are skipped and `NA` labels
 dropped. The result gives `cell_type`, `n`, the statistic, `p` and BH-adjusted
 `fdr`, sorted by p-value.
 
-## Interpreting the results
+### Interpreting the results
 
 **Score spread does not predict heterogeneity.** $T_g$ and its null eigenvalues
 both scale linearly with $S_g$, so the p-value is invariant to the overall size
@@ -105,20 +164,20 @@ of within-group variation. What matters is whether the direction in which cells
 vary aligns with the direction in which topic enrichments differ. A cell type
 with a wide score range can be non-significant, and a narrow one significant.
 
-**Test association before heterogeneity.** Heterogeneity within a cell type that
-carries no overall disease signal is heterogeneity in noise.
-
 **Power follows the precision of the topic enrichments**, not the number of
 cells. The test sees only differences between topics, so a trait with large but
 imprecisely estimated enrichments can give no detections while a trait with a
 smaller, tighter spread detects readily.
 
-**Loadings are treated as fixed.** Topic-model uncertainty is not propagated into
-either variance.
+**The test does not account for topic-model uncertainty;** the loadings are
+treated as fixed. So a significant result means the estimated loadings vary
+within the cell type in the direction in which the enrichments differ. In our
+simulations, the sampling noise of a loading is small (relative SD below 10%)
+once about 2,000 of the cell's reads are mapped to that topic; at about 20,000
+reads per cell it adds about 0.5% to the within-type variance of the score.
 
-## Following up a significant cell type
-
-The test says that cells within a cell type differ; it does not say which cells,
-or along what axis. Correlating the cell score against the topic loadings within
-that cell type identifies the topics driving the gradient, and their annotations
-point at the regulatory programs responsible.
+**Following up a significant cell type.** The test says that cells within a cell
+type differ; it does not say which cells, or along what axis. Correlating the
+cell score against the topic loadings within that cell type identifies the
+topics driving the gradient, and their annotations point at the regulatory
+programs responsible.
