@@ -144,9 +144,9 @@ test_that("p_cell keeps length I and honours `alternative`", {
   }
 
   two <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics,
-                use_approximation = TRUE)
+                use_approximation = TRUE, alternative = "two.sided")
   one <- get_cs(topic_res, ldsc_dir, "TestTrait", nTopics,
-                use_approximation = TRUE, alternative = "greater")
+                use_approximation = TRUE)                   # default: one-sided
 
   # p_cell must align with cs / z_cell
   expect_equal(length(two$p_cell), nCells)

@@ -93,8 +93,8 @@ plot(fdr ~ pct, data = rf$curve, type = "l",
 ```
 
 `p_cell` is `NA` where the variance is zero, so it always aligns with `cs`.
-`alternative = "greater"` gives a one-sided test of enrichment; the default is
-two-sided, which also flags significantly depleted cells.
+The test is one-sided by default (`alternative = "greater"`, enrichment only);
+`alternative = "two.sided"` also flags significantly depleted cells.
 
 `get_cs()` sets which cells are ranked (`fdr_alpha`, default 0.05), the number
 of draws (`fdr_draws`, default 1000; 0 skips the rank FDR) and the seed

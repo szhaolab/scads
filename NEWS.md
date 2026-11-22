@@ -1,3 +1,9 @@
+# scads 0.9.0
+
+* **Breaking:** `get_cs()` (and so `scads()`) defaults to the one-sided test,
+  `alternative = "greater"`; use `alternative = "two.sided"` for the previous
+  behaviour.
+
 # scads 0.8.0
 
 * `get_cs()`: the cell score uses the raw S-LDSC enrichments; ASH shrinkage and

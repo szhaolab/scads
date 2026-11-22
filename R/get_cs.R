@@ -49,11 +49,10 @@
 #'   `Cov(e_k, e_k') ~ w_k w_k' Cor(A_k, A_k')` instead of the jackknife
 #'   covariance. Default `FALSE`; the jackknife is preferred, and one of
 #'   `Sigma`, the reference prefixes, or this flag must be given.
-#' @param alternative Either `"two.sided"` (default, preserving previous
-#'   behaviour) or `"greater"` for a one-sided test of enrichment. Under
-#'   `"two.sided"`, cells that are significantly *depleted* (z < 0) also pass
-#'   FDR; if the scores are presented as disease relevance, `"greater"` is
-#'   usually the intended test.
+#' @param alternative Either `"greater"` (default), a one-sided test of
+#'   enrichment (cell score > 1), or `"two.sided"`, under which cells that are
+#'   significantly *depleted* (z < 0) also pass FDR. Before 0.9.0 the default
+#'   was `"two.sided"`.
 #' @param min_pct_blocks Minimum percentage of the genome's 0.01 cM blocks a
 #'   topic annotation must overlap (see Small annotations). Default 1.7.
 #' @param block_coverage Optional precomputed coverage: the data frame returned
@@ -98,7 +97,7 @@ get_cs <- function(topic_res, ldsc_res_dir, trait, nTopics,
                    baseline_prefix = NULL, frq_prefix = NULL,
                    Sigma = NULL,
                    use_approximation = FALSE,
-                   alternative = c("two.sided", "greater"),
+                   alternative = c("greater", "two.sided"),
                    min_pct_blocks = 1.7,
                    block_coverage = NULL,
                    small_annot = c("floor", "warn"),

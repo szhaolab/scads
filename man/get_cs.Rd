@@ -13,7 +13,7 @@ get_cs(
   frq_prefix = NULL,
   Sigma = NULL,
   use_approximation = FALSE,
-  alternative = c("two.sided", "greater"),
+  alternative = c("greater", "two.sided"),
   min_pct_blocks = 1.7,
   block_coverage = NULL,
   small_annot = c("floor", "warn"),
@@ -46,11 +46,10 @@ supplied directly instead of being computed.}
 covariance. Default \code{FALSE}; the jackknife is preferred, and one of
 \code{Sigma}, the reference prefixes, or this flag must be given.}
 
-\item{alternative}{Either \code{"two.sided"} (default, preserving previous
-behaviour) or \code{"greater"} for a one-sided test of enrichment. Under
-\code{"two.sided"}, cells that are significantly \emph{depleted} (z < 0) also pass
-FDR; if the scores are presented as disease relevance, \code{"greater"} is
-usually the intended test.}
+\item{alternative}{Either \code{"greater"} (default), a one-sided test of
+enrichment (cell score > 1), or \code{"two.sided"}, under which cells that are
+significantly \emph{depleted} (z < 0) also pass FDR. Before 0.9.0 the default
+was \code{"two.sided"}.}
 
 \item{min_pct_blocks}{Minimum percentage of the genome's 0.01 cM blocks a
 topic annotation must overlap (see Small annotations). Default 1.7.}
